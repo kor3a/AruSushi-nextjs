@@ -79,12 +79,12 @@ export default function SignIn() {
       <Header />
 
       <div style={{
-        paddingTop: '100px',
+        paddingTop: '140px',
         paddingBottom: '60px',
-        minHeight: 'calc(100vh - 80px)',
+        minHeight: '100vh',
         background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)',
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         justifyContent: 'center'
       }}>
         <div style={{ width: '100%', maxWidth: '450px', padding: '0 20px' }}>
