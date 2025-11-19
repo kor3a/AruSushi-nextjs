@@ -32,23 +32,22 @@ const HomePage = () => (
         <Header />
         <main>
         <div className="home" id="home">
-            
             <div className="swiper home-slider">
                 <div className="swiper-wrapper wrapper">
                     <div className="swiper-slide slide slide1">
-                        <Chatbot />
-                        {/* <div className="content">
+                        <div className="content">
                             <Image src="/img/homeLogo.png" alt="Logo" width={150} height={100}/>
 
                             <h3>A-Ru Sushi</h3>
                             <h1>Hungry?</h1>
                             <p>Scroll below to make reservations or order now online!</p>
                             <a href="https://www.doordash.com/en-CA/store/a-ru-japanese-restaurant-buellton-632339/" target="_blank" className="btn">Order Now</a>
-                        </div> */}
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
+        <Chatbot />
         <section className="parallex">
             <div className="parallex-wrapper">
                 <Image src="/img/interior1.png" className="image" alt="Interior Background" width={500} height={500} />

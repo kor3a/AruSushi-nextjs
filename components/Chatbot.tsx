@@ -28,49 +28,139 @@ const Chatbot: React.FC = () => {
   };
 
   return (
-    <div className="fixed bottom-4 right-4 z-50">
+    <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 9999 }}>
       {!isOpen ? (
         <button
           onClick={() => setIsOpen(true)}
-          className="bg-blue-500 text-white p-4 rounded-full shadow-lg hover:bg-blue-600"
+          style={{
+            background: 'linear-gradient(135deg, #fc3678 0%, #f1d00f 100%)',
+            color: '#fff',
+            padding: '16px 24px',
+            borderRadius: '50px',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: '16px',
+            fontWeight: '600',
+            boxShadow: '0 8px 24px rgba(252, 54, 120, 0.4), 0 0 20px rgba(241, 208, 15, 0.3)',
+            transition: 'all 0.3s ease',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'scale(1.05)';
+            e.currentTarget.style.boxShadow = '0 12px 32px rgba(252, 54, 120, 0.5), 0 0 30px rgba(241, 208, 15, 0.4)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'scale(1)';
+            e.currentTarget.style.boxShadow = '0 8px 24px rgba(252, 54, 120, 0.4), 0 0 20px rgba(241, 208, 15, 0.3)';
+          }}
         >
           Chat with SushiBot 🍣
         </button>
       ) : (
-        <div className="bg-white w-80 h-96 rounded-lg shadow-xl flex flex-col">
-          <div className="bg-blue-500 text-white p-2 flex justify-between items-center rounded-t-lg">
-            <span>SushiBot</span>
-            <AiOutlineClose className="cursor-pointer" onClick={() => setIsOpen(false)} />
+        <div style={{
+          background: 'rgba(26, 26, 26, 0.95)',
+          backdropFilter: 'blur(20px)',
+          width: '380px',
+          height: '500px',
+          borderRadius: '16px',
+          border: '2px solid rgba(252, 54, 120, 0.3)',
+          boxShadow: '0 16px 48px rgba(0, 0, 0, 0.5), 0 0 30px rgba(241, 208, 15, 0.2)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden'
+        }}>
+          <div style={{
+            background: 'linear-gradient(135deg, #fc3678 0%, #f1d00f 100%)',
+            color: '#fff',
+            padding: '16px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            borderRadius: '14px 14px 0 0',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+          }}>
+            <span style={{ fontWeight: '600', fontSize: '18px' }}>SushiBot 🍣</span>
+            <AiOutlineClose
+              style={{ cursor: 'pointer', fontSize: '20px' }}
+              onClick={() => setIsOpen(false)}
+            />
           </div>
-          <div className="flex-1 p-2 overflow-y-auto bg-gray-50">
+          <div style={{
+            flex: 1,
+            padding: '16px',
+            overflowY: 'auto',
+            background: 'rgba(0, 0, 0, 0.3)'
+          }}>
             {messages.map((msg, idx) => (
-              <div key={idx} className={`mb-2 ${msg.isUser ? 'text-right' : 'text-left'}`}>
+              <div key={idx} style={{ marginBottom: '12px', textAlign: msg.isUser ? 'right' : 'left' }}>
                 <span
-                  className={`inline-block p-2 rounded-lg ${
-                    msg.isUser ? 'bg-blue-100 text-black font-medium' : 'bg-green-100 text-gray-800 font-normal'
-                  }`}
+                  style={{
+                    display: 'inline-block',
+                    padding: '10px 14px',
+                    borderRadius: '12px',
+                    maxWidth: '80%',
+                    wordWrap: 'break-word',
+                    background: msg.isUser
+                      ? 'rgba(252, 54, 120, 0.2)'
+                      : 'rgba(241, 208, 15, 0.15)',
+                    border: msg.isUser
+                      ? '1px solid rgba(252, 54, 120, 0.4)'
+                      : '1px solid rgba(241, 208, 15, 0.3)',
+                    color: msg.isUser ? '#fff' : '#f1d00f',
+                    fontWeight: msg.isUser ? '500' : '400',
+                    fontSize: '14px'
+                  }}
                 >
                   {msg.text}
                 </span>
               </div>
             ))}
             {isLoading && (
-              <div className="text-center text-gray-500 text-sm">SushiBot is thinking...</div>
+              <div style={{ textAlign: 'center', color: '#f1d00f', fontSize: '14px', fontStyle: 'italic' }}>
+                SushiBot is thinking...
+              </div>
             )}
           </div>
-          <div className="p-2 border-t flex">
+          <div style={{
+            padding: '12px',
+            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+            display: 'flex',
+            background: 'rgba(0, 0, 0, 0.3)'
+          }}>
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-              className="flex-1 p-2 border rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              style={{
+                flex: 1,
+                padding: '12px',
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                borderRadius: '8px 0 0 8px',
+                color: '#fff',
+                fontSize: '14px',
+                outline: 'none'
+              }}
               placeholder="Ask about sushi..."
               disabled={isLoading}
             />
             <button
               onClick={handleSend}
-              className="bg-blue-500 text-white p-2 rounded-r-lg disabled:bg-gray-400"
+              style={{
+                background: isLoading ? '#666' : '#fc3678',
+                color: '#fff',
+                padding: '12px 16px',
+                borderRadius: '0 8px 8px 0',
+                border: 'none',
+                cursor: isLoading ? 'not-allowed' : 'pointer',
+                fontSize: '18px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
               disabled={isLoading}
             >
               <AiOutlineSend />
