@@ -54,8 +54,8 @@ const HomePage = () => {
         </div>
         <Chatbot />
         <section className="parallex">
-            <div className="parallex-wrapper" style={{ position: 'relative' }}>
-                <Image src="/img/interior1.png" className="image" alt="Interior Background" width={500} height={500} />
+            <div className="parallex-wrapper" style={{ position: 'relative', zIndex: 1 }}>
+                <Image src="/img/interior1.png" className="image" alt="Interior Background" width={500} height={500} style={{ zIndex: 0 }} />
                 {/* Dark overlay for better contrast */}
                 <div style={{
                     position: 'absolute',
@@ -64,7 +64,8 @@ const HomePage = () => {
                     right: 0,
                     bottom: 0,
                     background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.5) 100%)',
-                    zIndex: 1
+                    zIndex: 1,
+                    pointerEvents: 'none'
                 }} />
                 {/* Content container */}
                 {showReviewCard && (
@@ -73,11 +74,12 @@ const HomePage = () => {
                     left: '50%',
                     top: '50%',
                     transform: 'translate(-50%, -50%)',
-                    zIndex: 2,
+                    zIndex: 10,
                     textAlign: 'center',
                     width: '90%',
                     maxWidth: '800px',
-                    padding: '40px'
+                    padding: '40px',
+                    pointerEvents: 'auto'
                 }}>
                     {/* Glassmorphism card */}
                     <div style={{
@@ -87,7 +89,8 @@ const HomePage = () => {
                         border: '2px solid rgba(252, 54, 120, 0.3)',
                         boxShadow: '0 16px 48px rgba(0, 0, 0, 0.5), 0 0 40px rgba(241, 208, 15, 0.2)',
                         padding: '48px 32px',
-                        position: 'relative'
+                        position: 'relative',
+                        pointerEvents: 'auto'
                     }}>
                         {/* Close button */}
                         <button
@@ -95,6 +98,7 @@ const HomePage = () => {
                             onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
+                                console.log('Close button clicked!'); // Debug log
                                 setShowReviewCard(false);
                             }}
                             style={{
@@ -113,7 +117,8 @@ const HomePage = () => {
                                 color: '#fff',
                                 fontSize: '20px',
                                 transition: 'all 0.3s ease',
-                                zIndex: 100
+                                zIndex: 1000,
+                                pointerEvents: 'auto'
                             }}
                             onMouseEnter={(e) => {
                                 e.currentTarget.style.background = 'rgba(252, 54, 120, 0.3)';
