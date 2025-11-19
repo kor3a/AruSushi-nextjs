@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import Head from 'next/head';
 import Script from 'next/script';
 import Image from 'next/image';
@@ -5,8 +6,12 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import CherryBlossom from '@/components/CherryBlossom';
 import Chatbot from '../components/Chatbot';
+import { AiOutlineClose } from 'react-icons/ai';
 
-const HomePage = () => (
+const HomePage = () => {
+  const [showReviewCard, setShowReviewCard] = useState(true);
+
+  return (
   <>
     
     <Head>
@@ -62,6 +67,7 @@ const HomePage = () => (
                     zIndex: 1
                 }} />
                 {/* Content container */}
+                {showReviewCard && (
                 <div style={{
                     position: 'absolute',
                     left: '50%',
@@ -80,8 +86,42 @@ const HomePage = () => (
                         borderRadius: '24px',
                         border: '2px solid rgba(252, 54, 120, 0.3)',
                         boxShadow: '0 16px 48px rgba(0, 0, 0, 0.5), 0 0 40px rgba(241, 208, 15, 0.2)',
-                        padding: '48px 32px'
+                        padding: '48px 32px',
+                        position: 'relative'
                     }}>
+                        {/* Close button */}
+                        <button
+                            onClick={() => setShowReviewCard(false)}
+                            style={{
+                                position: 'absolute',
+                                top: '16px',
+                                right: '16px',
+                                background: 'rgba(255, 255, 255, 0.1)',
+                                border: '1px solid rgba(255, 255, 255, 0.2)',
+                                borderRadius: '50%',
+                                width: '36px',
+                                height: '36px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                color: '#fff',
+                                fontSize: '20px',
+                                transition: 'all 0.3s ease',
+                                zIndex: 10
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.background = 'rgba(252, 54, 120, 0.3)';
+                                e.currentTarget.style.transform = 'scale(1.1)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                                e.currentTarget.style.transform = 'scale(1)';
+                            }}
+                            title="Close"
+                        >
+                            <AiOutlineClose />
+                        </button>
                         {/* Star decoration */}
                         <div style={{
                             display: 'flex',
@@ -195,12 +235,14 @@ const HomePage = () => (
                         </div>
                     </div>
                 </div>
+                )}
             </div>
         </section>
         </main>
         <Footer />
     </div>
   </>
-);
+  );
+};
 
 export default HomePage;
