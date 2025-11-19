@@ -49,16 +49,14 @@ const HomePage = () => (
         </div>
         <Chatbot />
         <section className="parallex">
-            <div className="parallex-wrapper">
+            <div className="parallex-wrapper" style={{ position: 'relative' }}>
                 <Image src="/img/interior1.png" className="image" alt="Interior Background" width={500} height={500} />
-                <div className="text" style={{
-                    opacity: 1,
-                    transform: 'translateX(0)',
+                <div style={{
                     position: 'absolute',
                     left: '50%',
                     top: '50%',
                     transform: 'translate(-50%, -50%)',
-                    zIndex: 1,
+                    zIndex: 2,
                     textAlign: 'center',
                     width: '100%',
                     padding: '0 20px'
