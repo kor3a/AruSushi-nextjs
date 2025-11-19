@@ -55,7 +55,21 @@ const HomePage = () => {
         <Chatbot />
         <section className="parallex">
             <div className="parallex-wrapper" style={{ position: 'relative', zIndex: 1 }}>
-                <Image src="/img/interior1.png" className="image" alt="Interior Background" width={500} height={500} style={{ zIndex: 0 }} />
+                <Image
+                    src="/img/interior1.png"
+                    className="image"
+                    alt="Interior Background"
+                    width={500}
+                    height={500}
+                    style={{
+                        position: 'absolute',
+                        zIndex: 0,
+                        pointerEvents: 'none',
+                        objectFit: 'cover',
+                        width: '100%',
+                        height: '100%'
+                    }}
+                />
                 {/* Dark overlay for better contrast */}
                 <div style={{
                     position: 'absolute',
