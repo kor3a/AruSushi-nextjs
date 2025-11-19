@@ -51,8 +51,8 @@ const HomePage = () => (
         <section className="parallex">
             <div className="parallex-wrapper">
                 <Image src="/img/interior1.png" className="image" alt="Interior Background" width={500} height={500} />
-                <div className="text">
-                    <h2>Write us a review on Yelp & Google!</h2>
+                <div className="text" style={{ opacity: 1, transform: 'translateX(0)' }}>
+                    <h2 className="animate">Write us a review on Yelp & Google!</h2>
                 </div>
             </div>
         </section>
