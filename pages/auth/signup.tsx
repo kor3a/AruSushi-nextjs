@@ -89,8 +89,8 @@ export default function SignUp() {
         <Head>
           <title>Sign Up - A-Ru Sushi</title>
         </Head>
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <p className="text-gray-600">Loading...</p>
+        <div style={{ paddingTop: '80px', minHeight: '100vh', background: '#1a1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <p style={{ color: '#f1d00f' }}>Loading...</p>
         </div>
       </>
     );
@@ -106,23 +106,50 @@ export default function SignUp() {
 
       <Header />
 
-      <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md mx-auto">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">Create Your Account</h1>
-            <p className="mt-2 text-gray-600">Join A-Ru Sushi to start ordering</p>
+      <div style={{
+        paddingTop: '100px',
+        paddingBottom: '60px',
+        minHeight: 'calc(100vh - 80px)',
+        background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <div style={{ width: '100%', maxWidth: '500px', padding: '0 20px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+            <h1 style={{ fontSize: '32px', fontWeight: 'bold', color: '#f1d00f', marginBottom: '8px' }}>
+              Create Your Account
+            </h1>
+            <p style={{ color: '#ccc', fontSize: '16px' }}>
+              Join A-Ru Sushi to start ordering
+            </p>
           </div>
 
-          <div className="bg-white p-8 rounded-lg shadow-md">
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.05)',
+            backdropFilter: 'blur(10px)',
+            padding: '40px',
+            borderRadius: '16px',
+            border: '1px solid rgba(252, 54, 120, 0.2)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
+          }}>
             {error && (
-              <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+              <div style={{
+                marginBottom: '20px',
+                padding: '12px',
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                color: '#fca5a5',
+                borderRadius: '8px',
+                fontSize: '14px'
+              }}>
                 {error}
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="name" style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#f1d00f', marginBottom: '6px' }}>
                   Full Name
                 </label>
                 <input
@@ -131,12 +158,20 @@ export default function SignUp() {
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px',
+                    color: '#fff',
+                    fontSize: '15px'
+                  }}
                 />
               </div>
 
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="email" style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#f1d00f', marginBottom: '6px' }}>
                   Email Address *
                 </label>
                 <input
@@ -146,40 +181,66 @@ export default function SignUp() {
                   required
                   value={formData.email}
                   onChange={handleChange}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px',
+                    color: '#fff',
+                    fontSize: '15px'
+                  }}
                 />
               </div>
 
-              <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-                  Phone Number
-                </label>
-                <input
-                  type="tel"
-                  id="phone"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500"
-                />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                <div>
+                  <label htmlFor="phone" style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#f1d00f', marginBottom: '6px' }}>
+                    Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    id="phone"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '8px',
+                      color: '#fff',
+                      fontSize: '15px'
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="address" style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#f1d00f', marginBottom: '6px' }}>
+                    City
+                  </label>
+                  <input
+                    type="text"
+                    id="address"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleChange}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '8px',
+                      color: '#fff',
+                      fontSize: '15px'
+                    }}
+                  />
+                </div>
               </div>
 
               <div>
-                <label htmlFor="address" className="block text-sm font-medium text-gray-700">
-                  Delivery Address
-                </label>
-                <textarea
-                  id="address"
-                  name="address"
-                  rows={2}
-                  value={formData.address}
-                  onChange={handleChange}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="password" style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#f1d00f', marginBottom: '6px' }}>
                   Password *
                 </label>
                 <input
@@ -189,13 +250,21 @@ export default function SignUp() {
                   required
                   value={formData.password}
                   onChange={handleChange}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px',
+                    color: '#fff',
+                    fontSize: '15px'
+                  }}
                 />
-                <p className="mt-1 text-sm text-gray-500">Minimum 6 characters</p>
+                <p style={{ marginTop: '4px', fontSize: '12px', color: '#999' }}>Minimum 6 characters</p>
               </div>
 
               <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="confirmPassword" style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#f1d00f', marginBottom: '6px' }}>
                   Confirm Password *
                 </label>
                 <input
@@ -205,23 +274,50 @@ export default function SignUp() {
                   required
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px',
+                    color: '#fff',
+                    fontSize: '15px'
+                  }}
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-pink-600 hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  marginTop: '10px',
+                  background: loading ? '#999' : '#fc3678',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.3s',
+                  boxShadow: '0 4px 12px rgba(252, 54, 120, 0.3)'
+                }}
+                onMouseEnter={(e) => {
+                  if (!loading) e.currentTarget.style.background = '#e02d68';
+                }}
+                onMouseLeave={(e) => {
+                  if (!loading) e.currentTarget.style.background = '#fc3678';
+                }}
               >
                 {loading ? 'Creating Account...' : 'Sign Up'}
               </button>
             </form>
 
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600">
+            <div style={{ marginTop: '25px', textAlign: 'center', paddingTop: '25px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+              <p style={{ fontSize: '14px', color: '#ccc' }}>
                 Already have an account?{' '}
-                <Link href="/auth/signin" className="font-medium text-pink-600 hover:text-pink-500">
+                <Link href="/auth/signin" style={{ fontWeight: '600', color: '#fc3678' }}>
                   Sign in
                 </Link>
               </p>
