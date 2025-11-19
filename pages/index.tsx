@@ -91,7 +91,12 @@ const HomePage = () => {
                     }}>
                         {/* Close button */}
                         <button
-                            onClick={() => setShowReviewCard(false)}
+                            type="button"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setShowReviewCard(false);
+                            }}
                             style={{
                                 position: 'absolute',
                                 top: '16px',
@@ -108,7 +113,7 @@ const HomePage = () => {
                                 color: '#fff',
                                 fontSize: '20px',
                                 transition: 'all 0.3s ease',
-                                zIndex: 10
+                                zIndex: 100
                             }}
                             onMouseEnter={(e) => {
                                 e.currentTarget.style.background = 'rgba(252, 54, 120, 0.3)';
@@ -119,6 +124,7 @@ const HomePage = () => {
                                 e.currentTarget.style.transform = 'scale(1)';
                             }}
                             title="Close"
+                            aria-label="Close review card"
                         >
                             <AiOutlineClose />
                         </button>
