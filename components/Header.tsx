@@ -36,7 +36,7 @@ const Header = () => {
       </nav>
       <div className="icons" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
         <Link href="/cart" style={{ position: 'relative', display: 'inline-block' }}>
-          <FaShoppingCart size={20} />
+          <FaShoppingCart size={20} style={{ color: '#f1d00f' }} />
           {cartItemsCount > 0 && (
             <span style={{
               position: 'absolute',
@@ -59,8 +59,8 @@ const Header = () => {
         </Link>
         {session ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span style={{ fontSize: '14px' }}>
-              <FaUser size={16} style={{ marginRight: '5px' }} />
+            <span style={{ fontSize: '14px', color: '#f1d00f' }}>
+              <FaUser size={16} style={{ marginRight: '5px', color: '#f1d00f' }} />
               {session.user.name || session.user.email}
             </span>
             <button
@@ -69,16 +69,17 @@ const Header = () => {
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
-                padding: '5px'
+                padding: '5px',
+                color: '#f1d00f'
               }}
               title="Sign out"
             >
-              <FaSignOutAlt size={18} />
+              <FaSignOutAlt size={18} style={{ color: '#f1d00f' }} />
             </button>
           </div>
         ) : (
-          <Link href="/auth/signin">
-            <FaSignInAlt size={18} title="Sign in" />
+          <Link href="/auth/signin" style={{ color: '#f1d00f' }}>
+            <FaSignInAlt size={18} title="Sign in" style={{ color: '#f1d00f' }} />
           </Link>
         )}
         <i className="fas fa-bars" id="menu"></i>
