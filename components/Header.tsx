@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
 import { useCart } from '../contexts/CartContext';
@@ -5,8 +6,21 @@ import { FaShoppingCart, FaUser, FaSignOutAlt, FaSignInAlt } from 'react-icons/f
 
 const Header = () => {
   const { data: session } = useSession();
-  const { getTotalItems } = useCart();
-  const cartItemsCount = getTotalItems();
+  const { getTotalItems, items } = useCart();
+  const [cartItemsCount, setCartItemsCount] = useState(0);
+  const [mounted, setMounted] = useState(false);
+
+  // Only get cart count on client side to prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Update cart count when items change
+  useEffect(() => {
+    if (mounted) {
+      setCartItemsCount(getTotalItems());
+    }
+  }, [mounted, items, getTotalItems]);
 
   return (
     <header>

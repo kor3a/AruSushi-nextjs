@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -15,6 +15,12 @@ export default function Cart() {
     useCart();
   const [editingNotes, setEditingNotes] = useState<{ [key: string]: boolean }>({});
   const [notesValue, setNotesValue] = useState<{ [key: string]: string }>({});
+  const [mounted, setMounted] = useState(false);
+
+  // Wait for client-side mount to prevent hydration issues
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleCheckout = () => {
     if (!session) {
@@ -51,7 +57,11 @@ export default function Cart() {
         <div className="max-w-4xl mx-auto">
           <h1 className="text-3xl font-bold text-gray-900 mb-8">Shopping Cart</h1>
 
-          {items.length === 0 ? (
+          {!mounted ? (
+            <div className="bg-white p-8 rounded-lg shadow-md text-center">
+              <p className="text-gray-600">Loading cart...</p>
+            </div>
+          ) : items.length === 0 ? (
             <div className="bg-white p-8 rounded-lg shadow-md text-center">
               <p className="text-gray-600 mb-4">Your cart is empty</p>
               <Link
