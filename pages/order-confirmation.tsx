@@ -1,0 +1,124 @@
+import { useEffect, useState } from 'react';
+import Head from 'next/head';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { useSession } from 'next-auth/react';
+import Header from '../components/Header';
+import Footer from '../components/Footer';
+import { FaCheckCircle, FaClock } from 'react-icons/fa';
+
+export default function OrderConfirmation() {
+  const router = useRouter();
+  const { orderId } = router.query;
+  const { data: session, status } = useSession();
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/auth/signin');
+    } else if (status === 'authenticated') {
+      setLoading(false);
+    }
+  }, [status, router]);
+
+  if (status === 'loading' || loading) {
+    return (
+      <>
+        <Head>
+          <title>Order Confirmation - A-Ru Sushi</title>
+        </Head>
+        <Header />
+        <div className="min-h-screen bg-gray-50 py-12 px-4 flex items-center justify-center">
+          <p className="text-gray-600">Loading...</p>
+        </div>
+        <Footer />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Head>
+        <title>Order Confirmation - A-Ru Sushi</title>
+        <meta name="description" content="Your order has been confirmed" />
+        <link rel="icon" href="/favicon.ico" />
+      </Head>
+
+      <Header />
+
+      <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-2xl mx-auto">
+          <div className="bg-white rounded-lg shadow-md p-8 text-center">
+            <div className="mb-6">
+              <FaCheckCircle size={64} className="text-green-500 mx-auto mb-4" />
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Order Confirmed!</h1>
+              <p className="text-gray-600">Thank you for your order</p>
+            </div>
+
+            {orderId && (
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <p className="text-sm text-gray-600 mb-1">Order Number</p>
+                <p className="text-xl font-semibold text-gray-900">{orderId}</p>
+              </div>
+            )}
+
+            <div className="border-t border-b py-6 mb-6">
+              <div className="flex items-center justify-center gap-3 text-gray-700">
+                <FaClock size={20} className="text-pink-600" />
+                <div>
+                  <p className="font-semibold">Estimated Preparation Time</p>
+                  <p className="text-sm text-gray-600">30-45 minutes</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4 mb-8">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-800">
+                  <strong>Confirmation Email Sent</strong>
+                  <br />
+                  We've sent a confirmation email to{' '}
+                  <span className="font-semibold">{session?.user?.email}</span>
+                </p>
+              </div>
+
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <p className="text-sm text-green-800">
+                  <strong>Restaurant Notified</strong>
+                  <br />
+                  Your order has been sent to our kitchen. We'll start preparing it right away!
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <Link
+                href="/menu"
+                className="block w-full bg-pink-600 text-white px-6 py-3 rounded-md hover:bg-pink-700 font-semibold"
+              >
+                Order More Food
+              </Link>
+              <Link
+                href="/"
+                className="block w-full bg-gray-200 text-gray-700 px-6 py-3 rounded-md hover:bg-gray-300 font-semibold"
+              >
+                Return to Home
+              </Link>
+            </div>
+
+            <div className="mt-8 pt-6 border-t">
+              <p className="text-sm text-gray-600">
+                Questions about your order? Contact us at{' '}
+                <a href="tel:805-686-8898" className="text-pink-600 hover:text-pink-700">
+                  (805) 686-8898
+                </a>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <Footer />
+    </>
+  );
+}
