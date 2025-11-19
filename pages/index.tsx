@@ -51,6 +51,17 @@ const HomePage = () => (
         <section className="parallex">
             <div className="parallex-wrapper" style={{ position: 'relative' }}>
                 <Image src="/img/interior1.png" className="image" alt="Interior Background" width={500} height={500} />
+                {/* Dark overlay for better contrast */}
+                <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.5) 100%)',
+                    zIndex: 1
+                }} />
+                {/* Content container */}
                 <div style={{
                     position: 'absolute',
                     left: '50%',
@@ -58,19 +69,131 @@ const HomePage = () => (
                     transform: 'translate(-50%, -50%)',
                     zIndex: 2,
                     textAlign: 'center',
-                    width: '100%',
-                    padding: '0 20px'
+                    width: '90%',
+                    maxWidth: '800px',
+                    padding: '40px'
                 }}>
-                    <h2 style={{
-                        color: '#f1d00f',
-                        fontSize: '4rem',
-                        fontWeight: 'bold',
-                        textShadow: '2px 2px 8px rgba(0, 0, 0, 0.8), 0 0 20px rgba(241, 208, 15, 0.5)',
-                        letterSpacing: '1px',
-                        margin: 0
+                    {/* Glassmorphism card */}
+                    <div style={{
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        backdropFilter: 'blur(20px)',
+                        borderRadius: '24px',
+                        border: '2px solid rgba(252, 54, 120, 0.3)',
+                        boxShadow: '0 16px 48px rgba(0, 0, 0, 0.5), 0 0 40px rgba(241, 208, 15, 0.2)',
+                        padding: '48px 32px'
                     }}>
-                        Write us a review on Yelp & Google!
-                    </h2>
+                        {/* Star decoration */}
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'center',
+                            gap: '8px',
+                            marginBottom: '24px'
+                        }}>
+                            {[1, 2, 3, 4, 5].map((star) => (
+                                <span key={star} style={{
+                                    fontSize: '32px',
+                                    color: '#f1d00f',
+                                    textShadow: '0 0 10px rgba(241, 208, 15, 0.5)'
+                                }}>★</span>
+                            ))}
+                        </div>
+
+                        <h2 style={{
+                            color: '#fff',
+                            fontSize: '3rem',
+                            fontWeight: 'bold',
+                            textShadow: '2px 2px 8px rgba(0, 0, 0, 0.8)',
+                            letterSpacing: '1px',
+                            marginBottom: '16px',
+                            lineHeight: '1.3'
+                        }}>
+                            Love Our Sushi?
+                        </h2>
+
+                        <p style={{
+                            color: '#f1d00f',
+                            fontSize: '1.5rem',
+                            fontWeight: '500',
+                            marginBottom: '32px',
+                            textShadow: '1px 1px 4px rgba(0, 0, 0, 0.8)'
+                        }}>
+                            Share your experience with us!
+                        </p>
+
+                        {/* Review buttons */}
+                        <div style={{
+                            display: 'flex',
+                            gap: '16px',
+                            justifyContent: 'center',
+                            flexWrap: 'wrap'
+                        }}>
+                            <a
+                                href="https://www.yelp.com/biz/a-ru-japanese-restaurant-buellton"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '10px',
+                                    padding: '14px 28px',
+                                    background: 'linear-gradient(135deg, #fc3678 0%, #ff5a8f 100%)',
+                                    color: '#fff',
+                                    borderRadius: '50px',
+                                    fontWeight: '600',
+                                    fontSize: '16px',
+                                    textDecoration: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    boxShadow: '0 8px 24px rgba(252, 54, 120, 0.4)',
+                                    transition: 'all 0.3s ease'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.transform = 'translateY(-2px)';
+                                    e.currentTarget.style.boxShadow = '0 12px 32px rgba(252, 54, 120, 0.5)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.transform = 'translateY(0)';
+                                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(252, 54, 120, 0.4)';
+                                }}
+                            >
+                                <span style={{ fontSize: '20px' }}>⭐</span>
+                                Review on Yelp
+                            </a>
+
+                            <a
+                                href="https://www.google.com/search?q=a-ru+japanese+restaurant+buellton"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '10px',
+                                    padding: '14px 28px',
+                                    background: 'linear-gradient(135deg, #f1d00f 0%, #ffd700 100%)',
+                                    color: '#333',
+                                    borderRadius: '50px',
+                                    fontWeight: '600',
+                                    fontSize: '16px',
+                                    textDecoration: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    boxShadow: '0 8px 24px rgba(241, 208, 15, 0.4)',
+                                    transition: 'all 0.3s ease'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.transform = 'translateY(-2px)';
+                                    e.currentTarget.style.boxShadow = '0 12px 32px rgba(241, 208, 15, 0.5)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.transform = 'translateY(0)';
+                                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(241, 208, 15, 0.4)';
+                                }}
+                            >
+                                <span style={{ fontSize: '20px' }}>⭐</span>
+                                Review on Google
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
