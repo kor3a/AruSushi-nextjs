@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Head from 'next/head';
@@ -17,6 +17,12 @@ export default function SignUp() {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // Wait for client-side mount to prevent hydration issues
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -76,6 +82,19 @@ export default function SignUp() {
       [e.target.name]: e.target.value,
     });
   };
+
+  if (!mounted) {
+    return (
+      <>
+        <Head>
+          <title>Sign Up - A-Ru Sushi</title>
+        </Head>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>

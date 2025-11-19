@@ -71,6 +71,48 @@ export default function Cart() {
                 Browse Menu
               </Link>
             </div>
+          ) : !session ? (
+            <div className="bg-white p-8 rounded-lg shadow-md">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-6">
+                <p className="text-yellow-800 font-semibold mb-2">Sign in required</p>
+                <p className="text-yellow-700 text-sm mb-4">
+                  You need to sign in to proceed with checkout. Your cart will be saved.
+                </p>
+                <Link
+                  href="/auth/signin?returnUrl=/cart"
+                  className="inline-block bg-pink-600 text-white px-6 py-3 rounded-md hover:bg-pink-700 font-semibold"
+                >
+                  Sign In
+                </Link>
+                <span className="mx-3 text-gray-500">or</span>
+                <Link
+                  href="/auth/signup?returnUrl=/cart"
+                  className="inline-block bg-gray-200 text-gray-700 px-6 py-3 rounded-md hover:bg-gray-300 font-semibold"
+                >
+                  Create Account
+                </Link>
+              </div>
+
+              <div className="border-t pt-6">
+                <h2 className="text-xl font-semibold mb-4">Your Items</h2>
+                <div className="space-y-3">
+                  {items.map((item) => (
+                    <div key={item.id} className="flex justify-between text-sm border-b pb-2">
+                      <span>
+                        {item.name} x{item.quantity}
+                      </span>
+                      <span>${(item.price * item.quantity).toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="border-t mt-4 pt-4">
+                  <div className="flex justify-between font-bold">
+                    <span>Total:</span>
+                    <span className="text-pink-600">${totalPrice.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           ) : (
             <>
               <div className="bg-white rounded-lg shadow-md mb-6">
