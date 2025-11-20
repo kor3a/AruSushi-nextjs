@@ -17,8 +17,7 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
   const { items, getTotalPrice, clearCart } = useCart();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [deliveryAddress, setDeliveryAddress] = useState('');
-  const [deliveryPhone, setDeliveryPhone] = useState('');
+  const [phone, setPhone] = useState('');
   const [notes, setNotes] = useState('');
 
   const handleSubmit = async (e: FormEvent) => {
@@ -58,8 +57,7 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
           total: getTotalPrice(),
           paymentIntentId: paymentIntent.id,
           paymentStatus: paymentIntent.status === 'succeeded' ? 'paid' : 'pending',
-          deliveryAddress,
-          deliveryPhone,
+          deliveryPhone: phone,
           notes,
         }),
       });
@@ -82,19 +80,19 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
   return (
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <div>
-        <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: '#f1d00f' }}>Delivery Information</h3>
+        <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: '#f1d00f' }}>Pickup Information</h3>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div>
             <label htmlFor="phone" style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#ccc', marginBottom: '4px' }}>
-              Phone Number *
+              Contact Phone Number *
             </label>
             <input
               type="tel"
               id="phone"
               required
-              value={deliveryPhone}
-              onChange={(e) => setDeliveryPhone(e.target.value)}
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
               style={{
                 width: '100%',
                 padding: '12px',
@@ -106,31 +104,6 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
                 outline: 'none'
               }}
               placeholder="(555) 123-4567"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="address" style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#ccc', marginBottom: '4px' }}>
-              Delivery Address *
-            </label>
-            <textarea
-              id="address"
-              required
-              value={deliveryAddress}
-              onChange={(e) => setDeliveryAddress(e.target.value)}
-              rows={3}
-              style={{
-                width: '100%',
-                padding: '12px',
-                background: 'rgba(255, 255, 255, 0.08)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '8px',
-                color: '#fff',
-                fontSize: '14px',
-                outline: 'none',
-                resize: 'vertical'
-              }}
-              placeholder="123 Main St, City, State, ZIP"
             />
           </div>
 
@@ -154,7 +127,7 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
                 outline: 'none',
                 resize: 'vertical'
               }}
-              placeholder="Any special instructions for your order"
+              placeholder="Any special instructions for your pickup order"
             />
           </div>
         </div>
