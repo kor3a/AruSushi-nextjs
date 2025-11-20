@@ -103,80 +103,6 @@ export default function Cart() {
                 Browse Menu
               </Link>
             </div>
-          ) : !session ? (
-            <div style={{
-              background: 'rgba(255, 255, 255, 0.05)',
-              backdropFilter: 'blur(10px)',
-              padding: '40px',
-              borderRadius: '16px',
-              border: '1px solid rgba(252, 54, 120, 0.2)',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
-            }}>
-              <div style={{
-                background: 'rgba(241, 208, 15, 0.1)',
-                border: '1px solid rgba(241, 208, 15, 0.3)',
-                borderRadius: '8px',
-                padding: '24px',
-                marginBottom: '24px'
-              }}>
-                <p style={{ color: '#f1d00f', fontWeight: '600', marginBottom: '8px', fontSize: '16px' }}>Sign in required</p>
-                <p style={{ color: '#ccc', fontSize: '14px', marginBottom: '16px' }}>
-                  You need to sign in to proceed with checkout. Your cart will be saved.
-                </p>
-                <Link
-                  href="/auth/signin?returnUrl=/cart"
-                  style={{
-                    display: 'inline-block',
-                    background: '#fc3678',
-                    color: '#fff',
-                    padding: '12px 24px',
-                    borderRadius: '8px',
-                    fontWeight: '600',
-                    textDecoration: 'none',
-                    boxShadow: '0 4px 12px rgba(252, 54, 120, 0.3)',
-                    marginRight: '12px'
-                  }}
-                >
-                  Sign In
-                </Link>
-                <span style={{ color: '#999', margin: '0 12px' }}>or</span>
-                <Link
-                  href="/auth/signup?returnUrl=/cart"
-                  style={{
-                    display: 'inline-block',
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    color: '#fff',
-                    padding: '12px 24px',
-                    borderRadius: '8px',
-                    fontWeight: '600',
-                    textDecoration: 'none',
-                    border: '1px solid rgba(255, 255, 255, 0.2)'
-                  }}
-                >
-                  Create Account
-                </Link>
-              </div>
-
-              <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '24px' }}>
-                <h2 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '16px', color: '#f1d00f' }}>Your Items</h2>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {items.map((item) => (
-                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', paddingBottom: '8px', color: '#ccc' }}>
-                      <span>
-                        {item.name} x{item.quantity}
-                      </span>
-                      <span>${(item.price * item.quantity).toFixed(2)}</span>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', marginTop: '16px', paddingTop: '16px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
-                    <span style={{ color: '#fff' }}>Total:</span>
-                    <span style={{ color: '#fc3678', fontSize: '20px' }}>${totalPrice.toFixed(2)}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
           ) : (
             <>
               <div style={{
@@ -331,6 +257,21 @@ export default function Cart() {
                   </span>
                 </div>
 
+                {!session && (
+                  <div style={{
+                    background: 'rgba(241, 208, 15, 0.1)',
+                    border: '1px solid rgba(241, 208, 15, 0.3)',
+                    borderRadius: '8px',
+                    padding: '16px',
+                    marginBottom: '16px'
+                  }}>
+                    <p style={{ color: '#f1d00f', fontWeight: '600', marginBottom: '4px', fontSize: '14px' }}>Sign in to checkout</p>
+                    <p style={{ color: '#ccc', fontSize: '12px' }}>
+                      You'll need to sign in to complete your order
+                    </p>
+                  </div>
+                )}
+
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <button
                     onClick={() => clearCart()}
@@ -365,7 +306,7 @@ export default function Cart() {
                       transition: 'all 0.3s'
                     }}
                   >
-                    Proceed to Checkout
+                    {session ? 'Proceed to Checkout' : 'Sign In to Checkout'}
                   </button>
                 </div>
 
