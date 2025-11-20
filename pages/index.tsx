@@ -193,7 +193,7 @@ const HomePage = () => {
                             flexWrap: 'wrap'
                         }}>
                             <a
-                                href="https://www.yelp.com/biz/a-ru-japanese-restaurant-buellton"
+                                href="https://www.yelp.com/writeareview/biz/KB3eR6jtMOq9wm4ltrXxDA?return_url=%2Fbiz%2FKB3eR6jtMOq9wm4ltrXxDA&review_origin=biz-details-war-button"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 style={{
@@ -226,7 +226,7 @@ const HomePage = () => {
                             </a>
 
                             <a
-                                href="https://www.google.com/search?q=a-ru+japanese+restaurant+buellton"
+                                href="https://www.google.com/search?sca_esv=18637f1ce6371d1f&authuser=1&sxsrf=AE3TifOKEMPnt_yh7PNdrOtcqZa_fQutbw:1763675181203&q=aru+japanese+restaurant&si=AMgyJEuzsz2NflaaWzrzdpjxXXRaJ2hfdMsbe_mSWso6src8s4F6tWjRJOSO5C5cSzgAr6W8sFvdV2DFJFFYMsP3vRSf7ZWvKNDdpScF89NYNO8VwE-q1y_uv9qhv12HQCylTUZXE_9ouwvNY1ufQgVSW1aFjcX7qQ%3D%3D&sa=X&ved=2ahUKEwjQ27KF2oGRAxXnJ0QIHbxWO1gQrrQLegQIHBAA&biw=1920&bih=911&dpr=1"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 style={{
