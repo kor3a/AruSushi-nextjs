@@ -80,13 +80,13 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <div>
-        <h3 className="text-lg font-semibold mb-4">Delivery Information</h3>
+        <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: '#f1d00f' }}>Delivery Information</h3>
 
-        <div className="space-y-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div>
-            <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="phone" style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#ccc', marginBottom: '4px' }}>
               Phone Number *
             </label>
             <input
@@ -95,13 +95,22 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
               required
               value={deliveryPhone}
               onChange={(e) => setDeliveryPhone(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-pink-500 focus:border-pink-500"
+              style={{
+                width: '100%',
+                padding: '12px',
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '8px',
+                color: '#fff',
+                fontSize: '14px',
+                outline: 'none'
+              }}
               placeholder="(555) 123-4567"
             />
           </div>
 
           <div>
-            <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="address" style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#ccc', marginBottom: '4px' }}>
               Delivery Address *
             </label>
             <textarea
@@ -110,13 +119,23 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
               value={deliveryAddress}
               onChange={(e) => setDeliveryAddress(e.target.value)}
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-pink-500 focus:border-pink-500"
+              style={{
+                width: '100%',
+                padding: '12px',
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '8px',
+                color: '#fff',
+                fontSize: '14px',
+                outline: 'none',
+                resize: 'vertical'
+              }}
               placeholder="123 Main St, City, State, ZIP"
             />
           </div>
 
           <div>
-            <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="notes" style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#ccc', marginBottom: '4px' }}>
               Order Notes (Optional)
             </label>
             <textarea
@@ -124,7 +143,17 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={2}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-pink-500 focus:border-pink-500"
+              style={{
+                width: '100%',
+                padding: '12px',
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '8px',
+                color: '#fff',
+                fontSize: '14px',
+                outline: 'none',
+                resize: 'vertical'
+              }}
               placeholder="Any special instructions for your order"
             />
           </div>
@@ -132,12 +161,18 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
       </div>
 
       <div>
-        <h3 className="text-lg font-semibold mb-4">Payment Information</h3>
+        <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: '#f1d00f' }}>Payment Information</h3>
         <PaymentElement />
       </div>
 
       {error && (
-        <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+        <div style={{
+          padding: '12px',
+          background: 'rgba(255, 68, 68, 0.1)',
+          border: '1px solid rgba(255, 68, 68, 0.3)',
+          borderRadius: '8px',
+          color: '#ff4444'
+        }}>
           {error}
         </div>
       )}
@@ -145,7 +180,20 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
       <button
         type="submit"
         disabled={!stripe || loading}
-        className="w-full bg-pink-600 text-white py-3 rounded-md hover:bg-pink-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+        style={{
+          width: '100%',
+          padding: '14px 24px',
+          background: !stripe || loading ? 'rgba(252, 54, 120, 0.5)' : '#fc3678',
+          color: '#fff',
+          border: 'none',
+          borderRadius: '8px',
+          fontSize: '16px',
+          fontWeight: '600',
+          cursor: !stripe || loading ? 'not-allowed' : 'pointer',
+          boxShadow: '0 4px 12px rgba(252, 54, 120, 0.3)',
+          transition: 'all 0.3s',
+          opacity: !stripe || loading ? 0.5 : 1
+        }}
       >
         {loading ? 'Processing...' : `Pay $${getTotalPrice().toFixed(2)}`}
       </button>
@@ -214,8 +262,15 @@ export default function Checkout() {
           <title>Checkout - A-Ru Sushi</title>
         </Head>
         <Header />
-        <div className="min-h-screen bg-gray-50 py-12 px-4 flex items-center justify-center">
-          <p className="text-gray-600">Loading...</p>
+        <div style={{
+          minHeight: '100vh',
+          background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)',
+          padding: '140px 20px 60px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <p style={{ color: '#f1d00f', fontSize: '16px' }}>Loading...</p>
         </div>
         <Footer />
       </>
@@ -229,9 +284,19 @@ export default function Checkout() {
           <title>Checkout - A-Ru Sushi</title>
         </Head>
         <Header />
-        <div className="min-h-screen bg-gray-50 py-12 px-4">
-          <div className="max-w-2xl mx-auto">
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+        <div style={{
+          minHeight: '100vh',
+          background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)',
+          padding: '140px 20px 60px'
+        }}>
+          <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+            <div style={{
+              background: 'rgba(255, 68, 68, 0.1)',
+              border: '1px solid rgba(255, 68, 68, 0.3)',
+              borderRadius: '8px',
+              padding: '16px',
+              color: '#ff4444'
+            }}>
               {error}
             </div>
           </div>
@@ -251,15 +316,27 @@ export default function Checkout() {
 
       <Header />
 
-      <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-2xl mx-auto">
-          <h1 className="text-3xl font-bold text-gray-900 mb-8">Checkout</h1>
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)',
+        padding: '140px 20px 60px'
+      }}>
+        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+          <h1 style={{ fontSize: '36px', fontWeight: 'bold', color: '#f1d00f', marginBottom: '32px', textAlign: 'center' }}>Checkout</h1>
 
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
-            <div className="space-y-2">
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.05)',
+            backdropFilter: 'blur(10px)',
+            borderRadius: '16px',
+            border: '1px solid rgba(252, 54, 120, 0.2)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+            padding: '24px',
+            marginBottom: '24px'
+          }}>
+            <h2 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '16px', color: '#f1d00f' }}>Order Summary</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {items.map((item) => (
-                <div key={item.id} className="flex justify-between text-sm">
+                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#ccc' }}>
                   <span>
                     {item.name} x{item.quantity}
                   </span>
@@ -267,15 +344,22 @@ export default function Checkout() {
                 </div>
               ))}
             </div>
-            <div className="border-t mt-4 pt-4">
-              <div className="flex justify-between font-bold text-lg">
-                <span>Total:</span>
-                <span className="text-pink-600">${getTotalPrice().toFixed(2)}</span>
+            <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', marginTop: '16px', paddingTop: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '18px' }}>
+                <span style={{ color: '#fff' }}>Total:</span>
+                <span style={{ color: '#fc3678' }}>${getTotalPrice().toFixed(2)}</span>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.05)',
+            backdropFilter: 'blur(10px)',
+            borderRadius: '16px',
+            border: '1px solid rgba(252, 54, 120, 0.2)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+            padding: '24px'
+          }}>
             {clientSecret && (
               <Elements stripe={stripePromise} options={{ clientSecret }}>
                 <CheckoutForm clientSecret={clientSecret} />
