@@ -21,7 +21,6 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -30,6 +29,18 @@ export default function Profile() {
     newPassword: '',
     confirmPassword: '',
   });
+
+  // Check if form data has changed from the original profile
+  const hasChanges = () => {
+    if (!profile) return false;
+
+    const nameChanged = formData.name !== (profile.name || '');
+    const phoneChanged = formData.phone !== (profile.phone || '');
+    const addressChanged = formData.address !== (profile.address || '');
+    const passwordChanged = formData.currentPassword || formData.newPassword || formData.confirmPassword;
+
+    return nameChanged || phoneChanged || addressChanged || passwordChanged;
+  };
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -122,34 +133,20 @@ export default function Profile() {
 
       setProfile(data.user);
       setSuccess('Profile updated successfully!');
-      setEditing(false);
-      // Clear password fields
-      setFormData(prev => ({
-        ...prev,
+      // Update form data with new profile values and clear password fields
+      setFormData({
+        name: data.user.name || '',
+        phone: data.user.phone || '',
+        address: data.user.address || '',
         currentPassword: '',
         newPassword: '',
         confirmPassword: '',
-      }));
+      });
     } catch (err: any) {
       setError(err.message || 'An error occurred');
     }
   };
 
-  const handleCancel = () => {
-    if (profile) {
-      setFormData({
-        name: profile.name || '',
-        phone: profile.phone || '',
-        address: profile.address || '',
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: '',
-      });
-    }
-    setEditing(false);
-    setError('');
-    setSuccess('');
-  };
 
   if (status === 'loading' || loading) {
     return (
@@ -261,17 +258,15 @@ export default function Profile() {
                     name="name"
                     value={formData.name}
                     onChange={handleInputChange}
-                    disabled={!editing}
                     style={{
                       width: '100%',
                       padding: '12px',
-                      background: editing ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.03)',
+                      background: 'rgba(255, 255, 255, 0.08)',
                       border: '1px solid rgba(255, 255, 255, 0.1)',
                       borderRadius: '8px',
                       color: '#fff',
                       fontSize: '14px',
-                      outline: 'none',
-                      cursor: editing ? 'text' : 'not-allowed'
+                      outline: 'none'
                     }}
                     placeholder="Your name"
                   />
@@ -287,17 +282,15 @@ export default function Profile() {
                     name="phone"
                     value={formData.phone}
                     onChange={handleInputChange}
-                    disabled={!editing}
                     style={{
                       width: '100%',
                       padding: '12px',
-                      background: editing ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.03)',
+                      background: 'rgba(255, 255, 255, 0.08)',
                       border: '1px solid rgba(255, 255, 255, 0.1)',
                       borderRadius: '8px',
                       color: '#fff',
                       fontSize: '14px',
-                      outline: 'none',
-                      cursor: editing ? 'text' : 'not-allowed'
+                      outline: 'none'
                     }}
                     placeholder="Your phone number"
                   />
@@ -312,29 +305,26 @@ export default function Profile() {
                     name="address"
                     value={formData.address}
                     onChange={handleInputChange}
-                    disabled={!editing}
                     rows={3}
                     style={{
                       width: '100%',
                       padding: '12px',
-                      background: editing ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.03)',
+                      background: 'rgba(255, 255, 255, 0.08)',
                       border: '1px solid rgba(255, 255, 255, 0.1)',
                       borderRadius: '8px',
                       color: '#fff',
                       fontSize: '14px',
                       outline: 'none',
                       resize: 'vertical',
-                      cursor: editing ? 'text' : 'not-allowed',
                       fontFamily: 'inherit'
                     }}
                     placeholder="Your address"
                   />
                 </div>
 
-                {/* Password Change Section - Only shown when editing */}
-                {editing && (
-                  <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '24px', marginTop: '8px' }}>
-                    <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#f1d00f', marginBottom: '16px' }}>Change Password (Optional)</h2>
+                {/* Password Change Section */}
+                <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '24px', marginTop: '8px' }}>
+                  <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#f1d00f', marginBottom: '16px' }}>Change Password (Optional)</h2>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                       <div>
@@ -406,8 +396,7 @@ export default function Profile() {
                         />
                       </div>
                     </div>
-                  </div>
-                )}
+                </div>
 
                 {/* Member Since */}
                 <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '16px' }}>
@@ -417,90 +406,40 @@ export default function Profile() {
                   </p>
                 </div>
 
-                {/* Action Buttons */}
-                <div style={{ display: 'flex', gap: '16px', paddingTop: '8px' }}>
-                  {!editing ? (
-                    <button
-                      type="button"
-                      onClick={() => setEditing(true)}
-                      style={{
-                        flex: 1,
-                        padding: '14px 24px',
-                        background: '#fc3678',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '8px',
-                        fontSize: '16px',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        boxShadow: '0 4px 12px rgba(252, 54, 120, 0.3)',
-                        transition: 'all 0.3s'
-                      }}
-                      onMouseEnter={(e) => {
+                {/* Update Button */}
+                <div style={{ paddingTop: '8px' }}>
+                  <button
+                    type="submit"
+                    disabled={!hasChanges()}
+                    style={{
+                      width: '100%',
+                      padding: '14px 24px',
+                      background: hasChanges() ? '#fc3678' : 'rgba(252, 54, 120, 0.3)',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '16px',
+                      fontWeight: '600',
+                      cursor: hasChanges() ? 'pointer' : 'not-allowed',
+                      boxShadow: hasChanges() ? '0 4px 12px rgba(252, 54, 120, 0.3)' : 'none',
+                      transition: 'all 0.3s',
+                      opacity: hasChanges() ? 1 : 0.6
+                    }}
+                    onMouseEnter={(e) => {
+                      if (hasChanges()) {
                         e.currentTarget.style.background = '#e32a68';
                         e.currentTarget.style.transform = 'translateY(-2px)';
-                      }}
-                      onMouseLeave={(e) => {
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (hasChanges()) {
                         e.currentTarget.style.background = '#fc3678';
                         e.currentTarget.style.transform = 'translateY(0)';
-                      }}
-                    >
-                      Edit Profile
-                    </button>
-                  ) : (
-                    <>
-                      <button
-                        type="submit"
-                        style={{
-                          flex: 1,
-                          padding: '14px 24px',
-                          background: '#fc3678',
-                          color: '#fff',
-                          border: 'none',
-                          borderRadius: '8px',
-                          fontSize: '16px',
-                          fontWeight: '600',
-                          cursor: 'pointer',
-                          boxShadow: '0 4px 12px rgba(252, 54, 120, 0.3)',
-                          transition: 'all 0.3s'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = '#e32a68';
-                          e.currentTarget.style.transform = 'translateY(-2px)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = '#fc3678';
-                          e.currentTarget.style.transform = 'translateY(0)';
-                        }}
-                      >
-                        Save Changes
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleCancel}
-                        style={{
-                          flex: 1,
-                          padding: '14px 24px',
-                          background: 'rgba(255, 255, 255, 0.1)',
-                          color: '#fff',
-                          border: '1px solid rgba(255, 255, 255, 0.2)',
-                          borderRadius: '8px',
-                          fontSize: '16px',
-                          fontWeight: '600',
-                          cursor: 'pointer',
-                          transition: 'all 0.3s'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                        }}
-                      >
-                        Cancel
-                      </button>
-                    </>
-                  )}
+                      }
+                    }}
+                  >
+                    Update
+                  </button>
                 </div>
               </div>
             </form>
