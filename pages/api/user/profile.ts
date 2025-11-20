@@ -52,9 +52,9 @@ export default async function handler(
 
         const hashedPassword = await bcrypt.hash(newPassword, 10);
         await db.updateUser(session.user.id, {
-          name: name || user.name,
-          phone: phone || user.phone,
-          address: address || user.address,
+          name: name || null,
+          phone: phone || null,
+          address: address || null,
           password: hashedPassword,
         });
       } else {
