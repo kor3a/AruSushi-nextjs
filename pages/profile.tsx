@@ -158,8 +158,15 @@ export default function Profile() {
           <title>Profile - A-Ru Sushi</title>
         </Head>
         <Header />
-        <div className="min-h-screen bg-gray-50 py-12 px-4 flex items-center justify-center">
-          <p className="text-gray-600">Loading...</p>
+        <div style={{
+          minHeight: '100vh',
+          background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)',
+          padding: '140px 20px 60px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <p style={{ color: '#f1d00f', fontSize: '16px' }}>Loading...</p>
         </div>
         <Footer />
       </>
@@ -176,42 +183,77 @@ export default function Profile() {
 
       <Header />
 
-      <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-2xl mx-auto">
-          <h1 className="text-3xl font-bold text-gray-900 mb-8">My Profile</h1>
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)',
+        padding: '140px 20px 60px'
+      }}>
+        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+          <h1 style={{ fontSize: '36px', fontWeight: 'bold', color: '#f1d00f', marginBottom: '32px', textAlign: 'center' }}>My Profile</h1>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+            <div style={{
+              marginBottom: '24px',
+              padding: '16px',
+              background: 'rgba(255, 68, 68, 0.1)',
+              border: '1px solid rgba(255, 68, 68, 0.3)',
+              borderRadius: '8px',
+              color: '#ff4444'
+            }}>
               {error}
             </div>
           )}
 
           {success && (
-            <div className="mb-6 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
+            <div style={{
+              marginBottom: '24px',
+              padding: '16px',
+              background: 'rgba(76, 175, 80, 0.1)',
+              border: '1px solid rgba(76, 175, 80, 0.3)',
+              borderRadius: '8px',
+              color: '#4caf50'
+            }}>
               {success}
             </div>
           )}
 
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.05)',
+            backdropFilter: 'blur(10px)',
+            borderRadius: '16px',
+            border: '1px solid rgba(252, 54, 120, 0.2)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+            padding: '32px'
+          }}>
             <form onSubmit={handleSubmit}>
-              <div className="space-y-6">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 {/* Email (read-only) */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#f1d00f', marginBottom: '8px' }}>
                     Email
                   </label>
                   <input
                     type="email"
                     value={profile?.email || ''}
                     disabled
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-600 cursor-not-allowed"
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      background: 'rgba(255, 255, 255, 0.03)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '8px',
+                      color: '#999',
+                      fontSize: '14px',
+                      outline: 'none',
+                      cursor: 'not-allowed'
+                    }}
                   />
-                  <p className="mt-1 text-xs text-gray-500">Email cannot be changed</p>
+                  <p style={{ marginTop: '4px', fontSize: '12px', color: '#888' }}>Email cannot be changed</p>
                 </div>
 
                 {/* Name */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#ccc', marginBottom: '8px' }}>
                     Name
                   </label>
                   <input
@@ -220,16 +262,24 @@ export default function Profile() {
                     value={formData.name}
                     onChange={handleInputChange}
                     disabled={!editing}
-                    className={`w-full px-4 py-2 border border-gray-300 rounded-md ${
-                      editing ? 'bg-white' : 'bg-gray-50'
-                    }`}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      background: editing ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.03)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '8px',
+                      color: '#fff',
+                      fontSize: '14px',
+                      outline: 'none',
+                      cursor: editing ? 'text' : 'not-allowed'
+                    }}
                     placeholder="Your name"
                   />
                 </div>
 
                 {/* Phone */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#ccc', marginBottom: '8px' }}>
                     Phone
                   </label>
                   <input
@@ -238,16 +288,24 @@ export default function Profile() {
                     value={formData.phone}
                     onChange={handleInputChange}
                     disabled={!editing}
-                    className={`w-full px-4 py-2 border border-gray-300 rounded-md ${
-                      editing ? 'bg-white' : 'bg-gray-50'
-                    }`}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      background: editing ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.03)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '8px',
+                      color: '#fff',
+                      fontSize: '14px',
+                      outline: 'none',
+                      cursor: editing ? 'text' : 'not-allowed'
+                    }}
                     placeholder="Your phone number"
                   />
                 </div>
 
                 {/* Address */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#ccc', marginBottom: '8px' }}>
                     Address
                   </label>
                   <textarea
@@ -256,21 +314,31 @@ export default function Profile() {
                     onChange={handleInputChange}
                     disabled={!editing}
                     rows={3}
-                    className={`w-full px-4 py-2 border border-gray-300 rounded-md ${
-                      editing ? 'bg-white' : 'bg-gray-50'
-                    }`}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      background: editing ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.03)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '8px',
+                      color: '#fff',
+                      fontSize: '14px',
+                      outline: 'none',
+                      resize: 'vertical',
+                      cursor: editing ? 'text' : 'not-allowed',
+                      fontFamily: 'inherit'
+                    }}
                     placeholder="Your address"
                   />
                 </div>
 
                 {/* Password Change Section - Only shown when editing */}
                 {editing && (
-                  <div className="border-t pt-6 mt-6">
-                    <h2 className="text-lg font-semibold text-gray-900 mb-4">Change Password (Optional)</h2>
+                  <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '24px', marginTop: '8px' }}>
+                    <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#f1d00f', marginBottom: '16px' }}>Change Password (Optional)</h2>
 
-                    <div className="space-y-4">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#ccc', marginBottom: '8px' }}>
                           Current Password
                         </label>
                         <input
@@ -278,13 +346,22 @@ export default function Profile() {
                           name="currentPassword"
                           value={formData.currentPassword}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-md"
+                          style={{
+                            width: '100%',
+                            padding: '12px',
+                            background: 'rgba(255, 255, 255, 0.08)',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: '8px',
+                            color: '#fff',
+                            fontSize: '14px',
+                            outline: 'none'
+                          }}
                           placeholder="Enter current password"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#ccc', marginBottom: '8px' }}>
                           New Password
                         </label>
                         <input
@@ -292,13 +369,22 @@ export default function Profile() {
                           name="newPassword"
                           value={formData.newPassword}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-md"
+                          style={{
+                            width: '100%',
+                            padding: '12px',
+                            background: 'rgba(255, 255, 255, 0.08)',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: '8px',
+                            color: '#fff',
+                            fontSize: '14px',
+                            outline: 'none'
+                          }}
                           placeholder="Enter new password (min. 6 characters)"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#ccc', marginBottom: '8px' }}>
                           Confirm New Password
                         </label>
                         <input
@@ -306,7 +392,16 @@ export default function Profile() {
                           name="confirmPassword"
                           value={formData.confirmPassword}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-md"
+                          style={{
+                            width: '100%',
+                            padding: '12px',
+                            background: 'rgba(255, 255, 255, 0.08)',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: '8px',
+                            color: '#fff',
+                            fontSize: '14px',
+                            outline: 'none'
+                          }}
                           placeholder="Confirm new password"
                         />
                       </div>
@@ -315,20 +410,40 @@ export default function Profile() {
                 )}
 
                 {/* Member Since */}
-                <div className="border-t pt-4">
-                  <p className="text-sm text-gray-600">
-                    <strong>Member since:</strong>{' '}
+                <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '16px' }}>
+                  <p style={{ fontSize: '14px', color: '#ccc' }}>
+                    <strong style={{ color: '#f1d00f' }}>Member since:</strong>{' '}
                     {profile?.createdAt && new Date(profile.createdAt).toLocaleDateString()}
                   </p>
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex gap-4 pt-4">
+                <div style={{ display: 'flex', gap: '16px', paddingTop: '8px' }}>
                   {!editing ? (
                     <button
                       type="button"
                       onClick={() => setEditing(true)}
-                      className="flex-1 bg-pink-600 text-white px-6 py-3 rounded-md hover:bg-pink-700 font-medium"
+                      style={{
+                        flex: 1,
+                        padding: '14px 24px',
+                        background: '#fc3678',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '16px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 12px rgba(252, 54, 120, 0.3)',
+                        transition: 'all 0.3s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#e32a68';
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = '#fc3678';
+                        e.currentTarget.style.transform = 'translateY(0)';
+                      }}
                     >
                       Edit Profile
                     </button>
@@ -336,14 +451,51 @@ export default function Profile() {
                     <>
                       <button
                         type="submit"
-                        className="flex-1 bg-pink-600 text-white px-6 py-3 rounded-md hover:bg-pink-700 font-medium"
+                        style={{
+                          flex: 1,
+                          padding: '14px 24px',
+                          background: '#fc3678',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: '8px',
+                          fontSize: '16px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          boxShadow: '0 4px 12px rgba(252, 54, 120, 0.3)',
+                          transition: 'all 0.3s'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = '#e32a68';
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = '#fc3678';
+                          e.currentTarget.style.transform = 'translateY(0)';
+                        }}
                       >
                         Save Changes
                       </button>
                       <button
                         type="button"
                         onClick={handleCancel}
-                        className="flex-1 bg-gray-300 text-gray-700 px-6 py-3 rounded-md hover:bg-gray-400 font-medium"
+                        style={{
+                          flex: 1,
+                          padding: '14px 24px',
+                          background: 'rgba(255, 255, 255, 0.1)',
+                          color: '#fff',
+                          border: '1px solid rgba(255, 255, 255, 0.2)',
+                          borderRadius: '8px',
+                          fontSize: '16px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          transition: 'all 0.3s'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                        }}
                       >
                         Cancel
                       </button>
