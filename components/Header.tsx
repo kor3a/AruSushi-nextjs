@@ -59,10 +59,9 @@ const Header = () => {
         </Link>
         {session ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span style={{ fontSize: '14px', color: '#f1d00f' }}>
-              <FaUser size={16} style={{ marginRight: '5px', color: '#f1d00f' }} />
-              {session.user.name || session.user.email}
-            </span>
+            <Link href="/profile" style={{ color: '#f1d00f', display: 'flex', alignItems: 'center' }} title="Profile">
+              <FaUser size={18} style={{ color: '#f1d00f' }} />
+            </Link>
             <button
               onClick={() => signOut()}
               style={{
