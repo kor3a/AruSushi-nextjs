@@ -46,33 +46,33 @@ export interface RestaurantInfo {
 export const restaurantInfo: RestaurantInfo = {
   name: "Aru Sushi",
   description: "Authentic Japanese cuisine featuring fresh sushi, sashimi, and traditional dishes. We pride ourselves on using the highest quality ingredients and traditional preparation methods.",
-  phone: "(555) 123-4567",
+  phone: "(805)686-9001",
   email: "info@arusushi.com",
   address: {
-    street: "123 Main Street",
-    city: "Your City",
-    state: "ST",
-    zip: "12345"
+    street: "225 McMurray Rd Ste D",
+    city: "Buellton",
+    state: "CA",
+    zip: "93427"
   },
   hours: {
-    monday: "11:00 AM - 9:00 PM",
+    monday: "Closed",
     tuesday: "11:00 AM - 9:00 PM",
     wednesday: "11:00 AM - 9:00 PM",
     thursday: "11:00 AM - 9:00 PM",
-    friday: "11:00 AM - 10:00 PM",
-    saturday: "12:00 PM - 10:00 PM",
-    sunday: "12:00 PM - 9:00 PM"
+    friday: "11:00 AM - 9:00 PM",
+    saturday: "4:00 PM - 9:00 PM",
+    sunday: "4:00 PM - 9:00 PM"
   },
   specialHours: [
     {
-      date: "2024-12-25",
+      date: "2025-12-25",
       hours: "Closed",
       note: "Christmas Day"
     },
     {
-      date: "2024-12-31",
-      hours: "11:00 AM - 6:00 PM",
-      note: "New Year's Eve"
+      date: "2026-01-01",
+      hours: "Closed",
+      note: "New Year's Day"
     }
   ],
   deliveryInfo: {
