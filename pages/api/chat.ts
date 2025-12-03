@@ -187,6 +187,10 @@ const functions = [
 
 // Build the system prompt with full context
 function buildSystemPrompt(userName?: string): string {
+  const hoursDisplay = Object.entries(restaurantInfo.hours)
+    .map(([day, hours]) => `  • ${day.charAt(0).toUpperCase() + day.slice(1)}: ${hours}`)
+    .join('\n');
+
   const menuContext = `
 MENU KNOWLEDGE:
 You have access to our complete menu with ${lunchMenu.length + dinnerMenu.length} categories:
@@ -198,17 +202,19 @@ Total items available: ${[...lunchMenu, ...dinnerMenu].reduce((sum, cat) => sum 
 `;
 
   const restaurantContext = `
-RESTAURANT INFORMATION:
-- Name: ${restaurantInfo.name}
-- Phone: ${restaurantInfo.phone}
-- Email: ${restaurantInfo.email}
-- Address: ${restaurantInfo.address.street}, ${restaurantInfo.address.city}, ${restaurantInfo.address.state} ${restaurantInfo.address.zip}
+RESTAURANT INFORMATION (USE EXACTLY AS PROVIDED):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📍 Name: ${restaurantInfo.name}
+📞 Phone: ${restaurantInfo.phone}
+✉️ Email: ${restaurantInfo.email}
+📍 Address: ${restaurantInfo.address.street}, ${restaurantInfo.address.city}, ${restaurantInfo.address.state} ${restaurantInfo.address.zip}
 
-HOURS:
-${Object.entries(restaurantInfo.hours).map(([day, hours]) => `- ${day.charAt(0).toUpperCase() + day.slice(1)}: ${hours}`).join('\n')}
+⏰ OPERATING HOURS (EXACT - DO NOT MODIFY):
+${hoursDisplay}
 
-DELIVERY: ${restaurantInfo.deliveryInfo.available ? `Available - $${restaurantInfo.deliveryInfo.deliveryFee} fee, $${restaurantInfo.deliveryInfo.minimumOrder} minimum, ${restaurantInfo.deliveryInfo.estimatedTime}` : 'Not available'}
-PICKUP: ${restaurantInfo.pickupInfo.available ? `Available - ${restaurantInfo.pickupInfo.estimatedTime}` : 'Not available'}
+🚗 DELIVERY: ${restaurantInfo.deliveryInfo.available ? `Available - $${restaurantInfo.deliveryInfo.deliveryFee} fee, $${restaurantInfo.deliveryInfo.minimumOrder} minimum order, ${restaurantInfo.deliveryInfo.estimatedTime}` : 'Not available'}
+🏪 PICKUP: ${restaurantInfo.pickupInfo.available ? `Available - Ready in ${restaurantInfo.pickupInfo.estimatedTime}` : 'Not available'}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `;
 
   const greeting = userName ? `The user's name is ${userName}.` : '';
@@ -218,6 +224,15 @@ PICKUP: ${restaurantInfo.pickupInfo.available ? `Available - ${restaurantInfo.pi
 ${menuContext}
 
 ${restaurantContext}
+
+⚠️ CRITICAL RULES - NEVER VIOLATE:
+1. **NEVER INVENT OR GUESS INFORMATION** - Only use data provided above
+2. **OPERATING HOURS** - Always cite the exact hours listed above, never make up different times
+3. **PRICES** - Only mention prices from the menu data, never estimate
+4. **MENU ITEMS** - Only recommend items that exist in the menu
+5. **RESTAURANT INFO** - Use exact phone, address, and contact details as listed
+6. If you don't know something, say "Let me check on that" and use the appropriate function
+7. If information isn't available, admit it - don't make it up
 
 YOUR CAPABILITIES:
 1. **Menu Expert**: Answer questions about any dish, ingredients, preparation methods, and Japanese cuisine
@@ -289,7 +304,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       messages,
       functions,
       function_call: 'auto',
-      temperature: 0.7,
+      temperature: 0.3, // Lower temperature for more factual, consistent responses
       max_tokens: 500,
     });
 
@@ -410,7 +425,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         messages,
         functions,
         function_call: 'auto',
-        temperature: 0.7,
+        temperature: 0.3, // Lower temperature for more factual, consistent responses
         max_tokens: 500,
       });
 
