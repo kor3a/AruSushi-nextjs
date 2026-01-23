@@ -63,11 +63,20 @@ Please prepare this order as soon as possible.
   try {
     const command = new SendEmailCommand(params);
     const result = await ses.send(command);
-    console.log('Email sent successfully:', result.MessageId);
+    console.log('Restaurant notification email sent successfully:', result.MessageId);
     return result;
-  } catch (error) {
-    console.error('Error sending email:', error);
-    throw error;
+  } catch (error: any) {
+    // Handle AWS SES errors
+    if (error.name === 'MessageRejected') {
+      console.warn(
+        `Could not send restaurant notification email: Email address not verified in AWS SES. ` +
+        `This is normal in development/sandbox mode. Order was still created successfully.`
+      );
+    } else {
+      console.error('Error sending restaurant notification email:', error.message || error);
+    }
+    // Don't throw error - order creation should succeed even if email fails
+    return null;
   }
 }
 
@@ -127,8 +136,19 @@ Thank you for choosing A-Ru Sushi!
     const result = await ses.send(command);
     console.log('Confirmation email sent successfully:', result.MessageId);
     return result;
-  } catch (error) {
-    console.error('Error sending confirmation email:', error);
-    // Don't throw error for customer email failures
+  } catch (error: any) {
+    // Handle AWS SES errors gracefully
+    if (error.name === 'MessageRejected') {
+      // Email address not verified in SES (common in sandbox mode)
+      console.warn(
+        `Could not send confirmation email to ${order.customerEmail}: Email address not verified in AWS SES. ` +
+        `This is normal in development/sandbox mode. Order was still created successfully.`
+      );
+    } else {
+      // Other email errors
+      console.error('Error sending confirmation email:', error.message || error);
+    }
+    // Don't throw error - order creation should succeed even if email fails
+    return null;
   }
 }
