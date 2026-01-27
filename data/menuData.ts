@@ -86,12 +86,96 @@ export const lunchMenu: MenuCategory[] = [
         price: 19.95,
         description:
           'Beef Teriyaki, Chicken Teriyaki, Salmon Teriyaki, Spicy Pork, Shrimp & Vegetable Tempura, Gyoza, Chicken Cutlet, California & Spicy Tuna roll, Sushi 5pcs',
+        options: [
+          {
+            label: '1st Choice',
+            name: 'firstChoice',
+            required: true,
+            choices: [
+              'Chicken Teriyaki',
+              'Beef Teriyaki',
+              'Chicken Cutlet',
+              'Spicy Pork',
+              'Salmon Teriyaki',
+              'Shrimp & Veggie Tempura',
+              'Gyoza',
+              'California & Spicy Tuna roll',
+              'Sushi 5pcs'
+            ]
+          },
+          {
+            label: '2nd Choice',
+            name: 'secondChoice',
+            required: true,
+            choices: [
+              'Chicken Teriyaki',
+              'Beef Teriyaki',
+              'Chicken Cutlet',
+              'Spicy Pork',
+              'Salmon Teriyaki',
+              'Shrimp & Veggie Tempura',
+              'Gyoza',
+              'California & Spicy Tuna roll',
+              'Sushi 5pcs'
+            ]
+          }
+        ]
       },
       {
         name: 'Choose Any 3 Different Items',
         price: 24.95,
         description:
           'Beef Teriyaki, Chicken Teriyaki, Salmon Teriyaki, Spicy Pork, Shrimp & Vegetable Tempura, Gyoza, Chicken Cutlet, California & Spicy Tuna roll, Sushi 5pcs',
+        options: [
+          {
+            label: '1st Choice',
+            name: 'firstChoice',
+            required: true,
+            choices: [
+              'Chicken Teriyaki',
+              'Beef Teriyaki',
+              'Chicken Cutlet',
+              'Spicy Pork',
+              'Salmon Teriyaki',
+              'Shrimp & Veggie Tempura',
+              'Gyoza',
+              'California & Spicy Tuna roll',
+              'Sushi 5pcs'
+            ]
+          },
+          {
+            label: '2nd Choice',
+            name: 'secondChoice',
+            required: true,
+            choices: [
+              'Chicken Teriyaki',
+              'Beef Teriyaki',
+              'Chicken Cutlet',
+              'Spicy Pork',
+              'Salmon Teriyaki',
+              'Shrimp & Veggie Tempura',
+              'Gyoza',
+              'California & Spicy Tuna roll',
+              'Sushi 5pcs'
+            ]
+          },
+          {
+            label: '3rd Choice',
+            name: 'thirdChoice',
+            required: true,
+            choices: [
+              'Chicken Teriyaki',
+              'Beef Teriyaki',
+              'Chicken Cutlet',
+              'Spicy Pork',
+              'Salmon Teriyaki',
+              'Shrimp & Veggie Tempura',
+              'Gyoza',
+              'California & Spicy Tuna roll',
+              'Sushi 5pcs'
+            ]
+          },
+        ]
       },
     ],
   },
@@ -111,11 +195,6 @@ export const lunchMenu: MenuCategory[] = [
     image: '/img/carte.png',
     items: [
       { name: 'Sashimi Combination', price: 29.5 },
-      {
-        name: 'Hot Stone Bibimbap',
-        price: 21.95,
-        description: 'Korean style beef, vegetables, and egg over rice'
-      },
       {
         name: 'Fried Rice',
         price: 14.95,
