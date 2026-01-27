@@ -60,6 +60,26 @@ export const lunchMenu: MenuCategory[] = [
         price: 21.9,
         description:
           "5pcs sushi of Chef's choice & customer's choice of 1 roll (911 roll, Alaskan roll, Aloha roll, Caterpillar roll, Crunchy roll, Dragon roll, Fire Cracker roll, Shrimp roll, Baked Salmon roll, Rainbow roll, Red Dragon roll)",
+        options: [
+          {
+            label: 'Choice',
+            name: 'Roll Choice',
+            required: true,
+            choices: [
+              '911 roll',
+              'Alaskan roll',
+              'Aloha roll',
+              'Caterpillar roll',
+              'Crunchy roll',
+              'Dragon roll',
+              'Fire Cracker roll',
+              'Shrimp roll',
+              'Baked Salmon roll',
+              'Rainbow roll',
+              'Red Dragon roll',
+            ]
+          },
+        ]
       },
       {
         name: 'Choose Any 2 Different Items',
