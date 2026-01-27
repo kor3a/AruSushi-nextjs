@@ -15,6 +15,7 @@ export default function MenuItem({ name, price, description, options }: MenuItem
   const [added, setAdded] = useState(false);
   const [specialNotes, setSpecialNotes] = useState('');
   const [showNotes, setShowNotes] = useState(false);
+  const [showOptions, setShowOptions] = useState(false);
   const [selectedOptions, setSelectedOptions] = useState<{ [key: string]: string }>({});
 
   const handleOptionChange = (optionName: string, value: string) => {
@@ -35,6 +36,13 @@ export default function MenuItem({ name, price, description, options }: MenuItem
   };
 
   const handleAddToCart = () => {
+    // If item has options and they're not shown yet, show them instead of adding
+    if (options && options.length > 0 && !showOptions) {
+      setShowOptions(true);
+      return;
+    }
+
+    // If options are required but not all selected, don't add
     if (options && !areRequiredOptionsSelected()) {
       return;
     }
@@ -42,6 +50,7 @@ export default function MenuItem({ name, price, description, options }: MenuItem
     addItem({ name, price }, 1, specialNotes, options ? selectedOptions : undefined);
     setAdded(true);
     setShowNotes(false);
+    setShowOptions(false);
     setSpecialNotes('');
     setSelectedOptions({});
 
@@ -64,7 +73,7 @@ export default function MenuItem({ name, price, description, options }: MenuItem
       )}
 
       <div style={{ marginTop: '10px' }}>
-        {options && options.length > 0 && (
+        {options && options.length > 0 && showOptions && (
           <div style={{ marginBottom: '15px', padding: '12px', background: '#f9f9f9', borderRadius: '8px', border: '1px solid #e0e0e0' }}>
             {options.map((option) => (
               <div key={option.name} style={{ marginBottom: '12px' }}>
@@ -117,14 +126,14 @@ export default function MenuItem({ name, price, description, options }: MenuItem
         <div style={{ display: 'flex', gap: '10px' }}>
           <button
             onClick={handleAddToCart}
-            disabled={added || (options && !areRequiredOptionsSelected())}
+            disabled={added || (showOptions && options && !areRequiredOptionsSelected())}
             style={{
-              background: added ? '#10b981' : (options && !areRequiredOptionsSelected()) ? '#ccc' : '#fc3678',
+              background: added ? '#10b981' : (showOptions && options && !areRequiredOptionsSelected()) ? '#ccc' : '#fc3678',
               color: 'white',
               border: 'none',
               padding: '8px 16px',
               borderRadius: '4px',
-              cursor: (added || (options && !areRequiredOptionsSelected())) ? 'not-allowed' : 'pointer',
+              cursor: (added || (showOptions && options && !areRequiredOptionsSelected())) ? 'not-allowed' : 'pointer',
               fontSize: '14px',
               fontWeight: 'bold',
               display: 'flex',
@@ -132,7 +141,7 @@ export default function MenuItem({ name, price, description, options }: MenuItem
               gap: '5px',
               transition: 'all 0.3s'
             }}
-            title={options && !areRequiredOptionsSelected() ? 'Please select all required options' : ''}
+            title={showOptions && options && !areRequiredOptionsSelected() ? 'Please select all required options' : ''}
           >
             {added ? (
               <>
