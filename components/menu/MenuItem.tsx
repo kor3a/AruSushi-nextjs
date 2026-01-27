@@ -1,24 +1,58 @@
 import { useState } from 'react';
 import { useCart } from '../../contexts/CartContext';
 import { FaShoppingCart, FaCheck } from 'react-icons/fa';
+import { MenuItemOption } from '../../data/menuData';
 
 interface MenuItemProps {
   name: string;
   price: number;
   description?: string;
+  options?: MenuItemOption[];
 }
 
-export default function MenuItem({ name, price, description }: MenuItemProps) {
+export default function MenuItem({ name, price, description, options }: MenuItemProps) {
   const { addItem } = useCart();
   const [added, setAdded] = useState(false);
   const [specialNotes, setSpecialNotes] = useState('');
   const [showNotes, setShowNotes] = useState(false);
+  const [showOptions, setShowOptions] = useState(false);
+  const [selectedOptions, setSelectedOptions] = useState<{ [key: string]: string }>({});
+
+  const handleOptionChange = (optionName: string, value: string) => {
+    setSelectedOptions(prev => ({
+      ...prev,
+      [optionName]: value
+    }));
+  };
+
+  const areRequiredOptionsSelected = () => {
+    if (!options) return true;
+    return options.every(option => {
+      if (option.required) {
+        return selectedOptions[option.name] && selectedOptions[option.name].trim() !== '';
+      }
+      return true;
+    });
+  };
 
   const handleAddToCart = () => {
-    addItem({ name, price }, 1, specialNotes);
+    // If item has options and they're not shown yet, show them instead of adding
+    if (options && options.length > 0 && !showOptions) {
+      setShowOptions(true);
+      return;
+    }
+
+    // If options are required but not all selected, don't add
+    if (options && !areRequiredOptionsSelected()) {
+      return;
+    }
+    
+    addItem({ name, price }, 1, specialNotes, options ? selectedOptions : undefined);
     setAdded(true);
     setShowNotes(false);
+    setShowOptions(false);
     setSpecialNotes('');
+    setSelectedOptions({});
 
     // Reset the "added" state after 2 seconds
     setTimeout(() => setAdded(false), 2000);
@@ -39,6 +73,38 @@ export default function MenuItem({ name, price, description }: MenuItemProps) {
       )}
 
       <div style={{ marginTop: '10px' }}>
+        {options && options.length > 0 && showOptions && (
+          <div style={{ marginBottom: '15px', padding: '12px', background: '#f9f9f9', borderRadius: '8px', border: '1px solid #e0e0e0' }}>
+            {options.map((option) => (
+              <div key={option.name} style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', color: '#333', fontSize: '14px' }}>
+                  {option.label} {option.required && <span style={{ color: '#fc3678' }}>*</span>}
+                </label>
+                <select
+                  value={selectedOptions[option.name] || ''}
+                  onChange={(e) => handleOptionChange(option.name, e.target.value)}
+                  required={option.required}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    borderRadius: '4px',
+                    border: '1px solid #ddd',
+                    fontSize: '14px',
+                    background: 'white'
+                  }}
+                >
+                  <option value="">-- Select {option.label} --</option>
+                  {option.choices.map((choice) => (
+                    <option key={choice} value={choice}>
+                      {choice}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ))}
+          </div>
+        )}
+
         {showNotes && (
           <div style={{ marginBottom: '10px' }}>
             <input
@@ -60,14 +126,14 @@ export default function MenuItem({ name, price, description }: MenuItemProps) {
         <div style={{ display: 'flex', gap: '10px' }}>
           <button
             onClick={handleAddToCart}
-            disabled={added}
+            disabled={added || (showOptions && options && !areRequiredOptionsSelected())}
             style={{
-              background: added ? '#10b981' : '#fc3678',
+              background: added ? '#10b981' : (showOptions && options && !areRequiredOptionsSelected()) ? '#ccc' : '#fc3678',
               color: 'white',
               border: 'none',
               padding: '8px 16px',
               borderRadius: '4px',
-              cursor: added ? 'default' : 'pointer',
+              cursor: (added || (showOptions && options && !areRequiredOptionsSelected())) ? 'not-allowed' : 'pointer',
               fontSize: '14px',
               fontWeight: 'bold',
               display: 'flex',
@@ -75,6 +141,7 @@ export default function MenuItem({ name, price, description }: MenuItemProps) {
               gap: '5px',
               transition: 'all 0.3s'
             }}
+            title={showOptions && options && !areRequiredOptionsSelected() ? 'Please select all required options' : ''}
           >
             {added ? (
               <>

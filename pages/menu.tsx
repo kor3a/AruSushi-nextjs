@@ -44,6 +44,7 @@ const MenuPage = () => (
                     name={item.name}
                     price={item.price}
                     description={item.description}
+                    options={item.options}
                   />
                 ))}
               </div>
@@ -67,6 +68,7 @@ const MenuPage = () => (
                     name={item.name}
                     price={item.price}
                     description={item.description}
+                    options={item.options}
                   />
                 ))}
               </div>
