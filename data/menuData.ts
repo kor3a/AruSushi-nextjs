@@ -26,7 +26,7 @@ export const lunchMenu: MenuCategory[] = [
     items: [
       {
         name: 'Lunch Bento Special: Choice of 2 Items below',
-        price: 18.95,
+        price: 19.95,
         description:
           '*Served with miso soup, rice, and salad. (1st choice: Chicken Teriyaki, Beef Teriyaki, Chicken Cutlet, Spicy Sesame Chicken, Salmon Teriyaki, Shrimp & Veggie Tempura) (2nd choice: Sashimi, Sushi, California roll, Spicy Albacore Roll)',
         options: [
@@ -58,7 +58,7 @@ export const lunchMenu: MenuCategory[] = [
       },
       {
         name: 'Special Combination',
-        price: 21.9,
+        price: 24.95,
         description:
           "5pcs sushi of Chef's choice & customer's choice of 1 roll (911 roll, Alaskan roll, Aloha roll, Caterpillar roll, Crunchy roll, Dragon roll, Fire Cracker roll, Shrimp roll, Baked Salmon roll, Rainbow roll, Red Dragon roll)",
         options: [
@@ -84,7 +84,7 @@ export const lunchMenu: MenuCategory[] = [
       },
       {
         name: 'Choose Any 2 Different Items',
-        price: 19.95,
+        price: 21.95,
         description:
           'Beef Teriyaki, Chicken Teriyaki, Salmon Teriyaki, Spicy Pork, Shrimp & Vegetable Tempura, Gyoza, Chicken Cutlet, California & Spicy Tuna roll, Sushi 5pcs',
         options: [
@@ -124,7 +124,7 @@ export const lunchMenu: MenuCategory[] = [
       },
       {
         name: 'Choose Any 3 Different Items',
-        price: 24.95,
+        price: 26.95,
         description:
           'Beef Teriyaki, Chicken Teriyaki, Salmon Teriyaki, Spicy Pork, Shrimp & Vegetable Tempura, Gyoza, Chicken Cutlet, California & Spicy Tuna roll, Sushi 5pcs',
         options: [
@@ -186,7 +186,7 @@ export const lunchMenu: MenuCategory[] = [
     items: [
       {
         name: 'Sashimi Salad',
-        price: 19.95,
+        price: 21.95,
         description: 'Assorted fish with mixed salad and ginger dressing'
       },
     ],
@@ -195,10 +195,10 @@ export const lunchMenu: MenuCategory[] = [
     category: 'A La Carte',
     image: '/img/carte.png',
     items: [
-      { name: 'Sashimi Combination', price: 29.5 },
+      { name: 'Sashimi Combination', price: 29.50 },
       {
         name: 'Fried Rice',
-        price: 14.95,
+        price: 15.95,
         description: 'Chicken, shrimp, and vegetables'
       },
     ],
@@ -209,12 +209,12 @@ export const lunchMenu: MenuCategory[] = [
     items: [
       {
         name: 'Udon with choice of one item below',
-        price: 16.95,
+        price: 19.95,
         description: 'Roll (California or Spicy tuna) or Shrimp & Vegetable Tempura'
       },
       {
         name: 'Ramen',
-        price: 13.5,
+        price: 13.50,
         description: 'Mild or Spicy Korean style ramen noodle (Add-ons: ham(+$1.50), cheese(+$1.00), egg(+$1.00), rice cake(+$1.00))'
       },
     ],
@@ -225,7 +225,7 @@ export const lunchMenu: MenuCategory[] = [
     items: [
       {
         name: 'Bulgogi Bowl',
-        price: 16.95,
+        price: 19.95,
         description: 'Korean marinated beef bulgogi & vegetables over rice'
       },
       {
