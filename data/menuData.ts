@@ -3,6 +3,7 @@ export interface MenuItemOption {
   name: string;
   required: boolean;
   choices: string[];
+  choicePrices?: { [key: string]: number };
 }
 
 export interface MenuItemData {
@@ -537,18 +538,174 @@ export const dinnerMenu: MenuCategory[] = [
     category: 'Basic Rolls',
     image: '/img/Rolls.png',
     items: [
-      { name: 'Tuna Roll', price: 11.5, description: 'Hand: $9.50 | Cut: $11.50' },
-      { name: 'California Roll', price: 10.5, description: 'Hand: $9.50 | Cut: $10.50' },
-      { name: 'Spicy Tuna Roll', price: 9.5, description: 'Hand: $8.50 | Cut: $9.50' },
-      { name: 'Cucumber Roll', price: 7.95, description: 'Hand: $5.50 | Cut: $7.95' },
-      { name: 'Salmon Skin Roll', price: 8.95, description: 'Hand: $7.50 | Cut: $8.95' },
-      { name: 'Scallop Roll', price: 9.5, description: 'Hand: $7.50 | Cut: $9.50' },
-      { name: 'Yellowtail Roll', price: 10.95, description: 'Hand: $9.50 | Cut: $10.95' },
-      { name: 'Salmon Roll', price: 9.5, description: 'Hand: $8.50 | Cut: $9.50' },
-      { name: 'Avocado Roll', price: 8.5, description: 'Hand: $7.50 | Cut: $8.50' },
-      { name: 'Unagi Roll', price: 11.5, description: 'Hand: $9.50 | Cut: $11.50' },
-      { name: 'Shrimp Tempura Roll', price: 13.5, description: 'Hand: $9.50 | Cut: $13.50' },
-      { name: 'Albacore Tempura Roll', price: 12.5, description: 'Hand: $9.50 | Cut: $12.50' },
+      {
+        name: 'Tuna Roll',
+        price: 11.5,
+        description: 'Hand: $9.50 | Cut: $11.50',
+        options: [
+          {
+            label: 'Roll Type',
+            name: 'rollType',
+            required: true,
+            choices: ['Hand Roll', 'Cut Roll'],
+            choicePrices: { 'Hand Roll': 9.5, 'Cut Roll': 11.5 }
+          }
+        ]
+      },
+      {
+        name: 'California Roll',
+        price: 10.5,
+        description: 'Hand: $9.50 | Cut: $10.50',
+        options: [
+          {
+            label: 'Roll Type',
+            name: 'rollType',
+            required: true,
+            choices: ['Hand Roll', 'Cut Roll'],
+            choicePrices: { 'Hand Roll': 9.5, 'Cut Roll': 10.5 }
+          }
+        ]
+      },
+      {
+        name: 'Spicy Tuna Roll',
+        price: 9.5,
+        description: 'Hand: $8.50 | Cut: $9.50',
+        options: [
+          {
+            label: 'Roll Type',
+            name: 'rollType',
+            required: true,
+            choices: ['Hand Roll', 'Cut Roll'],
+            choicePrices: { 'Hand Roll': 8.5, 'Cut Roll': 9.5 }
+          }
+        ]
+      },
+      {
+        name: 'Cucumber Roll',
+        price: 7.95,
+        description: 'Hand: $5.50 | Cut: $7.95',
+        options: [
+          {
+            label: 'Roll Type',
+            name: 'rollType',
+            required: true,
+            choices: ['Hand Roll', 'Cut Roll'],
+            choicePrices: { 'Hand Roll': 5.5, 'Cut Roll': 7.95 }
+          }
+        ]
+      },
+      {
+        name: 'Salmon Skin Roll',
+        price: 8.95,
+        description: 'Hand: $7.50 | Cut: $8.95',
+        options: [
+          {
+            label: 'Roll Type',
+            name: 'rollType',
+            required: true,
+            choices: ['Hand Roll', 'Cut Roll'],
+            choicePrices: { 'Hand Roll': 7.5, 'Cut Roll': 8.95 }
+          }
+        ]
+      },
+      {
+        name: 'Scallop Roll',
+        price: 9.5,
+        description: 'Hand: $7.50 | Cut: $9.50',
+        options: [
+          {
+            label: 'Roll Type',
+            name: 'rollType',
+            required: true,
+            choices: ['Hand Roll', 'Cut Roll'],
+            choicePrices: { 'Hand Roll': 7.5, 'Cut Roll': 9.5 }
+          }
+        ]
+      },
+      {
+        name: 'Yellowtail Roll',
+        price: 10.95,
+        description: 'Hand: $9.50 | Cut: $10.95',
+        options: [
+          {
+            label: 'Roll Type',
+            name: 'rollType',
+            required: true,
+            choices: ['Hand Roll', 'Cut Roll'],
+            choicePrices: { 'Hand Roll': 9.5, 'Cut Roll': 10.95 }
+          }
+        ]
+      },
+      {
+        name: 'Salmon Roll',
+        price: 9.5,
+        description: 'Hand: $8.50 | Cut: $9.50',
+        options: [
+          {
+            label: 'Roll Type',
+            name: 'rollType',
+            required: true,
+            choices: ['Hand Roll', 'Cut Roll'],
+            choicePrices: { 'Hand Roll': 8.5, 'Cut Roll': 9.5 }
+          }
+        ]
+      },
+      {
+        name: 'Avocado Roll',
+        price: 8.5,
+        description: 'Hand: $7.50 | Cut: $8.50',
+        options: [
+          {
+            label: 'Roll Type',
+            name: 'rollType',
+            required: true,
+            choices: ['Hand Roll', 'Cut Roll'],
+            choicePrices: { 'Hand Roll': 7.5, 'Cut Roll': 8.5 }
+          }
+        ]
+      },
+      {
+        name: 'Unagi Roll',
+        price: 11.5,
+        description: 'Hand: $9.50 | Cut: $11.50',
+        options: [
+          {
+            label: 'Roll Type',
+            name: 'rollType',
+            required: true,
+            choices: ['Hand Roll', 'Cut Roll'],
+            choicePrices: { 'Hand Roll': 9.5, 'Cut Roll': 11.5 }
+          }
+        ]
+      },
+      {
+        name: 'Shrimp Tempura Roll',
+        price: 13.5,
+        description: 'Hand: $9.50 | Cut: $13.50',
+        options: [
+          {
+            label: 'Roll Type',
+            name: 'rollType',
+            required: true,
+            choices: ['Hand Roll', 'Cut Roll'],
+            choicePrices: { 'Hand Roll': 9.5, 'Cut Roll': 13.5 }
+          }
+        ]
+      },
+      {
+        name: 'Albacore Tempura Roll',
+        price: 12.5,
+        description: 'Hand: $9.50 | Cut: $12.50',
+        options: [
+          {
+            label: 'Roll Type',
+            name: 'rollType',
+            required: true,
+            choices: ['Hand Roll', 'Cut Roll'],
+            choicePrices: { 'Hand Roll': 9.5, 'Cut Roll': 12.5 }
+          }
+        ]
+      },
     ],
   },
   {

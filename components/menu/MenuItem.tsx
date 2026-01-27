@@ -35,6 +35,27 @@ export default function MenuItem({ name, price, description, options }: MenuItem
     });
   };
 
+  const calculatePrice = (): number => {
+    if (!options || options.length === 0) {
+      return price;
+    }
+
+    // Find the first option that has choicePrices and a selected value
+    for (const option of options) {
+      if (option.choicePrices && selectedOptions[option.name]) {
+        const selectedChoice = selectedOptions[option.name];
+        if (option.choicePrices[selectedChoice] !== undefined) {
+          return option.choicePrices[selectedChoice];
+        }
+      }
+    }
+
+    // If no price found from options, return base price
+    return price;
+  };
+
+  const currentPrice = calculatePrice();
+
   const handleAddToCart = () => {
     // If item has options and they're not shown yet, show them instead of adding
     if (options && options.length > 0 && !showOptions) {
@@ -47,7 +68,7 @@ export default function MenuItem({ name, price, description, options }: MenuItem
       return;
     }
     
-    addItem({ name, price }, 1, specialNotes, options ? selectedOptions : undefined);
+    addItem({ name, price: currentPrice }, 1, specialNotes, options ? selectedOptions : undefined);
     setAdded(true);
     setShowNotes(false);
     setShowOptions(false);
@@ -63,7 +84,7 @@ export default function MenuItem({ name, price, description, options }: MenuItem
       <div className="item-info">
         <h3 id="name">{name}</h3>
         <span className="dots"></span>
-        <h3 id="price">${price.toFixed(2)}</h3>
+        <h3 id="price">${currentPrice.toFixed(2)}</h3>
       </div>
 
       {description && (
@@ -96,7 +117,7 @@ export default function MenuItem({ name, price, description, options }: MenuItem
                   <option value="">-- Select {option.label} --</option>
                   {option.choices.map((choice) => (
                     <option key={choice} value={choice}>
-                      {choice}
+                      {choice}{option.choicePrices && option.choicePrices[choice] !== undefined ? ` ($${option.choicePrices[choice].toFixed(2)})` : ''}
                     </option>
                   ))}
                 </select>
