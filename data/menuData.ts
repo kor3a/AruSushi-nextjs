@@ -1,7 +1,15 @@
+export interface MenuItemOption {
+  label: string;
+  name: string;
+  required: boolean;
+  choices: string[];
+}
+
 export interface MenuItemData {
   name: string;
   price: number;
   description?: string;
+  options?: MenuItemOption[];
 }
 
 export interface MenuCategory {
@@ -20,6 +28,32 @@ export const lunchMenu: MenuCategory[] = [
         price: 18.95,
         description:
           '*Served with miso soup, rice, and salad. (1st choice: Chicken Teriyaki, Beef Teriyaki, Chicken Cutlet, Spicy Sesame Chicken, Salmon Teriyaki, Shrimp & Veggie Tempura) (2nd choice: Sashimi, Sushi, California roll, Spicy Albacore Roll)',
+        options: [
+          {
+            label: '1st Choice',
+            name: 'firstChoice',
+            required: true,
+            choices: [
+              'Chicken Teriyaki',
+              'Beef Teriyaki',
+              'Chicken Cutlet',
+              'Spicy Sesame Chicken',
+              'Salmon Teriyaki',
+              'Shrimp & Veggie Tempura'
+            ]
+          },
+          {
+            label: '2nd Choice',
+            name: 'secondChoice',
+            required: true,
+            choices: [
+              'Sashimi',
+              'Sushi',
+              'California Roll',
+              'Spicy Albacore Roll'
+            ]
+          }
+        ]
       },
       {
         name: 'Special Combination',
