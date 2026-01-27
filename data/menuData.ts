@@ -4,6 +4,8 @@ export interface MenuItemOption {
   required: boolean;
   choices: string[];
   choicePrices?: { [key: string]: number };
+  isMultiSelect?: boolean;
+  addonPrices?: { [key: string]: number };
 }
 
 export interface MenuItemData {
@@ -210,12 +212,41 @@ export const lunchMenu: MenuCategory[] = [
       {
         name: 'Udon with choice of one item below',
         price: 19.95,
-        description: 'Roll (California or Spicy tuna) or Shrimp & Vegetable Tempura'
+        description: 'Roll (California or Spicy tuna) or Shrimp & Vegetable Tempura',
+        options: [
+          {
+            label: 'Choose One Item',
+            name: 'udonChoice',
+            required: true,
+            choices: ['California Roll', 'Spicy Tuna Roll', 'Shrimp & Vegetable Tempura']
+          }
+        ]
       },
       {
         name: 'Ramen',
         price: 13.50,
-        description: 'Mild or Spicy Korean style ramen noodle (Add-ons: ham(+$1.50), cheese(+$1.00), egg(+$1.00), rice cake(+$1.00))'
+        description: 'Mild or Spicy Korean style ramen noodle (Add-ons: ham(+$1.50), cheese(+$1.00), egg(+$1.00), rice cake(+$1.00))',
+        options: [
+          {
+            label: 'Spice Level',
+            name: 'spiceLevel',
+            required: true,
+            choices: ['Mild', 'Spicy']
+          },
+          {
+            label: 'Add-ons',
+            name: 'addons',
+            required: false,
+            choices: ['Ham', 'Cheese', 'Egg', 'Rice Cake'],
+            isMultiSelect: true,
+            addonPrices: {
+              'Ham': 1.50,
+              'Cheese': 1.00,
+              'Egg': 1.00,
+              'Rice Cake': 1.00
+            }
+          }
+        ]
       },
     ],
   },

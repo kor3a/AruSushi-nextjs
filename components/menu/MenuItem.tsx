@@ -16,7 +16,7 @@ export default function MenuItem({ name, price, description, options }: MenuItem
   const [specialNotes, setSpecialNotes] = useState('');
   const [showNotes, setShowNotes] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
-  const [selectedOptions, setSelectedOptions] = useState<{ [key: string]: string }>({});
+  const [selectedOptions, setSelectedOptions] = useState<{ [key: string]: string | string[] }>({});
 
   const handleOptionChange = (optionName: string, value: string) => {
     setSelectedOptions(prev => ({
@@ -25,11 +25,31 @@ export default function MenuItem({ name, price, description, options }: MenuItem
     }));
   };
 
+  const handleMultiSelectChange = (optionName: string, choice: string, checked: boolean) => {
+    setSelectedOptions(prev => {
+      const current = prev[optionName] as string[] || [];
+      if (checked) {
+        return { ...prev, [optionName]: [...current, choice] };
+      } else {
+        return { ...prev, [optionName]: current.filter(c => c !== choice) };
+      }
+    });
+  };
+
+  const isAddonSelected = (optionName: string, choice: string): boolean => {
+    const selected = selectedOptions[optionName] as string[] || [];
+    return selected.includes(choice);
+  };
+
   const areRequiredOptionsSelected = () => {
     if (!options) return true;
     return options.every(option => {
       if (option.required) {
-        return selectedOptions[option.name] && selectedOptions[option.name].trim() !== '';
+        const value = selectedOptions[option.name];
+        if (Array.isArray(value)) {
+          return value.length > 0;
+        }
+        return value && String(value).trim() !== '';
       }
       return true;
     });
@@ -40,18 +60,32 @@ export default function MenuItem({ name, price, description, options }: MenuItem
       return price;
     }
 
-    // Find the first option that has choicePrices and a selected value
+    let calculatedPrice = price;
+
+    // Check for choicePrices (single select with price)
     for (const option of options) {
       if (option.choicePrices && selectedOptions[option.name]) {
         const selectedChoice = selectedOptions[option.name];
-        if (option.choicePrices[selectedChoice] !== undefined) {
-          return option.choicePrices[selectedChoice];
+        if (typeof selectedChoice === 'string' && option.choicePrices[selectedChoice] !== undefined) {
+          calculatedPrice = option.choicePrices[selectedChoice];
+          break; // Use the first matching price option
         }
       }
     }
 
-    // If no price found from options, return base price
-    return price;
+    // Add add-on prices
+    for (const option of options) {
+      if (option.addonPrices && option.isMultiSelect) {
+        const selectedAddons = selectedOptions[option.name] as string[] || [];
+        selectedAddons.forEach(addon => {
+          if (option.addonPrices && option.addonPrices[addon] !== undefined) {
+            calculatedPrice += option.addonPrices[addon];
+          }
+        });
+      }
+    }
+
+    return calculatedPrice;
   };
 
   const currentPrice = calculatePrice();
@@ -68,7 +102,19 @@ export default function MenuItem({ name, price, description, options }: MenuItem
       return;
     }
     
-    addItem({ name, price: currentPrice }, 1, specialNotes, options ? selectedOptions : undefined);
+    // Convert arrays to comma-separated strings for storage
+    const optionsForCart: { [key: string]: string } = {};
+    if (options) {
+      Object.entries(selectedOptions).forEach(([key, value]) => {
+        if (Array.isArray(value)) {
+          optionsForCart[key] = value.join(', ');
+        } else {
+          optionsForCart[key] = String(value);
+        }
+      });
+    }
+    
+    addItem({ name, price: currentPrice }, 1, specialNotes, options ? optionsForCart : undefined);
     setAdded(true);
     setShowNotes(false);
     setShowOptions(false);
@@ -101,26 +147,61 @@ export default function MenuItem({ name, price, description, options }: MenuItem
                 <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', color: '#333', fontSize: '14px' }}>
                   {option.label} {option.required && <span style={{ color: '#fc3678' }}>*</span>}
                 </label>
-                <select
-                  value={selectedOptions[option.name] || ''}
-                  onChange={(e) => handleOptionChange(option.name, e.target.value)}
-                  required={option.required}
-                  style={{
-                    width: '100%',
-                    padding: '8px',
-                    borderRadius: '4px',
-                    border: '1px solid #ddd',
-                    fontSize: '14px',
-                    background: 'white'
-                  }}
-                >
-                  <option value="">-- Select {option.label} --</option>
-                  {option.choices.map((choice) => (
-                    <option key={choice} value={choice}>
-                      {choice}{option.choicePrices && option.choicePrices[choice] !== undefined ? ` ($${option.choicePrices[choice].toFixed(2)})` : ''}
-                    </option>
-                  ))}
-                </select>
+                {option.isMultiSelect ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {option.choices.map((choice) => (
+                      <label
+                        key={choice}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          cursor: 'pointer',
+                          padding: '6px',
+                          borderRadius: '4px',
+                          background: isAddonSelected(option.name, choice) ? '#e8f5e9' : 'white',
+                          border: '1px solid #ddd'
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isAddonSelected(option.name, choice)}
+                          onChange={(e) => handleMultiSelectChange(option.name, choice, e.target.checked)}
+                          style={{ cursor: 'pointer' }}
+                        />
+                        <span style={{ fontSize: '14px' }}>
+                          {choice}
+                          {option.addonPrices && option.addonPrices[choice] !== undefined && (
+                            <span style={{ color: '#666', marginLeft: '8px' }}>
+                              (+${option.addonPrices[choice].toFixed(2)})
+                            </span>
+                          )}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                ) : (
+                  <select
+                    value={typeof selectedOptions[option.name] === 'string' ? selectedOptions[option.name] as string : ''}
+                    onChange={(e) => handleOptionChange(option.name, e.target.value)}
+                    required={option.required}
+                    style={{
+                      width: '100%',
+                      padding: '8px',
+                      borderRadius: '4px',
+                      border: '1px solid #ddd',
+                      fontSize: '14px',
+                      background: 'white'
+                    }}
+                  >
+                    <option value="">-- Select {option.label} --</option>
+                    {option.choices.map((choice) => (
+                      <option key={choice} value={choice}>
+                        {choice}{option.choicePrices && option.choicePrices[choice] !== undefined ? ` ($${option.choicePrices[choice].toFixed(2)})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
             ))}
           </div>

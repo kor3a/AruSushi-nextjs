@@ -135,8 +135,11 @@ export default function Cart() {
                               <strong style={{ color: '#f1d00f' }}>
                                 {key === 'firstChoice' ? '1st Choice' : 
                                  key === 'secondChoice' ? '2nd Choice' : 
-                                 key === 'rollType' ? 'Roll Type' : key}:
-                              </strong> {value}
+                                 key === 'rollType' ? 'Roll Type' :
+                                 key === 'udonChoice' ? 'Choice' :
+                                 key === 'spiceLevel' ? 'Spice Level' :
+                                 key === 'addons' ? 'Add-ons' : key}:
+                              </strong> {String(value)}
                             </div>
                           ))}
                         </div>
