@@ -6,11 +6,12 @@ export interface CartItem {
   price: number;
   quantity: number;
   specialNotes?: string;
+  options?: { [key: string]: string };
 }
 
 interface CartContextType {
   items: CartItem[];
-  addItem: (item: Omit<CartItem, 'id' | 'quantity'>, quantity?: number, specialNotes?: string) => void;
+  addItem: (item: Omit<CartItem, 'id' | 'quantity'>, quantity?: number, specialNotes?: string, options?: { [key: string]: string }) => void;
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
   updateSpecialNotes: (id: string, notes: string) => void;
@@ -49,12 +50,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const addItem = (
     item: Omit<CartItem, 'id' | 'quantity'>,
     quantity: number = 1,
-    specialNotes?: string
+    specialNotes?: string,
+    options?: { [key: string]: string }
   ) => {
     setItems((currentItems) => {
-      // Check if item already exists in cart
+      // Check if item already exists in cart with same options
       const existingItemIndex = currentItems.findIndex(
-        (cartItem) => cartItem.name === item.name && cartItem.specialNotes === specialNotes
+        (cartItem) => {
+          const sameName = cartItem.name === item.name;
+          const sameNotes = cartItem.specialNotes === specialNotes;
+          const sameOptions = JSON.stringify(cartItem.options) === JSON.stringify(options);
+          return sameName && sameNotes && sameOptions;
+        }
       );
 
       if (existingItemIndex > -1) {
@@ -71,6 +78,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
             id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             quantity,
             specialNotes,
+            options,
           },
         ];
       }

@@ -128,6 +128,23 @@ export default function Cart() {
                       <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#f1d00f' }}>{item.name}</h3>
                       <p style={{ color: '#ccc', marginTop: '4px' }}>${item.price.toFixed(2)} each</p>
 
+                      {item.options && Object.keys(item.options).length > 0 && (
+                        <div style={{ marginTop: '8px', fontSize: '14px', color: '#ccc' }}>
+                          {Object.entries(item.options).map(([key, value]) => (
+                            <div key={key} style={{ marginBottom: '4px' }}>
+                              <strong style={{ color: '#f1d00f' }}>
+                                {key === 'firstChoice' ? '1st Choice' : 
+                                 key === 'secondChoice' ? '2nd Choice' : 
+                                 key === 'rollType' ? 'Roll Type' :
+                                 key === 'udonChoice' ? 'Choice' :
+                                 key === 'spiceLevel' ? 'Spice Level' :
+                                 key === 'addons' ? 'Add-ons' : key}:
+                              </strong> {String(value)}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
                       {item.specialNotes && !editingNotes[item.id] && (
                         <div style={{ marginTop: '8px', fontSize: '14px', color: '#ccc' }}>
                           <strong style={{ color: '#f1d00f' }}>Note:</strong> {item.specialNotes}
