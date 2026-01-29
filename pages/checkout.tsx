@@ -1,7 +1,7 @@
 import { useState, useEffect, FormEvent } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '../contexts/AuthContext';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import Header from '../components/Header';
@@ -176,7 +176,7 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
 
 export default function Checkout() {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { user, loading: authLoading } = useAuth();
   const { items, getTotalPrice } = useCart();
   const [clientSecret, setClientSecret] = useState('');
   const [loading, setLoading] = useState(true);
@@ -184,7 +184,7 @@ export default function Checkout() {
 
   useEffect(() => {
     // Redirect to sign in if not authenticated
-    if (status === 'unauthenticated') {
+    if (!authLoading && !user) {
       router.push('/auth/signin?returnUrl=/checkout');
       return;
     }
@@ -195,7 +195,7 @@ export default function Checkout() {
       return;
     }
 
-    if (status === 'authenticated' && items.length > 0) {
+    if (user && items.length > 0) {
       // Create payment intent
       const createPaymentIntent = async () => {
         try {
@@ -226,9 +226,9 @@ export default function Checkout() {
 
       createPaymentIntent();
     }
-  }, [status, items, router, getTotalPrice]);
+  }, [user, authLoading, items, router, getTotalPrice]);
 
-  if (status === 'loading' || loading) {
+  if (authLoading || loading) {
     return (
       <>
         <Head>

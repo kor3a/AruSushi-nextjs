@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '../contexts/AuthContext';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 
@@ -16,7 +16,7 @@ interface UserProfile {
 
 export default function Profile() {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { user, loading: authLoading } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -43,15 +43,15 @@ export default function Profile() {
   };
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
+    if (!authLoading && !user) {
       router.push('/auth/signin?returnUrl=/profile');
       return;
     }
 
-    if (status === 'authenticated') {
+    if (user) {
       fetchProfile();
     }
-  }, [status, router]);
+  }, [user, authLoading, router]);
 
   const fetchProfile = async () => {
     try {
@@ -148,7 +148,7 @@ export default function Profile() {
   };
 
 
-  if (status === 'loading' || loading) {
+  if (authLoading || loading) {
     return (
       <>
         <Head>

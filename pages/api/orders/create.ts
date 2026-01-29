@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../../lib/auth/config';
+import { createApiClient } from '../../../lib/supabase/server';
 import { db } from '../../../lib/db';
 import {
   sendOrderNotificationToRestaurant,
@@ -16,9 +15,11 @@ export default async function handler(
   }
 
   try {
-    // Check if user is authenticated
-    const session = await getServerSession(req, res, authOptions);
-    if (!session || !session.user) {
+    // Check if user is authenticated with Supabase
+    const supabase = createApiClient(req, res);
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
@@ -41,6 +42,16 @@ export default async function handler(
       return res.status(400).json({ message: 'Invalid total amount' });
     }
 
+    // Ensure user profile exists in our database
+    let dbUser = await db.findUserById(user.id);
+    if (!dbUser) {
+      dbUser = await db.createUser({
+        id: user.id,
+        email: user.email!,
+        name: user.user_metadata?.name || null,
+      });
+    }
+
     // Create order items
     const orderItems = items.map((item: any) => ({
       id: item.id,
@@ -52,7 +63,7 @@ export default async function handler(
 
     // Create order
     const order = await db.createOrder({
-      userId: session.user.id,
+      userId: user.id,
       items: orderItems,
       total,
       status: 'pending',
@@ -60,8 +71,8 @@ export default async function handler(
       paymentStatus: paymentStatus || 'pending',
       deliveryAddress,
       deliveryPhone,
-      customerName: session.user.name || undefined,
-      customerEmail: session.user.email,
+      customerName: user.user_metadata?.name || dbUser.name || undefined,
+      customerEmail: user.email,
       notes,
     });
 

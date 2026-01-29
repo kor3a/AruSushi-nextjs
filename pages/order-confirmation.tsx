@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '../contexts/AuthContext';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { FaCheckCircle, FaClock } from 'react-icons/fa';
@@ -10,18 +10,18 @@ import { FaCheckCircle, FaClock } from 'react-icons/fa';
 export default function OrderConfirmation() {
   const router = useRouter();
   const { orderId } = router.query;
-  const { data: session, status } = useSession();
+  const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
+    if (!authLoading && !user) {
       router.push('/auth/signin');
-    } else if (status === 'authenticated') {
+    } else if (user) {
       setLoading(false);
     }
-  }, [status, router]);
+  }, [user, authLoading, router]);
 
-  if (status === 'loading' || loading) {
+  if (authLoading || loading) {
     return (
       <>
         <Head>
@@ -78,7 +78,7 @@ export default function OrderConfirmation() {
                   <strong>Confirmation Email Sent</strong>
                   <br />
                   We've sent a confirmation email to{' '}
-                  <span className="font-semibold">{session?.user?.email}</span>
+                  <span className="font-semibold">{user?.email}</span>
                 </p>
               </div>
 

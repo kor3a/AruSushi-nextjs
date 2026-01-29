@@ -1,28 +1,28 @@
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '../contexts/AuthContext';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { Order } from '../lib/db';
 
 export default function MyOrders() {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { user, loading: authLoading } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
+    if (!authLoading && !user) {
       router.push('/auth/signin?returnUrl=/my-orders');
       return;
     }
 
-    if (status === 'authenticated') {
+    if (user) {
       fetchOrders();
     }
-  }, [status, router]);
+  }, [user, authLoading, router]);
 
   const fetchOrders = async () => {
     try {
@@ -53,7 +53,7 @@ export default function MyOrders() {
     return colors[status] || 'bg-gray-100 text-gray-800';
   };
 
-  if (status === 'loading' || loading) {
+  if (authLoading || loading) {
     return (
       <>
         <Head>

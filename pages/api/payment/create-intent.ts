@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../../lib/auth/config';
+import { createApiClient } from '../../../lib/supabase/server';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -16,9 +15,11 @@ export default async function handler(
   }
 
   try {
-    // Check if user is authenticated
-    const session = await getServerSession(req, res, authOptions);
-    if (!session || !session.user) {
+    // Check if user is authenticated with Supabase
+    const supabase = createApiClient(req, res);
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
@@ -38,9 +39,9 @@ export default async function handler(
       amount: Math.round(amount * 100), // Convert to cents
       currency: 'usd',
       metadata: {
-        userId: session.user.id,
-        userEmail: session.user.email,
-        userName: session.user.name || '',
+        userId: user.id,
+        userEmail: user.email || '',
+        userName: user.user_metadata?.name || '',
         deliveryAddress: deliveryAddress || '',
         deliveryPhone: deliveryPhone || '',
         notes: notes || '',
