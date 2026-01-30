@@ -1,7 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import OpenAI from 'openai';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/config';
+import { createApiClient } from '@/lib/supabase/server';
 import { lunchMenu, dinnerMenu, MenuItemData, MenuCategory } from '@/data/menuData';
 import { restaurantInfo, popularItems, menuSuggestions } from '@/data/restaurantInfo';
 import { db } from '@/lib/db';
@@ -280,10 +279,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Message is required' });
     }
 
-    // Get user session if available
-    const session = await getServerSession(req, res, authOptions);
-    const userName = session?.user?.name || undefined;
-    const userId = session?.user?.id;
+    // Get user session if available from Supabase
+    const supabase = createApiClient(req, res);
+    const { data: { user } } = await supabase.auth.getUser();
+    const userName = user?.user_metadata?.name || undefined;
+    const userId = user?.id;
 
     // Build messages array with system prompt and conversation history
     const messages: any[] = [

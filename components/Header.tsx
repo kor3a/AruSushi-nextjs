@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useSession, signOut } from 'next-auth/react';
+import { useRouter } from 'next/router';
+import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
 import { FaShoppingCart, FaUser, FaSignOutAlt, FaSignInAlt } from 'react-icons/fa';
 
 const Header = () => {
-  const { data: session } = useSession();
+  const { user, signOut } = useAuth();
+  const router = useRouter();
   const { getTotalItems, items } = useCart();
   const [cartItemsCount, setCartItemsCount] = useState(0);
   const [mounted, setMounted] = useState(false);
@@ -31,6 +33,11 @@ const Header = () => {
     setIsMenuOpen(false);
   };
 
+  const handleSignOut = async () => {
+    await signOut();
+    router.push('/');
+  };
+
   return (
     <header>
       <Link href="/" className="logo">
@@ -39,7 +46,7 @@ const Header = () => {
       <nav className={`navbar ${isMenuOpen ? 'active' : ''}`}>
         <Link href="/" onClick={closeMenu}>Home</Link>
         <Link href="/menu" onClick={closeMenu}>Menu</Link>
-        {session && <Link href="/my-orders" onClick={closeMenu}>My Orders</Link>}
+        {user && <Link href="/my-orders" onClick={closeMenu}>My Orders</Link>}
         <Link href="/contact" onClick={closeMenu}>Contact Us</Link>
         <a href="https://www.doordash.com/en-CA/store/a-ru-japanese-restaurant-buellton-632339/" target="_blank" rel="noopener noreferrer" onClick={closeMenu}>Order via DoorDash</a>
       </nav>
@@ -66,13 +73,13 @@ const Header = () => {
             </span>
           )}
         </Link>
-        {session ? (
+        {user ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Link href="/profile" style={{ color: '#f1d00f', display: 'flex', alignItems: 'center' }} title="Profile">
               <FaUser size={18} style={{ color: '#f1d00f' }} />
             </Link>
             <button
-              onClick={() => signOut()}
+              onClick={handleSignOut}
               style={{
                 background: 'none',
                 border: 'none',
