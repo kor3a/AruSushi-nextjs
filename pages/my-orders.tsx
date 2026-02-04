@@ -1,10 +1,33 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useAuth } from '../contexts/AuthContext';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
-import { Order } from '../lib/db';
+
+interface OrderItem {
+  id: string;
+  itemName: string;
+  itemPrice: number | string;
+  quantity: number;
+  specialNotes?: string | null;
+}
+
+interface Order {
+  id: string;
+  userId: string;
+  items: OrderItem[];
+  total: number | string;
+  status: string;
+  paymentStatus: string;
+  deliveryAddress?: string | null;
+  deliveryPhone?: string | null;
+  customerName?: string | null;
+  customerEmail?: string | null;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export default function MyOrders() {
   const router = useRouter();
@@ -13,19 +36,9 @@ export default function MyOrders() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/auth/signin?returnUrl=/my-orders');
-      return;
-    }
-
-    if (user) {
-      fetchOrders();
-    }
-  }, [user, authLoading, router]);
-
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     try {
+      setLoading(true);
       const response = await fetch('/api/orders/my-orders');
       const data = await response.json();
 
@@ -33,13 +46,30 @@ export default function MyOrders() {
         throw new Error(data.message || 'Failed to fetch orders');
       }
 
-      setOrders(data.orders);
+      setOrders(data.orders || []);
     } catch (err: any) {
+      console.error('Error fetching orders:', err);
       setError(err.message || 'An error occurred');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    // Wait for auth to finish loading
+    if (authLoading) {
+      return;
+    }
+
+    // Redirect if not authenticated
+    if (!user) {
+      router.push('/auth/signin?returnUrl=/my-orders');
+      return;
+    }
+
+    // Fetch orders if authenticated
+    fetchOrders();
+  }, [user, authLoading, router, fetchOrders]);
 
   const getStatusColor = (status: string) => {
     const colors: { [key: string]: string } = {
@@ -53,7 +83,8 @@ export default function MyOrders() {
     return colors[status] || 'bg-gray-100 text-gray-800';
   };
 
-  if (authLoading || loading) {
+  // Show loading state while auth is loading or while fetching orders
+  if (authLoading || loading || !user) {
     return (
       <>
         <Head>
