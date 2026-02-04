@@ -1,10 +1,10 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Head from 'next/head';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
+import { createClient } from '../../lib/supabase/client';
 
 export default function SignIn() {
   const router = useRouter();
@@ -28,15 +28,18 @@ export default function SignIn() {
     setLoading(true);
 
     try {
-      const result = await signIn('credentials', {
-        redirect: false,
+      const supabase = createClient();
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password,
       });
 
-      if (result?.error) {
-        setError(result.error);
-      } else {
+      if (signInError) {
+        setError(signInError.message);
+        return;
+      }
+
+      if (data.user) {
         // Redirect to menu or cart after successful login
         const returnUrl = (router.query.returnUrl as string) || '/menu';
         router.push(returnUrl);

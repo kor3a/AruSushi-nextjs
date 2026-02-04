@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '../contexts/AuthContext';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { useCart } from '../contexts/CartContext';
@@ -10,7 +10,7 @@ import { FaTrash, FaMinus, FaPlus } from 'react-icons/fa';
 
 export default function Cart() {
   const router = useRouter();
-  const { data: session } = useSession();
+  const { user } = useAuth();
   const { items, removeItem, updateQuantity, updateSpecialNotes, clearCart, getTotalPrice } =
     useCart();
   const [editingNotes, setEditingNotes] = useState<{ [key: string]: boolean }>({});
@@ -23,7 +23,7 @@ export default function Cart() {
   }, []);
 
   const handleCheckout = () => {
-    if (!session) {
+    if (!user) {
       // Redirect to sign in with return URL to checkout
       router.push('/auth/signin?returnUrl=/checkout');
     } else {
@@ -267,7 +267,7 @@ export default function Cart() {
                   </span>
                 </div>
 
-                {!session && (
+                {!user && (
                   <div style={{
                     background: 'rgba(241, 208, 15, 0.1)',
                     border: '1px solid rgba(241, 208, 15, 0.3)',
@@ -316,7 +316,7 @@ export default function Cart() {
                       transition: 'all 0.3s'
                     }}
                   >
-                    {session ? 'Proceed to Checkout' : 'Sign In to Checkout'}
+                    {user ? 'Proceed to Checkout' : 'Sign In to Checkout'}
                   </button>
                 </div>
 

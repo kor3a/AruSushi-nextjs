@@ -1,15 +1,15 @@
 import type { AppProps } from 'next/app';
-import { SessionProvider } from 'next-auth/react';
+import { AuthProvider } from '../contexts/AuthContext';
 import { CartProvider } from '../contexts/CartContext';
 import '../public/style/style.css';
 
-function MyApp({ Component, pageProps: { session, ...pageProps } }: AppProps) {
+function MyApp({ Component, pageProps }: AppProps) {
   return (
-    <SessionProvider session={session}>
+    <AuthProvider>
       <CartProvider>
         <Component {...pageProps} />
       </CartProvider>
-    </SessionProvider>
+    </AuthProvider>
   );
 }
 

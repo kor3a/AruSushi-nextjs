@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { AiOutlineClose, AiOutlineSend, AiOutlineShoppingCart } from 'react-icons/ai';
 import axios from 'axios';
 import { useCart } from '@/contexts/CartContext';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/contexts/AuthContext';
 import { lunchMenu, dinnerMenu } from '@/data/menuData';
 
 interface Message {
@@ -21,7 +21,7 @@ const Chatbot: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
-      text: "Hi! I'm SushiBot, your personal ordering assistant. 🍣\n\nI can help you:\n• Explore our menu\n• Get recommendations\n• Add items to your cart\n• Answer questions about dishes\n\nWhat would you like today?",
+      text: "Hi! I'm SushiBot, your personal ordering assistant. \n\nI can help you:\n* Explore our menu\n* Get recommendations\n* Add items to your cart\n* Answer questions about dishes\n\nWhat would you like today?",
       isUser: false
     },
   ]);
@@ -30,7 +30,7 @@ const Chatbot: React.FC = () => {
   const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { addItem } = useCart();
-  const { data: session } = useSession();
+  const { user } = useAuth();
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -85,7 +85,7 @@ const Chatbot: React.FC = () => {
             specialNotes || undefined
           );
 
-          const confirmMessage = `✅ Added ${quantity || 1}x ${menuItem.name} ($${menuItem.price.toFixed(2)}) to your cart!\n\n${specialNotes ? `Note: ${specialNotes}\n\n` : ''}Would you like to add anything else, or are you ready to checkout?`;
+          const confirmMessage = `Added ${quantity || 1}x ${menuItem.name} ($${menuItem.price.toFixed(2)}) to your cart!\n\n${specialNotes ? `Note: ${specialNotes}\n\n` : ''}Would you like to add anything else, or are you ready to checkout?`;
 
           setMessages(prev => [
             ...prev,
@@ -194,7 +194,7 @@ const Chatbot: React.FC = () => {
             e.currentTarget.style.boxShadow = '0 8px 24px rgba(252, 54, 120, 0.4), 0 0 20px rgba(241, 208, 15, 0.3)';
           }}
         >
-          Chat with SushiBot 🍣
+          Chat with SushiBot
         </button>
       ) : (
         <div style={{
@@ -221,10 +221,10 @@ const Chatbot: React.FC = () => {
             boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
           }}>
             <div>
-              <div style={{ fontWeight: '600', fontSize: '18px' }}>SushiBot 🍣</div>
-              {session?.user?.name && (
+              <div style={{ fontWeight: '600', fontSize: '18px' }}>SushiBot</div>
+              {user?.user_metadata?.name && (
                 <div style={{ fontSize: '12px', opacity: 0.9, marginTop: '2px' }}>
-                  Hi, {session.user.name}!
+                  Hi, {user.user_metadata.name}!
                 </div>
               )}
             </div>

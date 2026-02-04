@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Head from 'next/head';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
+import { createClient } from '../../lib/supabase/client';
 
 export default function SignUp() {
   const router = useRouter();
@@ -47,28 +48,53 @@ export default function SignUp() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/signup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const supabase = createClient();
+
+      // Sign up with Supabase Auth
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            name: formData.name,
+            phone: formData.phone,
+            address: formData.address,
+          },
         },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-          name: formData.name,
-          phone: formData.phone,
-          address: formData.address,
-        }),
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to sign up');
+      if (signUpError) {
+        setError(signUpError.message);
+        return;
       }
 
-      // Redirect to sign in page
-      router.push('/auth/signin?message=Account created successfully! Please sign in.');
+      if (data.user) {
+        // Create user profile in our database
+        const response = await fetch('/api/auth/create-profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: data.user.id,
+            email: data.user.email,
+            name: formData.name,
+            phone: formData.phone,
+            address: formData.address,
+          }),
+        });
+
+        if (!response.ok) {
+          console.error('Failed to create profile, but auth succeeded');
+        }
+
+        // Redirect to sign in page or show confirmation
+        if (data.session) {
+          // Auto-logged in (email confirmation disabled)
+          router.push('/menu');
+        } else {
+          // Email confirmation required
+          router.push('/auth/signin?message=Please check your email to confirm your account');
+        }
+      }
     } catch (err: any) {
       setError(err.message || 'An error occurred. Please try again.');
     } finally {
