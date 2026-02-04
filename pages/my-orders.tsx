@@ -71,16 +71,16 @@ export default function MyOrders() {
     fetchOrders();
   }, [user, authLoading, router, fetchOrders]);
 
-  const getStatusColor = (status: string) => {
-    const colors: { [key: string]: string } = {
-      pending: 'bg-yellow-100 text-yellow-800',
-      confirmed: 'bg-blue-100 text-blue-800',
-      preparing: 'bg-purple-100 text-purple-800',
-      ready: 'bg-green-100 text-green-800',
-      delivered: 'bg-gray-100 text-gray-800',
-      cancelled: 'bg-red-100 text-red-800',
+  const getStatusStyle = (status: string) => {
+    const styles: { [key: string]: { background: string; color: string } } = {
+      pending: { background: 'rgba(241, 208, 15, 0.2)', color: '#f1d00f' },
+      confirmed: { background: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa' },
+      preparing: { background: 'rgba(168, 85, 247, 0.2)', color: '#c084fc' },
+      ready: { background: 'rgba(34, 197, 94, 0.2)', color: '#4ade80' },
+      delivered: { background: 'rgba(156, 163, 175, 0.2)', color: '#9ca3af' },
+      cancelled: { background: 'rgba(239, 68, 68, 0.2)', color: '#f87171' },
     };
-    return colors[status] || 'bg-gray-100 text-gray-800';
+    return styles[status] || { background: 'rgba(156, 163, 175, 0.2)', color: '#9ca3af' };
   };
 
   // Show loading state while auth is loading or while fetching orders
@@ -91,8 +91,15 @@ export default function MyOrders() {
           <title>My Orders - A-Ru Sushi</title>
         </Head>
         <Header />
-        <div className="min-h-screen bg-gray-50 py-12 px-4 flex items-center justify-center">
-          <p className="text-gray-600">Loading...</p>
+        <div style={{
+          minHeight: '100vh',
+          background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)',
+          padding: '140px 20px 60px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <p style={{ color: '#f1d00f', fontSize: '16px' }}>Loading...</p>
         </div>
         <Footer />
       </>
@@ -109,102 +116,195 @@ export default function MyOrders() {
 
       <Header />
 
-      <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl font-bold text-gray-900 mb-8">My Orders</h1>
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)',
+        padding: '140px 20px 60px'
+      }}>
+        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+          <h1 style={{ fontSize: '36px', fontWeight: 'bold', color: '#f1d00f', marginBottom: '32px', textAlign: 'center' }}>
+            My Orders
+          </h1>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+            <div style={{
+              marginBottom: '24px',
+              padding: '16px',
+              background: 'rgba(255, 68, 68, 0.1)',
+              border: '1px solid rgba(255, 68, 68, 0.3)',
+              borderRadius: '8px',
+              color: '#ff4444'
+            }}>
               {error}
             </div>
           )}
 
           {orders.length === 0 ? (
-            <div className="bg-white p-8 rounded-lg shadow-md text-center">
-              <p className="text-gray-600 mb-4">You haven't placed any orders yet</p>
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.05)',
+              backdropFilter: 'blur(10px)',
+              padding: '40px',
+              borderRadius: '16px',
+              border: '1px solid rgba(252, 54, 120, 0.2)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+              textAlign: 'center'
+            }}>
+              <p style={{ color: '#ccc', marginBottom: '20px', fontSize: '16px' }}>
+                You haven&apos;t placed any orders yet
+              </p>
               <a
                 href="/menu"
-                className="inline-block bg-pink-600 text-white px-6 py-3 rounded-md hover:bg-pink-700"
+                style={{
+                  display: 'inline-block',
+                  background: '#fc3678',
+                  color: '#fff',
+                  padding: '12px 24px',
+                  borderRadius: '8px',
+                  fontWeight: '600',
+                  textDecoration: 'none',
+                  boxShadow: '0 4px 12px rgba(252, 54, 120, 0.3)',
+                  transition: 'all 0.3s'
+                }}
               >
                 Browse Menu
               </a>
             </div>
           ) : (
-            <div className="space-y-6">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
               {orders.map((order) => (
-                <div key={order.id} className="bg-white rounded-lg shadow-md p-6">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+                <div
+                  key={order.id}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    backdropFilter: 'blur(10px)',
+                    borderRadius: '16px',
+                    border: '1px solid rgba(252, 54, 120, 0.2)',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+                    padding: '24px'
+                  }}
+                >
+                  {/* Order Header */}
+                  <div style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    gap: '12px',
+                    marginBottom: '16px'
+                  }}>
                     <div>
-                      <p className="text-sm text-gray-600">Order #{order.id}</p>
-                      <p className="text-sm text-gray-500">
+                      <p style={{ fontSize: '12px', color: '#888', marginBottom: '4px' }}>
+                        Order #{order.id.slice(0, 8)}...
+                      </p>
+                      <p style={{ fontSize: '14px', color: '#ccc' }}>
                         {new Date(order.createdAt).toLocaleString()}
                       </p>
                     </div>
-                    <div className="flex gap-2 mt-2 sm:mt-0">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(
-                          order.status
-                        )}`}
-                      >
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      <span style={{
+                        padding: '6px 12px',
+                        borderRadius: '20px',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        ...getStatusStyle(order.status)
+                      }}>
                         {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                       </span>
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                          order.paymentStatus === 'paid'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}
-                      >
+                      <span style={{
+                        padding: '6px 12px',
+                        borderRadius: '20px',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        background: order.paymentStatus === 'paid'
+                          ? 'rgba(34, 197, 94, 0.2)'
+                          : 'rgba(241, 208, 15, 0.2)',
+                        color: order.paymentStatus === 'paid' ? '#4ade80' : '#f1d00f'
+                      }}>
                         {order.paymentStatus === 'paid' ? 'Paid' : 'Pending Payment'}
                       </span>
                     </div>
                   </div>
 
-                  <div className="border-t pt-4">
-                    <h3 className="font-semibold mb-2">Items:</h3>
-                    <div className="space-y-1">
+                  {/* Order Items */}
+                  <div style={{
+                    borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                    paddingTop: '16px'
+                  }}>
+                    <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#f1d00f', marginBottom: '12px' }}>
+                      Items
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       {order.items.map((item, idx) => (
-                        <div key={idx} className="flex justify-between text-sm">
-                          <span>
-                            {item.itemName} x{item.quantity}
+                        <div key={idx} style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-start',
+                          fontSize: '14px'
+                        }}>
+                          <div style={{ flex: 1 }}>
+                            <span style={{ color: '#fff' }}>
+                              {item.itemName} <span style={{ color: '#888' }}>x{item.quantity}</span>
+                            </span>
                             {item.specialNotes && (
-                              <span className="text-gray-500 italic text-xs ml-2">
-                                ({item.specialNotes})
-                              </span>
+                              <p style={{ color: '#888', fontSize: '12px', fontStyle: 'italic', marginTop: '2px' }}>
+                                Note: {item.specialNotes}
+                              </p>
                             )}
+                          </div>
+                          <span style={{ color: '#ccc', marginLeft: '16px' }}>
+                            ${(Number(item.itemPrice) * item.quantity).toFixed(2)}
                           </span>
-                          <span>${(Number(item.itemPrice) * item.quantity).toFixed(2)}</span>
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  {order.deliveryAddress && (
-                    <div className="border-t mt-4 pt-4">
-                      <p className="text-sm text-gray-600">
-                        <strong>Delivery Address:</strong> {order.deliveryAddress}
-                      </p>
+                  {/* Delivery Info */}
+                  {(order.deliveryAddress || order.deliveryPhone) && (
+                    <div style={{
+                      borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                      marginTop: '16px',
+                      paddingTop: '16px'
+                    }}>
+                      {order.deliveryAddress && (
+                        <p style={{ fontSize: '14px', color: '#ccc', marginBottom: '4px' }}>
+                          <span style={{ color: '#f1d00f' }}>Delivery:</span> {order.deliveryAddress}
+                        </p>
+                      )}
                       {order.deliveryPhone && (
-                        <p className="text-sm text-gray-600">
-                          <strong>Phone:</strong> {order.deliveryPhone}
+                        <p style={{ fontSize: '14px', color: '#ccc' }}>
+                          <span style={{ color: '#f1d00f' }}>Phone:</span> {order.deliveryPhone}
                         </p>
                       )}
                     </div>
                   )}
 
+                  {/* Order Notes */}
                   {order.notes && (
-                    <div className="border-t mt-4 pt-4">
-                      <p className="text-sm text-gray-600">
-                        <strong>Notes:</strong> {order.notes}
+                    <div style={{
+                      borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                      marginTop: '16px',
+                      paddingTop: '16px'
+                    }}>
+                      <p style={{ fontSize: '14px', color: '#ccc' }}>
+                        <span style={{ color: '#f1d00f' }}>Notes:</span> {order.notes}
                       </p>
                     </div>
                   )}
 
-                  <div className="border-t mt-4 pt-4">
-                    <div className="flex justify-between font-bold">
-                      <span>Total:</span>
-                      <span className="text-pink-600">${Number(order.total).toFixed(2)}</span>
-                    </div>
+                  {/* Order Total */}
+                  <div style={{
+                    borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                    marginTop: '16px',
+                    paddingTop: '16px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}>
+                    <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#fff' }}>Total</span>
+                    <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#fc3678' }}>
+                      ${Number(order.total).toFixed(2)}
+                    </span>
                   </div>
                 </div>
               ))}
