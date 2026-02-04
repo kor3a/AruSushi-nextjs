@@ -13,7 +13,7 @@ export async function sendOrderNotificationToRestaurant(order: Order) {
   const itemsList = order.items
     .map(
       (item) =>
-        `- ${item.itemName} x${item.quantity} - $${(item.itemPrice * item.quantity).toFixed(2)}${
+        `- ${item.itemName} x${item.quantity} - $${(Number(item.itemPrice) * item.quantity).toFixed(2)}${
           item.specialNotes ? `\n  Note: ${item.specialNotes}` : ''
         }`
     )
@@ -31,7 +31,7 @@ Customer Information:
 Order Details:
 ${itemsList}
 
-Total: $${order.total.toFixed(2)}
+Total: $${Number(order.total).toFixed(2)}
 
 Payment Status: ${order.paymentStatus}
 ${order.notes ? `\nSpecial Instructions: ${order.notes}` : ''}
@@ -48,7 +48,7 @@ Please prepare this order as soon as possible.
     },
     Message: {
       Subject: {
-        Data: `New Order #${order.id} - $${order.total.toFixed(2)}`,
+        Data: `New Order #${order.id} - $${Number(order.total).toFixed(2)}`,
         Charset: 'UTF-8',
       },
       Body: {
@@ -89,7 +89,7 @@ export async function sendOrderConfirmationToCustomer(order: Order) {
   const itemsList = order.items
     .map(
       (item) =>
-        `- ${item.itemName} x${item.quantity} - $${(item.itemPrice * item.quantity).toFixed(2)}`
+        `- ${item.itemName} x${item.quantity} - $${(Number(item.itemPrice) * item.quantity).toFixed(2)}`
     )
     .join('\n');
 
@@ -103,7 +103,7 @@ Your order has been received and is being prepared.
 Order Details:
 ${itemsList}
 
-Total: $${order.total.toFixed(2)}
+Total: $${Number(order.total).toFixed(2)}
 
 ${order.deliveryAddress ? `Delivery Address: ${order.deliveryAddress}` : 'Pickup Order'}
 
