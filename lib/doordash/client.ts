@@ -66,26 +66,42 @@ class DoorDashClient {
     });
 
     // Add request interceptor for authentication
-    this.client.interceptors.request.use((config) => {
-      // DoorDash uses OAuth 2.0 or API key authentication
-      // For simplicity, we'll use API key authentication
-      // In production, you should implement proper OAuth 2.0 flow
-      if (this.keyId && this.signingSecret) {
-        config.headers['Authorization'] = `Bearer ${this.getAuthToken()}`;
+    this.client.interceptors.request.use(
+      async (config) => {
+        // DoorDash Drive API uses OAuth 2.0 Bearer token authentication
+        if (this.keyId && this.signingSecret) {
+          try {
+            const token = await this.getAuthToken();
+            config.headers['Authorization'] = `Bearer ${token}`;
+          } catch (error) {
+            console.error('Failed to get DoorDash auth token:', error);
+          }
+        }
+        return config;
+      },
+      (error) => {
+        return Promise.reject(error);
       }
-      return config;
-    });
+    );
   }
 
   /**
    * Get authentication token
-   * In production, implement proper OAuth 2.0 token refresh
+   * DoorDash Drive API uses OAuth 2.0
+   * You can either:
+   * 1. Use a pre-generated access token (for testing)
+   * 2. Implement OAuth 2.0 token generation/refresh (for production)
    */
-  private getAuthToken(): string {
-    // For now, return a placeholder
-    // In production, implement OAuth 2.0 token generation
-    // or use API key if DoorDash supports it
-    return process.env.DOORDASH_ACCESS_TOKEN || '';
+  private async getAuthToken(): Promise<string> {
+    // Option 1: Use pre-configured access token (simpler, but less secure)
+    if (process.env.DOORDASH_ACCESS_TOKEN) {
+      return process.env.DOORDASH_ACCESS_TOKEN;
+    }
+
+    // Option 2: Generate token via OAuth 2.0 (recommended for production)
+    // This would require implementing the OAuth flow
+    // For now, we'll throw an error if no token is provided
+    throw new Error('DoorDash access token not configured. Please set DOORDASH_ACCESS_TOKEN or implement OAuth 2.0 flow.');
   }
 
   /**
