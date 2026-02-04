@@ -17,7 +17,12 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
   const { items, getTotalPrice, clearCart } = useCart();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [orderType, setOrderType] = useState<'pickup' | 'delivery'>('pickup');
   const [phone, setPhone] = useState('');
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [deliveryCity, setDeliveryCity] = useState('');
+  const [deliveryState, setDeliveryState] = useState('');
+  const [deliveryZip, setDeliveryZip] = useState('');
   const [notes, setNotes] = useState('');
 
   const handleSubmit = async (e: FormEvent) => {
@@ -46,6 +51,11 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
         return;
       }
 
+      // Prepare delivery address if delivery option is selected
+      const fullDeliveryAddress = orderType === 'delivery' && deliveryAddress && deliveryCity && deliveryState && deliveryZip
+        ? `${deliveryAddress}, ${deliveryCity}, ${deliveryState} ${deliveryZip}`
+        : null;
+
       // Create order in database
       const orderResponse = await fetch('/api/orders/create', {
         method: 'POST',
@@ -55,8 +65,10 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
         body: JSON.stringify({
           items,
           total: getTotalPrice(),
+          orderType,
           paymentIntentId: paymentIntent.id,
           paymentStatus: paymentIntent.status === 'succeeded' ? 'paid' : 'pending',
+          deliveryAddress: fullDeliveryAddress,
           deliveryPhone: phone,
           notes,
         }),
@@ -80,9 +92,165 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
   return (
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <div>
-        <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: '#f1d00f' }}>Pickup Information</h3>
+        <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: '#f1d00f' }}>Order Type</h3>
+        
+        <div style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
+          <label style={{
+            flex: 1,
+            padding: '16px',
+            background: orderType === 'pickup' ? 'rgba(252, 54, 120, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+            border: `2px solid ${orderType === 'pickup' ? '#fc3678' : 'rgba(255, 255, 255, 0.1)'}`,
+            borderRadius: '8px',
+            cursor: 'pointer',
+            transition: 'all 0.3s',
+            textAlign: 'center'
+          }}>
+            <input
+              type="radio"
+              name="orderType"
+              value="pickup"
+              checked={orderType === 'pickup'}
+              onChange={(e) => setOrderType(e.target.value as 'pickup' | 'delivery')}
+              style={{ display: 'none' }}
+            />
+            <div style={{ color: '#fff', fontWeight: '600', marginBottom: '4px' }}>Pickup</div>
+            <div style={{ color: '#ccc', fontSize: '12px' }}>Pick up at restaurant</div>
+          </label>
+
+          <label style={{
+            flex: 1,
+            padding: '16px',
+            background: orderType === 'delivery' ? 'rgba(252, 54, 120, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+            border: `2px solid ${orderType === 'delivery' ? '#fc3678' : 'rgba(255, 255, 255, 0.1)'}`,
+            borderRadius: '8px',
+            cursor: 'pointer',
+            transition: 'all 0.3s',
+            textAlign: 'center'
+          }}>
+            <input
+              type="radio"
+              name="orderType"
+              value="delivery"
+              checked={orderType === 'delivery'}
+              onChange={(e) => setOrderType(e.target.value as 'pickup' | 'delivery')}
+              style={{ display: 'none' }}
+            />
+            <div style={{ color: '#fff', fontWeight: '600', marginBottom: '4px' }}>Delivery</div>
+            <div style={{ color: '#ccc', fontSize: '12px' }}>Delivered via DoorDash</div>
+          </label>
+        </div>
+      </div>
+
+      <div>
+        <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: '#f1d00f' }}>
+          {orderType === 'pickup' ? 'Pickup Information' : 'Delivery Information'}
+        </h3>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {orderType === 'delivery' && (
+            <>
+              <div>
+                <label htmlFor="deliveryAddress" style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#ccc', marginBottom: '4px' }}>
+                  Street Address *
+                </label>
+                <input
+                  type="text"
+                  id="deliveryAddress"
+                  required={orderType === 'delivery'}
+                  value={deliveryAddress}
+                  onChange={(e) => setDeliveryAddress(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px',
+                    color: '#fff',
+                    fontSize: '14px',
+                    outline: 'none'
+                  }}
+                  placeholder="123 Main Street"
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label htmlFor="deliveryCity" style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#ccc', marginBottom: '4px' }}>
+                    City *
+                  </label>
+                  <input
+                    type="text"
+                    id="deliveryCity"
+                    required={orderType === 'delivery'}
+                    value={deliveryCity}
+                    onChange={(e) => setDeliveryCity(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '8px',
+                      color: '#fff',
+                      fontSize: '14px',
+                      outline: 'none'
+                    }}
+                    placeholder="City"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="deliveryState" style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#ccc', marginBottom: '4px' }}>
+                    State *
+                  </label>
+                  <input
+                    type="text"
+                    id="deliveryState"
+                    required={orderType === 'delivery'}
+                    value={deliveryState}
+                    onChange={(e) => setDeliveryState(e.target.value)}
+                    maxLength={2}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '8px',
+                      color: '#fff',
+                      fontSize: '14px',
+                      outline: 'none',
+                      textTransform: 'uppercase'
+                    }}
+                    placeholder="CA"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="deliveryZip" style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#ccc', marginBottom: '4px' }}>
+                    ZIP *
+                  </label>
+                  <input
+                    type="text"
+                    id="deliveryZip"
+                    required={orderType === 'delivery'}
+                    value={deliveryZip}
+                    onChange={(e) => setDeliveryZip(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '8px',
+                      color: '#fff',
+                      fontSize: '14px',
+                      outline: 'none'
+                    }}
+                    placeholder="12345"
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
           <div>
             <label htmlFor="phone" style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#ccc', marginBottom: '4px' }}>
               Contact Phone Number *
@@ -127,7 +295,7 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
                 outline: 'none',
                 resize: 'vertical'
               }}
-              placeholder="Any special instructions for your pickup order"
+              placeholder={orderType === 'pickup' ? 'Any special instructions for your pickup order' : 'Any special instructions for your delivery order'}
             />
           </div>
         </div>
