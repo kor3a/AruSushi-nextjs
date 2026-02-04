@@ -142,7 +142,7 @@ export default function MyOrders() {
                               </span>
                             )}
                           </span>
-                          <span>${(item.itemPrice * item.quantity).toFixed(2)}</span>
+                          <span>${(Number(item.itemPrice) * item.quantity).toFixed(2)}</span>
                         </div>
                       ))}
                     </div>
@@ -172,7 +172,7 @@ export default function MyOrders() {
                   <div className="border-t mt-4 pt-4">
                     <div className="flex justify-between font-bold">
                       <span>Total:</span>
-                      <span className="text-pink-600">${order.total.toFixed(2)}</span>
+                      <span className="text-pink-600">${Number(order.total).toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
