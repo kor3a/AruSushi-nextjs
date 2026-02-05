@@ -42,6 +42,41 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
   const [deliveryQuoteLoading, setDeliveryQuoteLoading] = useState(false);
   const [deliveryQuoteError, setDeliveryQuoteError] = useState('');
 
+  // Restore delivery quote and form data from sessionStorage on mount (in case of Stripe redirect)
+  useEffect(() => {
+    const savedData = sessionStorage.getItem('checkoutData');
+    if (savedData) {
+      try {
+        const data = JSON.parse(savedData);
+        if (data.orderType) setOrderType(data.orderType);
+        if (data.phone) setPhone(data.phone);
+        if (data.deliveryAddress) setDeliveryAddress(data.deliveryAddress);
+        if (data.deliveryCity) setDeliveryCity(data.deliveryCity);
+        if (data.deliveryState) setDeliveryState(data.deliveryState);
+        if (data.deliveryZip) setDeliveryZip(data.deliveryZip);
+        if (data.notes) setNotes(data.notes);
+        if (data.deliveryQuote) setDeliveryQuote(data.deliveryQuote);
+      } catch (e) {
+        console.error('Failed to restore checkout data:', e);
+      }
+    }
+  }, []);
+
+  // Save checkout data to sessionStorage whenever it changes
+  useEffect(() => {
+    const data = {
+      orderType,
+      phone,
+      deliveryAddress,
+      deliveryCity,
+      deliveryState,
+      deliveryZip,
+      notes,
+      deliveryQuote,
+    };
+    sessionStorage.setItem('checkoutData', JSON.stringify(data));
+  }, [orderType, phone, deliveryAddress, deliveryCity, deliveryState, deliveryZip, notes, deliveryQuote]);
+
   // Fetch delivery quote when address is complete
   const fetchDeliveryQuote = async () => {
     if (orderType !== 'delivery' || !deliveryAddress || !deliveryCity || !deliveryState || !deliveryZip || !phone) {
@@ -120,7 +155,28 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
       });
 
       if (stripeError) {
-        setError(stripeError.message || 'Payment failed');
+        // Handle specific Stripe errors
+        if (stripeError.type === 'card_error' || stripeError.type === 'validation_error') {
+          setError(stripeError.message || 'Payment failed. Please check your card details.');
+        } else if (stripeError.code === 'payment_intent_unexpected_state') {
+          setError('This payment has already been processed. Please check your order history.');
+        } else {
+          setError(stripeError.message || 'Payment failed. Please try again.');
+        }
+        setLoading(false);
+        return;
+      }
+
+      // Check if payment intent exists and has a valid status
+      if (!paymentIntent) {
+        setError('Payment could not be processed. Please try again.');
+        setLoading(false);
+        return;
+      }
+
+      // Check payment status
+      if (paymentIntent.status !== 'succeeded' && paymentIntent.status !== 'requires_capture') {
+        setError(`Payment status: ${paymentIntent.status}. Please try again.`);
         setLoading(false);
         return;
       }
@@ -153,11 +209,16 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
       const orderData = await orderResponse.json();
 
       if (!orderResponse.ok) {
-        throw new Error(orderData.message || 'Failed to create order');
+        // Provide more helpful error messages
+        if (orderData.message?.includes('quote')) {
+          throw new Error('Your delivery quote has expired. Please get a new quote and try again.');
+        }
+        throw new Error(orderData.message || 'Failed to create order. Please try again.');
       }
 
-      // Clear cart and redirect to confirmation
+      // Clear cart, checkout data, and redirect to confirmation
       clearCart();
+      sessionStorage.removeItem('checkoutData');
       router.push(`/order-confirmation?orderId=${orderData.order.id}`);
     } catch (err: any) {
       setError(err.message || 'An error occurred');
