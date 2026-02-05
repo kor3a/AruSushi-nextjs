@@ -25,11 +25,16 @@ export type CreateOrderInput = {
     specialNotes?: string;
   }[];
   total: number;
+  orderType?: string; // 'pickup' or 'delivery'
   status?: string;
   paymentIntentId?: string;
   paymentStatus?: string;
   deliveryAddress?: string;
   deliveryPhone?: string;
+  deliveryFee?: number;
+  doordashDeliveryId?: string;
+  doordashDeliveryStatus?: string;
+  doordashTrackingUrl?: string;
   customerName?: string;
   customerEmail?: string;
   notes?: string;
@@ -77,11 +82,16 @@ class Database {
       data: {
         userId: orderData.userId,
         total: new Prisma.Decimal(orderData.total),
+        orderType: orderData.orderType || 'pickup',
         status: orderData.status || 'pending',
         paymentIntentId: orderData.paymentIntentId,
         paymentStatus: orderData.paymentStatus || 'pending',
         deliveryAddress: orderData.deliveryAddress,
         deliveryPhone: orderData.deliveryPhone,
+        deliveryFee: orderData.deliveryFee ? new Prisma.Decimal(orderData.deliveryFee) : undefined,
+        doordashDeliveryId: orderData.doordashDeliveryId,
+        doordashDeliveryStatus: orderData.doordashDeliveryStatus,
+        doordashTrackingUrl: orderData.doordashTrackingUrl,
         customerName: orderData.customerName,
         customerEmail: orderData.customerEmail,
         notes: orderData.notes,
@@ -120,7 +130,7 @@ class Database {
     });
   }
 
-  async updateOrder(id: string, updates: Partial<{ status: string; paymentStatus: string }>) {
+  async updateOrder(id: string, updates: Partial<{ status: string; paymentStatus: string; doordashDeliveryId: string; doordashDeliveryStatus: string }>) {
     return prisma.order.update({
       where: { id },
       data: updates,

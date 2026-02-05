@@ -5,6 +5,8 @@ import {
   sendOrderNotificationToRestaurant,
   sendOrderConfirmationToCustomer,
 } from '../../../lib/email/sendOrderNotification';
+import { doordashClient } from '../../../lib/doordash/client';
+import { restaurantInfo } from '../../../data/restaurantInfo';
 
 export default async function handler(
   req: NextApiRequest,
@@ -26,10 +28,13 @@ export default async function handler(
     const {
       items,
       total,
+      orderType = 'pickup',
       paymentIntentId,
       paymentStatus,
       deliveryAddress,
       deliveryPhone,
+      deliveryQuoteId, // DoorDash quote ID to accept
+      deliveryFee, // Delivery fee from quote
       notes,
     } = req.body;
 
@@ -40,6 +45,15 @@ export default async function handler(
 
     if (!total || total <= 0) {
       return res.status(400).json({ message: 'Invalid total amount' });
+    }
+
+    // Validate delivery address if delivery is selected
+    if (orderType === 'delivery' && !deliveryAddress) {
+      return res.status(400).json({ message: 'Delivery address is required for delivery orders' });
+    }
+
+    if (orderType === 'delivery' && !deliveryPhone) {
+      return res.status(400).json({ message: 'Phone number is required for delivery orders' });
     }
 
     // Ensure user profile exists in our database
@@ -61,19 +75,66 @@ export default async function handler(
       specialNotes: item.specialNotes || undefined,
     }));
 
+    // Initialize DoorDash delivery variables
+    let doordashDeliveryId: string | undefined;
+    let doordashDeliveryStatus: string | undefined;
+    let doordashTrackingUrl: string | undefined;
+
+    // Accept DoorDash delivery quote if order type is delivery
+    let doordashError: string | undefined;
+    
+    if (orderType === 'delivery' && doordashClient.isConfigured()) {
+      if (!deliveryQuoteId) {
+        // No quote ID provided - order will be created without DoorDash
+        console.warn('No delivery quote ID provided for delivery order');
+        doordashError = 'No delivery quote provided';
+      } else {
+        try {
+          // Accept the delivery quote - this dispatches a Dasher
+          const doordashResponse = await doordashClient.acceptDeliveryQuote(deliveryQuoteId);
+          doordashDeliveryId = doordashResponse.id;
+          doordashDeliveryStatus = doordashResponse.status;
+          doordashTrackingUrl = doordashResponse.tracking_url;
+          
+          console.log('DoorDash delivery accepted:', {
+            deliveryId: doordashDeliveryId,
+            status: doordashDeliveryStatus,
+            trackingUrl: doordashTrackingUrl,
+          });
+        } catch (error: any) {
+          console.error('Failed to accept DoorDash delivery quote:', error);
+          // Don't fail the order - payment was already processed
+          // Create the order anyway and flag it for manual handling
+          doordashError = error.message || 'DoorDash delivery creation failed';
+          doordashDeliveryStatus = 'failed';
+        }
+      }
+    }
+
+    // Prepare order notes (include DoorDash error if any)
+    let orderNotes = notes || '';
+    if (doordashError) {
+      orderNotes = `[DELIVERY ISSUE: ${doordashError}] ${orderNotes}`.trim();
+    }
+
     // Create order
     const order = await db.createOrder({
       userId: user.id,
       items: orderItems,
       total,
-      status: 'pending',
+      orderType,
+      status: doordashError ? 'pending' : 'pending', // Could set to 'needs_attention' if you add that status
       paymentIntentId,
       paymentStatus: paymentStatus || 'pending',
-      deliveryAddress,
+      deliveryAddress: orderType === 'delivery' ? deliveryAddress : undefined,
       deliveryPhone,
+      deliveryFee: orderType === 'delivery' ? deliveryFee : undefined,
+      doordashDeliveryId,
+      doordashDeliveryStatus,
+      doordashTrackingUrl,
       customerName: user.user_metadata?.name || dbUser.name || undefined,
       customerEmail: user.email,
-      notes,
+      notes: orderNotes,
     });
 
     // Send email notifications (don't wait for them to complete)
@@ -87,9 +148,16 @@ export default async function handler(
       );
     }
 
+    // Return response with delivery status info
+    const responseMessage = doordashError 
+      ? 'Order created. Note: There was an issue with delivery scheduling. The restaurant will contact you about delivery arrangements.'
+      : 'Order created successfully';
+
     return res.status(201).json({
-      message: 'Order created successfully',
+      message: responseMessage,
       order,
+      deliveryStatus: doordashError ? 'manual' : 'scheduled',
+      deliveryError: doordashError,
     });
   } catch (error: any) {
     console.error('Order creation error:', error);

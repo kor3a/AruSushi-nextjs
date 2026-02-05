@@ -31,11 +31,16 @@ model Order {
   user            User        @relation(fields: [userId], references: [id])
   items           OrderItem[]
   total           Decimal     @db.Decimal(10, 2)
+  orderType       String      @default("pickup") @map("order_type") // pickup, delivery
   status          String      @default("pending") // pending, confirmed, preparing, ready, delivered, cancelled
   paymentIntentId String?     @unique @map("payment_intent_id")
   paymentStatus   String      @default("pending") @map("payment_status") // pending, paid, failed
   deliveryAddress String?     @map("delivery_address")
   deliveryPhone   String?     @map("delivery_phone")
+  deliveryFee         Decimal?  @map("delivery_fee") @db.Decimal(10, 2) // Delivery fee
+  doordashDeliveryId String?  @map("doordash_delivery_id") // DoorDash delivery ID
+  doordashDeliveryStatus String? @map("doordash_delivery_status") // DoorDash delivery status
+  doordashTrackingUrl String? @map("doordash_tracking_url") // DoorDash tracking URL
   customerName    String?     @map("customer_name")
   customerEmail   String?     @map("customer_email")
   notes           String?
