@@ -81,32 +81,40 @@ export default async function handler(
     let doordashTrackingUrl: string | undefined;
 
     // Accept DoorDash delivery quote if order type is delivery
+    let doordashError: string | undefined;
+    
     if (orderType === 'delivery' && doordashClient.isConfigured()) {
       if (!deliveryQuoteId) {
-        return res.status(400).json({ message: 'Delivery quote is required for delivery orders' });
+        // No quote ID provided - order will be created without DoorDash
+        console.warn('No delivery quote ID provided for delivery order');
+        doordashError = 'No delivery quote provided';
+      } else {
+        try {
+          // Accept the delivery quote - this dispatches a Dasher
+          const doordashResponse = await doordashClient.acceptDeliveryQuote(deliveryQuoteId);
+          doordashDeliveryId = doordashResponse.id;
+          doordashDeliveryStatus = doordashResponse.status;
+          doordashTrackingUrl = doordashResponse.tracking_url;
+          
+          console.log('DoorDash delivery accepted:', {
+            deliveryId: doordashDeliveryId,
+            status: doordashDeliveryStatus,
+            trackingUrl: doordashTrackingUrl,
+          });
+        } catch (error: any) {
+          console.error('Failed to accept DoorDash delivery quote:', error);
+          // Don't fail the order - payment was already processed
+          // Create the order anyway and flag it for manual handling
+          doordashError = error.message || 'DoorDash delivery creation failed';
+          doordashDeliveryStatus = 'failed';
+        }
       }
+    }
 
-      try {
-        // Accept the delivery quote - this dispatches a Dasher
-        const doordashResponse = await doordashClient.acceptDeliveryQuote(deliveryQuoteId);
-        doordashDeliveryId = doordashResponse.id;
-        doordashDeliveryStatus = doordashResponse.status;
-        doordashTrackingUrl = doordashResponse.tracking_url;
-        
-        console.log('DoorDash delivery accepted:', {
-          deliveryId: doordashDeliveryId,
-          status: doordashDeliveryStatus,
-          trackingUrl: doordashTrackingUrl,
-        });
-      } catch (error: any) {
-        console.error('Failed to accept DoorDash delivery quote:', error);
-        // In production, you might want to fail the order if delivery is critical
-        // For now, we'll continue and let the restaurant handle it manually
-        return res.status(500).json({ 
-          message: 'Failed to confirm delivery. Please try again or select pickup.',
-          error: error.message 
-        });
-      }
+    // Prepare order notes (include DoorDash error if any)
+    let orderNotes = notes || '';
+    if (doordashError) {
+      orderNotes = `[DELIVERY ISSUE: ${doordashError}] ${orderNotes}`.trim();
     }
 
     // Create order
@@ -115,7 +123,7 @@ export default async function handler(
       items: orderItems,
       total,
       orderType,
-      status: 'pending',
+      status: doordashError ? 'pending' : 'pending', // Could set to 'needs_attention' if you add that status
       paymentIntentId,
       paymentStatus: paymentStatus || 'pending',
       deliveryAddress: orderType === 'delivery' ? deliveryAddress : undefined,
@@ -126,7 +134,7 @@ export default async function handler(
       doordashTrackingUrl,
       customerName: user.user_metadata?.name || dbUser.name || undefined,
       customerEmail: user.email,
-      notes,
+      notes: orderNotes,
     });
 
     // Send email notifications (don't wait for them to complete)
@@ -140,9 +148,16 @@ export default async function handler(
       );
     }
 
+    // Return response with delivery status info
+    const responseMessage = doordashError 
+      ? 'Order created. Note: There was an issue with delivery scheduling. The restaurant will contact you about delivery arrangements.'
+      : 'Order created successfully';
+
     return res.status(201).json({
-      message: 'Order created successfully',
+      message: responseMessage,
       order,
+      deliveryStatus: doordashError ? 'manual' : 'scheduled',
+      deliveryError: doordashError,
     });
   } catch (error: any) {
     console.error('Order creation error:', error);

@@ -78,14 +78,16 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
   }, [orderType, phone, deliveryAddress, deliveryCity, deliveryState, deliveryZip, notes, deliveryQuote]);
 
   // Fetch delivery quote when address is complete
-  const fetchDeliveryQuote = async () => {
+  const fetchDeliveryQuote = async (silent: boolean = false): Promise<DeliveryQuote | null> => {
     if (orderType !== 'delivery' || !deliveryAddress || !deliveryCity || !deliveryState || !deliveryZip || !phone) {
-      return;
+      return null;
     }
 
-    setDeliveryQuoteLoading(true);
-    setDeliveryQuoteError('');
-    setDeliveryQuote(null);
+    if (!silent) {
+      setDeliveryQuoteLoading(true);
+      setDeliveryQuoteError('');
+      setDeliveryQuote(null);
+    }
 
     try {
       const fullAddress = `${deliveryAddress}, ${deliveryCity}, ${deliveryState} ${deliveryZip}`;
@@ -111,14 +113,35 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
 
       if (data.available && data.quote) {
         setDeliveryQuote(data.quote);
+        return data.quote;
       } else {
-        setDeliveryQuoteError('Delivery is not available for this address');
+        if (!silent) {
+          setDeliveryQuoteError('Delivery is not available for this address');
+        }
+        return null;
       }
     } catch (err: any) {
-      setDeliveryQuoteError(err.message || 'Unable to get delivery quote');
+      if (!silent) {
+        setDeliveryQuoteError(err.message || 'Unable to get delivery quote');
+      }
+      return null;
     } finally {
-      setDeliveryQuoteLoading(false);
+      if (!silent) {
+        setDeliveryQuoteLoading(false);
+      }
     }
+  };
+
+  // Check if quote is expired or about to expire (within 30 seconds)
+  const isQuoteExpired = (quote: DeliveryQuote | null): boolean => {
+    if (!quote) return true;
+    if (!quote.expiresAt) return false; // If no expiry, assume it's valid
+    
+    const expiresAt = new Date(quote.expiresAt).getTime();
+    const now = Date.now();
+    const bufferMs = 30 * 1000; // 30 second buffer
+    
+    return now >= (expiresAt - bufferMs);
   };
 
   // Calculate total with delivery fee
@@ -144,6 +167,21 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
     setLoading(true);
     setError('');
 
+    // For delivery orders, check if quote is expired and refresh if needed
+    let currentQuote = deliveryQuote;
+    if (orderType === 'delivery' && isQuoteExpired(deliveryQuote)) {
+      setError('');
+      console.log('Quote expired, fetching new quote...');
+      
+      const newQuote = await fetchDeliveryQuote(true); // Silent refresh
+      if (!newQuote) {
+        setError('Unable to refresh delivery quote. Please try again.');
+        setLoading(false);
+        return;
+      }
+      currentQuote = newQuote;
+    }
+
     try {
       // Confirm the payment
       const { error: stripeError, paymentIntent } = await stripe.confirmPayment({
@@ -159,7 +197,8 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
         if (stripeError.type === 'card_error' || stripeError.type === 'validation_error') {
           setError(stripeError.message || 'Payment failed. Please check your card details.');
         } else if (stripeError.code === 'payment_intent_unexpected_state') {
-          setError('This payment has already been processed. Please check your order history.');
+          // Payment was already processed - check if we need to complete the order
+          setError('Payment was already processed. If your order is not in order history, please contact support.');
         } else {
           setError(stripeError.message || 'Payment failed. Please try again.');
         }
@@ -186,6 +225,10 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
         ? `${deliveryAddress}, ${deliveryCity}, ${deliveryState} ${deliveryZip}`
         : null;
 
+      // Calculate total with the current quote (might be refreshed)
+      const finalDeliveryFee = orderType === 'delivery' && currentQuote ? currentQuote.fee : 0;
+      const finalTotal = getTotalPrice() + finalDeliveryFee;
+
       // Create order in database (this will accept the DoorDash quote)
       const orderResponse = await fetch('/api/orders/create', {
         method: 'POST',
@@ -194,14 +237,14 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
         },
         body: JSON.stringify({
           items,
-          total: getOrderTotal(), // Include delivery fee in total
+          total: finalTotal, // Include delivery fee in total
           orderType,
           paymentIntentId: paymentIntent.id,
           paymentStatus: paymentIntent.status === 'succeeded' ? 'paid' : 'pending',
           deliveryAddress: fullDeliveryAddress,
           deliveryPhone: phone,
-          deliveryQuoteId: deliveryQuote?.id, // DoorDash quote ID to accept
-          deliveryFee: deliveryQuote?.fee, // Delivery fee from quote
+          deliveryQuoteId: currentQuote?.id, // DoorDash quote ID to accept (possibly refreshed)
+          deliveryFee: currentQuote?.fee, // Delivery fee from quote
           notes,
         }),
       });
@@ -415,7 +458,7 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
               {/* Get Delivery Quote Button */}
               <button
                 type="button"
-                onClick={fetchDeliveryQuote}
+                onClick={() => fetchDeliveryQuote(false)}
                 disabled={!deliveryAddress || !deliveryCity || !deliveryState || !deliveryZip || !phone || deliveryQuoteLoading}
                 style={{
                   width: '100%',
@@ -452,13 +495,22 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
               {deliveryQuote && (
                 <div style={{
                   padding: '16px',
-                  background: 'rgba(76, 175, 80, 0.1)',
-                  border: '1px solid rgba(76, 175, 80, 0.3)',
+                  background: isQuoteExpired(deliveryQuote) ? 'rgba(255, 152, 0, 0.1)' : 'rgba(76, 175, 80, 0.1)',
+                  border: `1px solid ${isQuoteExpired(deliveryQuote) ? 'rgba(255, 152, 0, 0.3)' : 'rgba(76, 175, 80, 0.3)'}`,
                   borderRadius: '8px'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                    <span style={{ color: '#4CAF50', fontSize: '18px' }}>✓</span>
-                    <span style={{ color: '#4CAF50', fontWeight: '600' }}>Delivery Available!</span>
+                    {isQuoteExpired(deliveryQuote) ? (
+                      <>
+                        <span style={{ color: '#FF9800', fontSize: '18px' }}>⚠</span>
+                        <span style={{ color: '#FF9800', fontWeight: '600' }}>Quote Expired - Will refresh on checkout</span>
+                      </>
+                    ) : (
+                      <>
+                        <span style={{ color: '#4CAF50', fontSize: '18px' }}>✓</span>
+                        <span style={{ color: '#4CAF50', fontWeight: '600' }}>Delivery Available!</span>
+                      </>
+                    )}
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                     <span style={{ color: '#ccc' }}>Delivery Fee:</span>
@@ -472,6 +524,9 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
                   )}
                   <div style={{ marginTop: '12px', fontSize: '12px', color: '#888' }}>
                     Delivered via DoorDash
+                    {deliveryQuote.expiresAt && !isQuoteExpired(deliveryQuote) && (
+                      <span> • Quote valid for a few minutes</span>
+                    )}
                   </div>
                 </div>
               )}
