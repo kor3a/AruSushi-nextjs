@@ -1,5 +1,22 @@
 import axios, { AxiosInstance } from 'axios';
 
+// Request types
+export interface DoorDashQuoteRequest {
+  external_delivery_id: string;
+  pickup_address: string;
+  pickup_phone_number: string;
+  pickup_business_name: string;
+  pickup_instructions?: string;
+  dropoff_address: string;
+  dropoff_phone_number: string;
+  dropoff_instructions?: string;
+  order_value: number; // Order total in cents
+  items?: Array<{
+    name: string;
+    quantity: number;
+  }>;
+}
+
 export interface DoorDashDeliveryRequest {
   external_delivery_id: string; // Our order ID
   pickup_address: string;
@@ -16,6 +33,20 @@ export interface DoorDashDeliveryRequest {
   }>;
 }
 
+// Response types
+export interface DoorDashQuoteResponse {
+  id: string; // Quote ID - needed to accept the quote
+  external_delivery_id: string;
+  fee: number; // Delivery fee in cents
+  currency: string;
+  delivery_time?: {
+    estimated_pickup_time: string;
+    estimated_dropoff_time: string;
+  };
+  time_estimate_seconds?: number;
+  expires_at?: string; // Quote expiration time
+}
+
 export interface DoorDashDeliveryResponse {
   id: string; // DoorDash delivery ID
   external_delivery_id: string;
@@ -24,6 +55,7 @@ export interface DoorDashDeliveryResponse {
   currency: string;
   estimated_pickup_time?: string;
   estimated_dropoff_time?: string;
+  tracking_url?: string;
 }
 
 export interface DoorDashDeliveryStatus {
@@ -105,7 +137,59 @@ class DoorDashClient {
   }
 
   /**
-   * Create a delivery request
+   * Step 1: Get a delivery quote
+   * This checks availability and returns delivery fee + time estimate
+   */
+  async getDeliveryQuote(request: DoorDashQuoteRequest): Promise<DoorDashQuoteResponse> {
+    if (!this.developerId || !this.keyId || !this.signingSecret) {
+      throw new Error('DoorDash credentials not configured');
+    }
+
+    try {
+      const response = await this.client.post<DoorDashQuoteResponse>(
+        '/drive/v2/quotes',
+        request
+      );
+
+      return response.data;
+    } catch (error: any) {
+      console.error('DoorDash Quote API Error:', error.response?.data || error.message);
+      throw new Error(
+        error.response?.data?.message || 
+        error.response?.data?.error || 
+        'Failed to get DoorDash delivery quote'
+      );
+    }
+  }
+
+  /**
+   * Step 2: Accept a delivery quote
+   * This confirms the delivery and dispatches a Dasher
+   */
+  async acceptDeliveryQuote(quoteId: string): Promise<DoorDashDeliveryResponse> {
+    if (!this.developerId || !this.keyId || !this.signingSecret) {
+      throw new Error('DoorDash credentials not configured');
+    }
+
+    try {
+      const response = await this.client.post<DoorDashDeliveryResponse>(
+        `/drive/v2/quotes/${quoteId}/accept`
+      );
+
+      return response.data;
+    } catch (error: any) {
+      console.error('DoorDash Accept Quote API Error:', error.response?.data || error.message);
+      throw new Error(
+        error.response?.data?.message || 
+        error.response?.data?.error || 
+        'Failed to accept DoorDash delivery quote'
+      );
+    }
+  }
+
+  /**
+   * Create a delivery request directly (without quote flow)
+   * Note: The recommended flow is to use getDeliveryQuote + acceptDeliveryQuote
    */
   async createDelivery(request: DoorDashDeliveryRequest): Promise<DoorDashDeliveryResponse> {
     if (!this.developerId || !this.keyId || !this.signingSecret) {
