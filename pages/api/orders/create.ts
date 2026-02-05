@@ -33,6 +33,8 @@ export default async function handler(
       paymentStatus,
       deliveryAddress,
       deliveryPhone,
+      deliveryQuoteId, // DoorDash quote ID to accept
+      deliveryFee, // Delivery fee from quote
       notes,
     } = req.body;
 
@@ -76,41 +78,34 @@ export default async function handler(
     // Initialize DoorDash delivery variables
     let doordashDeliveryId: string | undefined;
     let doordashDeliveryStatus: string | undefined;
+    let doordashTrackingUrl: string | undefined;
 
-    // Create DoorDash delivery if order type is delivery
+    // Accept DoorDash delivery quote if order type is delivery
     if (orderType === 'delivery' && doordashClient.isConfigured()) {
+      if (!deliveryQuoteId) {
+        return res.status(400).json({ message: 'Delivery quote is required for delivery orders' });
+      }
+
       try {
-        // Format restaurant address
-        const restaurantAddress = `${restaurantInfo.address.street}, ${restaurantInfo.address.city}, ${restaurantInfo.address.state} ${restaurantInfo.address.zip}`;
-        
-        // Format restaurant phone (remove formatting)
-        const restaurantPhone = restaurantInfo.phone.replace(/\D/g, '');
-
-        // Create DoorDash delivery request
-        const doordashRequest = {
-          external_delivery_id: `order-${Date.now()}`, // Temporary ID, will be replaced with actual order ID
-          pickup_address: restaurantAddress,
-          pickup_phone_number: restaurantPhone,
-          pickup_business_name: restaurantInfo.name,
-          pickup_instructions: notes || undefined,
-          dropoff_address: deliveryAddress,
-          dropoff_phone_number: deliveryPhone.replace(/\D/g, ''),
-          dropoff_instructions: notes || undefined,
-          order_value: Math.round(total * 100), // Convert to cents
-          items: items.map((item: any) => ({
-            name: item.name,
-            quantity: item.quantity,
-          })),
-        };
-
-        const doordashResponse = await doordashClient.createDelivery(doordashRequest);
+        // Accept the delivery quote - this dispatches a Dasher
+        const doordashResponse = await doordashClient.acceptDeliveryQuote(deliveryQuoteId);
         doordashDeliveryId = doordashResponse.id;
         doordashDeliveryStatus = doordashResponse.status;
+        doordashTrackingUrl = doordashResponse.tracking_url;
+        
+        console.log('DoorDash delivery accepted:', {
+          deliveryId: doordashDeliveryId,
+          status: doordashDeliveryStatus,
+          trackingUrl: doordashTrackingUrl,
+        });
       } catch (error: any) {
-        console.error('Failed to create DoorDash delivery:', error);
-        // Don't fail the order creation if DoorDash fails
-        // The order will be created without DoorDash integration
-        // In production, you might want to handle this differently
+        console.error('Failed to accept DoorDash delivery quote:', error);
+        // In production, you might want to fail the order if delivery is critical
+        // For now, we'll continue and let the restaurant handle it manually
+        return res.status(500).json({ 
+          message: 'Failed to confirm delivery. Please try again or select pickup.',
+          error: error.message 
+        });
       }
     }
 
@@ -125,19 +120,14 @@ export default async function handler(
       paymentStatus: paymentStatus || 'pending',
       deliveryAddress: orderType === 'delivery' ? deliveryAddress : undefined,
       deliveryPhone,
+      deliveryFee: orderType === 'delivery' ? deliveryFee : undefined,
       doordashDeliveryId,
       doordashDeliveryStatus,
+      doordashTrackingUrl,
       customerName: user.user_metadata?.name || dbUser.name || undefined,
       customerEmail: user.email,
       notes,
     });
-
-    // Update DoorDash external_delivery_id with actual order ID if delivery was created
-    if (orderType === 'delivery' && doordashDeliveryId && doordashClient.isConfigured()) {
-      // Note: DoorDash API might not support updating external_delivery_id after creation
-      // This is a limitation we'll need to work with
-      // In production, you might want to generate the order ID first, then create DoorDash delivery
-    }
 
     // Send email notifications (don't wait for them to complete)
     // Only send if payment is successful

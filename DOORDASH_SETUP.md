@@ -15,53 +15,43 @@ This guide explains how to obtain DoorDash API credentials for delivery integrat
 3. Fill in the application details:
    - Application Name: Your restaurant name (e.g., "A-Ru Sushi")
    - Description: Brief description of your use case
-   - Redirect URI: Your callback URL (if using OAuth flow)
 
-## Step 3: Get Your Credentials
+## Step 3: Get Your Access Key
 
-After creating your application, you'll receive:
+After creating your application, you'll receive an **Access Key** that contains three parts:
 
-- **Developer ID**: Your unique developer identifier
-- **Key ID (Client ID)**: Used for OAuth authentication
-- **Signing Secret (Client Secret)**: Used for OAuth authentication
+- **Developer ID** (`developer_id`): Your unique developer identifier
+- **Key ID** (`key_id`): Used for JWT authentication
+- **Signing Secret** (`signing_secret`): Used to sign JWT tokens
 
-## Step 4: Obtain Access Token
+The access key looks like this (JSON format):
+```json
+{
+  "developer_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "key_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "signing_secret": "base64encodedstring=="
+}
+```
 
-DoorDash Drive API uses OAuth 2.0 authentication. You have two options:
+## Step 4: How Authentication Works
 
-### Option A: Pre-generated Access Token (Testing/Development)
+DoorDash uses **JWT (JSON Web Token)** authentication. Our integration automatically generates JWTs for each API request using your credentials:
 
-1. In the DoorDash Developer Portal, go to your application settings
-2. Look for **Access Tokens** or **API Keys** section
-3. Generate a test/sandbox access token
-4. Copy the token and add it to your `.env` file as `DOORDASH_ACCESS_TOKEN`
+1. Each request generates a new JWT signed with your `signing_secret`
+2. The JWT includes your `developer_id` and `key_id`
+3. Tokens expire after 5 minutes (generated fresh for each request)
 
-### Option B: OAuth 2.0 Flow (Production)
-
-For production, you should implement the OAuth 2.0 flow:
-
-1. **Authorization Code Flow**:
-   - Redirect user to DoorDash authorization URL
-   - User authorizes your application
-   - Receive authorization code
-   - Exchange code for access token
-   - Refresh token when it expires
-
-2. **Client Credentials Flow** (if supported):
-   - Use your Client ID and Client Secret
-   - Exchange for access token via token endpoint
-   - Refresh as needed
+**You don't need to manually generate tokens** - our code handles this automatically!
 
 ## Step 5: Configure Environment Variables
 
 Add the following to your `.env` file:
 
 ```env
-# DoorDash Drive API Credentials
-DOORDASH_DEVELOPER_ID="your_developer_id_from_portal"
-DOORDASH_KEY_ID="your_key_id_from_portal"
-DOORDASH_SIGNING_SECRET="your_signing_secret_from_portal"
-DOORDASH_ACCESS_TOKEN="your_access_token_here"
+# DoorDash Drive API Credentials (from your Access Key)
+DOORDASH_DEVELOPER_ID="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+DOORDASH_KEY_ID="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+DOORDASH_SIGNING_SECRET="base64encodedstring=="
 DOORDASH_API_URL="https://openapi.doordash.com"
 DOORDASH_SANDBOX="true"  # Set to "false" for production
 ```
@@ -69,38 +59,57 @@ DOORDASH_SANDBOX="true"  # Set to "false" for production
 ## Step 6: Test Your Integration
 
 1. Make sure all credentials are set in your `.env` file
-2. Test creating a delivery order through your checkout page
-3. Check the DoorDash Developer Portal dashboard for delivery requests
+2. Restart your development server
+3. Go to checkout and select "Delivery"
+4. Enter a delivery address and click "Get Delivery Quote"
+5. Check the DoorDash Developer Portal dashboard for delivery requests
 
 ## Important Notes
 
 - **Sandbox vs Production**: Use `DOORDASH_SANDBOX="true"` for testing. Set to `"false"` for production.
-- **Token Expiration**: Access tokens expire. For production, implement token refresh logic.
+- **JWT Tokens**: Tokens are generated automatically for each request and expire after 5 minutes.
 - **API Limits**: Check DoorDash's rate limits in their documentation.
 - **Webhooks**: Consider setting up webhooks to receive delivery status updates.
 
 ## Troubleshooting
 
 ### "DoorDash credentials not configured" error
-- Verify all environment variables are set correctly
+- Verify all three environment variables are set correctly:
+  - `DOORDASH_DEVELOPER_ID`
+  - `DOORDASH_KEY_ID`
+  - `DOORDASH_SIGNING_SECRET`
 - Check that `.env` file is loaded properly
 - Restart your development server after adding credentials
 
-### "Failed to create DoorDash delivery" error
-- Verify your access token is valid and not expired
+### "Failed to get DoorDash delivery quote" error
+- Verify your credentials are correct (copy them exactly from the access key)
+- Make sure the `signing_secret` is the base64-encoded string (don't decode it)
 - Check that you're using the correct API endpoint (sandbox vs production)
-- Review DoorDash API documentation for required fields
+- Verify the delivery address is valid and within DoorDash service area
 
-### Authentication errors
-- Ensure your Developer ID, Key ID, and Signing Secret are correct
-- Verify your access token is valid
-- Check if you need to implement OAuth 2.0 token generation
+### "Failed to generate DoorDash JWT" error
+- Ensure your Signing Secret is correct and base64-encoded
+- Check that all three credentials are set
+
+### JWT Authentication errors (401/403)
+- Double-check your `developer_id`, `key_id`, and `signing_secret`
+- Make sure you copied the values exactly (no extra spaces)
+- Verify your application is active in the DoorDash Developer Portal
+
+## How the Delivery Flow Works
+
+1. **Customer selects delivery** at checkout
+2. **Customer enters address** and phone number
+3. **Get Quote**: System calls DoorDash API to get delivery fee and time estimate
+4. **Customer reviews** the delivery fee and estimated time
+5. **Customer pays**: System accepts the quote, DoorDash dispatches a Dasher
+6. **Delivery tracking**: Customer can track their delivery via DoorDash
 
 ## Additional Resources
 
 - [DoorDash Developer Documentation](https://developer.doordash.com/)
 - [DoorDash Drive API Reference](https://developer.doordash.com/en-US/api/drive)
-- [OAuth 2.0 Guide](https://developer.doordash.com/en-US/docs/guides/oauth)
+- [JWT Authentication Guide](https://developer.doordash.com/en-US/docs/drive/how_to/JWTs)
 
 ## Support
 

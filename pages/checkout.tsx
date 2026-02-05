@@ -10,6 +10,18 @@ import { useCart } from '../contexts/CartContext';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
+// Delivery quote interface
+interface DeliveryQuote {
+  id: string;
+  externalDeliveryId: string;
+  fee: number;
+  currency: string;
+  estimatedDeliveryMinutes: number | null;
+  estimatedPickupTime?: string;
+  estimatedDropoffTime?: string;
+  expiresAt?: string;
+}
+
 function CheckoutForm({ clientSecret }: { clientSecret: string }) {
   const router = useRouter();
   const stripe = useStripe();
@@ -24,11 +36,73 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
   const [deliveryState, setDeliveryState] = useState('');
   const [deliveryZip, setDeliveryZip] = useState('');
   const [notes, setNotes] = useState('');
+  
+  // Delivery quote state
+  const [deliveryQuote, setDeliveryQuote] = useState<DeliveryQuote | null>(null);
+  const [deliveryQuoteLoading, setDeliveryQuoteLoading] = useState(false);
+  const [deliveryQuoteError, setDeliveryQuoteError] = useState('');
+
+  // Fetch delivery quote when address is complete
+  const fetchDeliveryQuote = async () => {
+    if (orderType !== 'delivery' || !deliveryAddress || !deliveryCity || !deliveryState || !deliveryZip || !phone) {
+      return;
+    }
+
+    setDeliveryQuoteLoading(true);
+    setDeliveryQuoteError('');
+    setDeliveryQuote(null);
+
+    try {
+      const fullAddress = `${deliveryAddress}, ${deliveryCity}, ${deliveryState} ${deliveryZip}`;
+      
+      const response = await fetch('/api/delivery/quote', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          deliveryAddress: fullAddress,
+          deliveryPhone: phone,
+          orderTotal: getTotalPrice(),
+          items,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Unable to get delivery quote');
+      }
+
+      if (data.available && data.quote) {
+        setDeliveryQuote(data.quote);
+      } else {
+        setDeliveryQuoteError('Delivery is not available for this address');
+      }
+    } catch (err: any) {
+      setDeliveryQuoteError(err.message || 'Unable to get delivery quote');
+    } finally {
+      setDeliveryQuoteLoading(false);
+    }
+  };
+
+  // Calculate total with delivery fee
+  const getOrderTotal = () => {
+    const subtotal = getTotalPrice();
+    const deliveryFee = orderType === 'delivery' && deliveryQuote ? deliveryQuote.fee : 0;
+    return subtotal + deliveryFee;
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
     if (!stripe || !elements) {
+      return;
+    }
+
+    // Validate delivery quote for delivery orders
+    if (orderType === 'delivery' && !deliveryQuote) {
+      setError('Please get a delivery quote before proceeding');
       return;
     }
 
@@ -56,7 +130,7 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
         ? `${deliveryAddress}, ${deliveryCity}, ${deliveryState} ${deliveryZip}`
         : null;
 
-      // Create order in database
+      // Create order in database (this will accept the DoorDash quote)
       const orderResponse = await fetch('/api/orders/create', {
         method: 'POST',
         headers: {
@@ -64,12 +138,14 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
         },
         body: JSON.stringify({
           items,
-          total: getTotalPrice(),
+          total: getOrderTotal(), // Include delivery fee in total
           orderType,
           paymentIntentId: paymentIntent.id,
           paymentStatus: paymentIntent.status === 'succeeded' ? 'paid' : 'pending',
           deliveryAddress: fullDeliveryAddress,
           deliveryPhone: phone,
+          deliveryQuoteId: deliveryQuote?.id, // DoorDash quote ID to accept
+          deliveryFee: deliveryQuote?.fee, // Delivery fee from quote
           notes,
         }),
       });
@@ -91,6 +167,32 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
 
   return (
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      {/* Order Summary with Delivery Fee */}
+      <div style={{
+        background: 'rgba(255, 255, 255, 0.03)',
+        borderRadius: '12px',
+        padding: '16px',
+        marginBottom: '8px'
+      }}>
+        <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: '#f1d00f' }}>Order Total</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#ccc', marginBottom: '8px' }}>
+          <span>Subtotal:</span>
+          <span>${getTotalPrice().toFixed(2)}</span>
+        </div>
+        {orderType === 'delivery' && deliveryQuote && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#ccc', marginBottom: '8px' }}>
+            <span>Delivery Fee (DoorDash):</span>
+            <span>${deliveryQuote.fee.toFixed(2)}</span>
+          </div>
+        )}
+        <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', marginTop: '8px', paddingTop: '8px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '18px' }}>
+            <span style={{ color: '#fff' }}>Total:</span>
+            <span style={{ color: '#fc3678' }}>${getOrderTotal().toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
+
       <div>
         <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: '#f1d00f' }}>Order Type</h3>
         
@@ -158,7 +260,7 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
                   id="deliveryAddress"
                   required={orderType === 'delivery'}
                   value={deliveryAddress}
-                  onChange={(e) => setDeliveryAddress(e.target.value)}
+                  onChange={(e) => { setDeliveryAddress(e.target.value); setDeliveryQuote(null); }}
                   style={{
                     width: '100%',
                     padding: '12px',
@@ -183,7 +285,7 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
                     id="deliveryCity"
                     required={orderType === 'delivery'}
                     value={deliveryCity}
-                    onChange={(e) => setDeliveryCity(e.target.value)}
+                    onChange={(e) => { setDeliveryCity(e.target.value); setDeliveryQuote(null); }}
                     style={{
                       width: '100%',
                       padding: '12px',
@@ -207,7 +309,7 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
                     id="deliveryState"
                     required={orderType === 'delivery'}
                     value={deliveryState}
-                    onChange={(e) => setDeliveryState(e.target.value)}
+                    onChange={(e) => { setDeliveryState(e.target.value); setDeliveryQuote(null); }}
                     maxLength={2}
                     style={{
                       width: '100%',
@@ -233,7 +335,7 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
                     id="deliveryZip"
                     required={orderType === 'delivery'}
                     value={deliveryZip}
-                    onChange={(e) => setDeliveryZip(e.target.value)}
+                    onChange={(e) => { setDeliveryZip(e.target.value); setDeliveryQuote(null); }}
                     style={{
                       width: '100%',
                       padding: '12px',
@@ -248,6 +350,70 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
                   />
                 </div>
               </div>
+
+              {/* Get Delivery Quote Button */}
+              <button
+                type="button"
+                onClick={fetchDeliveryQuote}
+                disabled={!deliveryAddress || !deliveryCity || !deliveryState || !deliveryZip || !phone || deliveryQuoteLoading}
+                style={{
+                  width: '100%',
+                  padding: '12px 20px',
+                  background: deliveryQuoteLoading ? 'rgba(241, 208, 15, 0.3)' : '#f1d00f',
+                  color: '#1a1a1a',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: (!deliveryAddress || !deliveryCity || !deliveryState || !deliveryZip || !phone || deliveryQuoteLoading) ? 'not-allowed' : 'pointer',
+                  opacity: (!deliveryAddress || !deliveryCity || !deliveryState || !deliveryZip || !phone) ? 0.5 : 1,
+                  transition: 'all 0.3s'
+                }}
+              >
+                {deliveryQuoteLoading ? 'Getting Quote...' : 'Get Delivery Quote'}
+              </button>
+
+              {/* Delivery Quote Error */}
+              {deliveryQuoteError && (
+                <div style={{
+                  padding: '12px',
+                  background: 'rgba(255, 68, 68, 0.1)',
+                  border: '1px solid rgba(255, 68, 68, 0.3)',
+                  borderRadius: '8px',
+                  color: '#ff4444',
+                  fontSize: '14px'
+                }}>
+                  {deliveryQuoteError}
+                </div>
+              )}
+
+              {/* Delivery Quote Display */}
+              {deliveryQuote && (
+                <div style={{
+                  padding: '16px',
+                  background: 'rgba(76, 175, 80, 0.1)',
+                  border: '1px solid rgba(76, 175, 80, 0.3)',
+                  borderRadius: '8px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                    <span style={{ color: '#4CAF50', fontSize: '18px' }}>✓</span>
+                    <span style={{ color: '#4CAF50', fontWeight: '600' }}>Delivery Available!</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ color: '#ccc' }}>Delivery Fee:</span>
+                    <span style={{ color: '#fff', fontWeight: '600' }}>${deliveryQuote.fee.toFixed(2)}</span>
+                  </div>
+                  {deliveryQuote.estimatedDeliveryMinutes && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#ccc' }}>Estimated Delivery:</span>
+                      <span style={{ color: '#fff', fontWeight: '600' }}>{deliveryQuote.estimatedDeliveryMinutes} minutes</span>
+                    </div>
+                  )}
+                  <div style={{ marginTop: '12px', fontSize: '12px', color: '#888' }}>
+                    Delivered via DoorDash
+                  </div>
+                </div>
+              )}
             </>
           )}
 
@@ -320,24 +486,29 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
 
       <button
         type="submit"
-        disabled={!stripe || loading}
+        disabled={!stripe || loading || (orderType === 'delivery' && !deliveryQuote)}
         style={{
           width: '100%',
           padding: '14px 24px',
-          background: !stripe || loading ? 'rgba(252, 54, 120, 0.5)' : '#fc3678',
+          background: !stripe || loading || (orderType === 'delivery' && !deliveryQuote) ? 'rgba(252, 54, 120, 0.5)' : '#fc3678',
           color: '#fff',
           border: 'none',
           borderRadius: '8px',
           fontSize: '16px',
           fontWeight: '600',
-          cursor: !stripe || loading ? 'not-allowed' : 'pointer',
+          cursor: !stripe || loading || (orderType === 'delivery' && !deliveryQuote) ? 'not-allowed' : 'pointer',
           boxShadow: '0 4px 12px rgba(252, 54, 120, 0.3)',
           transition: 'all 0.3s',
-          opacity: !stripe || loading ? 0.5 : 1
+          opacity: !stripe || loading || (orderType === 'delivery' && !deliveryQuote) ? 0.5 : 1
         }}
       >
-        {loading ? 'Processing...' : `Pay $${getTotalPrice().toFixed(2)}`}
+        {loading ? 'Processing...' : `Pay $${getOrderTotal().toFixed(2)}`}
       </button>
+      {orderType === 'delivery' && !deliveryQuote && (
+        <p style={{ textAlign: 'center', fontSize: '12px', color: '#888', marginTop: '8px' }}>
+          Please get a delivery quote before proceeding
+        </p>
+      )}
     </form>
   );
 }

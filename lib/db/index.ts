@@ -31,8 +31,10 @@ export type CreateOrderInput = {
   paymentStatus?: string;
   deliveryAddress?: string;
   deliveryPhone?: string;
+  deliveryFee?: number;
   doordashDeliveryId?: string;
   doordashDeliveryStatus?: string;
+  doordashTrackingUrl?: string;
   customerName?: string;
   customerEmail?: string;
   notes?: string;
@@ -86,8 +88,10 @@ class Database {
         paymentStatus: orderData.paymentStatus || 'pending',
         deliveryAddress: orderData.deliveryAddress,
         deliveryPhone: orderData.deliveryPhone,
+        deliveryFee: orderData.deliveryFee ? new Prisma.Decimal(orderData.deliveryFee) : undefined,
         doordashDeliveryId: orderData.doordashDeliveryId,
         doordashDeliveryStatus: orderData.doordashDeliveryStatus,
+        doordashTrackingUrl: orderData.doordashTrackingUrl,
         customerName: orderData.customerName,
         customerEmail: orderData.customerEmail,
         notes: orderData.notes,
