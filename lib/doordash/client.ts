@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
+import jwt from 'jsonwebtoken';
 
 // Request types
 export interface DoorDashQuoteRequest {
@@ -97,16 +98,16 @@ class DoorDashClient {
       },
     });
 
-    // Add request interceptor for authentication
+    // Add request interceptor for JWT authentication
     this.client.interceptors.request.use(
-      async (config) => {
-        // DoorDash Drive API uses OAuth 2.0 Bearer token authentication
-        if (this.keyId && this.signingSecret) {
+      (config) => {
+        // Generate JWT for each request (tokens expire in 5 minutes)
+        if (this.developerId && this.keyId && this.signingSecret) {
           try {
-            const token = await this.getAuthToken();
+            const token = this.generateJWT();
             config.headers['Authorization'] = `Bearer ${token}`;
           } catch (error) {
-            console.error('Failed to get DoorDash auth token:', error);
+            console.error('Failed to generate DoorDash JWT:', error);
           }
         }
         return config;
@@ -118,22 +119,38 @@ class DoorDashClient {
   }
 
   /**
-   * Get authentication token
-   * DoorDash Drive API uses OAuth 2.0
-   * You can either:
-   * 1. Use a pre-generated access token (for testing)
-   * 2. Implement OAuth 2.0 token generation/refresh (for production)
+   * Generate JWT token for DoorDash API authentication
+   * JWTs are generated dynamically using the signing secret
+   * Token expires in 5 minutes (300 seconds)
    */
-  private async getAuthToken(): Promise<string> {
-    // Option 1: Use pre-configured access token (simpler, but less secure)
-    if (process.env.DOORDASH_ACCESS_TOKEN) {
-      return process.env.DOORDASH_ACCESS_TOKEN;
+  private generateJWT(): string {
+    if (!this.developerId || !this.keyId || !this.signingSecret) {
+      throw new Error('DoorDash credentials not configured');
     }
 
-    // Option 2: Generate token via OAuth 2.0 (recommended for production)
-    // This would require implementing the OAuth flow
-    // For now, we'll throw an error if no token is provided
-    throw new Error('DoorDash access token not configured. Please set DOORDASH_ACCESS_TOKEN or implement OAuth 2.0 flow.');
+    const data = {
+      aud: 'doordash',
+      iss: this.developerId,
+      kid: this.keyId,
+      exp: Math.floor(Date.now() / 1000 + 300), // Expires in 5 minutes
+      iat: Math.floor(Date.now() / 1000),
+    };
+
+    const token = jwt.sign(
+      data,
+      Buffer.from(this.signingSecret, 'base64'),
+      { 
+        algorithm: 'HS256',
+        header: { 
+          'dd-ver': 'DD-JWT-V1',
+          alg: 'HS256',
+          typ: 'JWT',
+          kid: this.keyId
+        } as any
+      }
+    );
+
+    return token;
   }
 
   /**
