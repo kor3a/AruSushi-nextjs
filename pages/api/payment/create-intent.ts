@@ -34,6 +34,11 @@ export default async function handler(
       return res.status(400).json({ message: 'No items in order' });
     }
 
+    // Build a compact items summary for Stripe metadata (500 char limit per value)
+    const itemsSummary = items
+      .map((item: any) => `${item.quantity}x ${item.name}`)
+      .join(', ');
+
     // Create a PaymentIntent with the order amount and currency
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(amount * 100), // Convert to cents
@@ -44,8 +49,11 @@ export default async function handler(
         userName: user.user_metadata?.name || '',
         deliveryAddress: deliveryAddress || '',
         deliveryPhone: deliveryPhone || '',
-        notes: notes || '',
-        items: JSON.stringify(items),
+        notes: (notes || '').slice(0, 500),
+        itemCount: String(items.length),
+        items: itemsSummary.length <= 500
+          ? itemsSummary
+          : itemsSummary.slice(0, 497) + '...',
       },
       automatic_payment_methods: {
         enabled: true,
