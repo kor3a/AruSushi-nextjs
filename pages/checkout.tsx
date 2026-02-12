@@ -271,32 +271,6 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
 
   return (
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      {/* Order Summary with Delivery Fee */}
-      <div style={{
-        background: 'rgba(255, 255, 255, 0.03)',
-        borderRadius: '12px',
-        padding: '16px',
-        marginBottom: '8px'
-      }}>
-        <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: '#f1d00f' }}>Order Total</h3>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#ccc', marginBottom: '8px' }}>
-          <span>Subtotal:</span>
-          <span>${getTotalPrice().toFixed(2)}</span>
-        </div>
-        {orderType === 'delivery' && deliveryQuote && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#ccc', marginBottom: '8px' }}>
-            <span>Delivery Fee (DoorDash):</span>
-            <span>${deliveryQuote.fee.toFixed(2)}</span>
-          </div>
-        )}
-        <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', marginTop: '8px', paddingTop: '8px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '18px' }}>
-            <span style={{ color: '#fff' }}>Total:</span>
-            <span style={{ color: '#fc3678' }}>${getOrderTotal().toFixed(2)}</span>
-          </div>
-        </div>
-      </div>
-
       <div>
         <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: '#f1d00f' }}>Order Type</h3>
         
