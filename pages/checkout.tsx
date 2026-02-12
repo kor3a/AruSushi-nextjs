@@ -271,6 +271,35 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
 
   return (
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      {/* Order Summary */}
+      <div>
+        <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '12px', color: '#f1d00f' }}>Order Summary</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {items.map((item) => (
+            <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#ccc' }}>
+              <span>{item.name} x{item.quantity}</span>
+              <span>${(item.price * item.quantity).toFixed(2)}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', marginTop: '12px', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#ccc' }}>
+            <span>Subtotal:</span>
+            <span>${getTotalPrice().toFixed(2)}</span>
+          </div>
+          {orderType === 'delivery' && deliveryQuote && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#ccc' }}>
+              <span>Delivery Fee (DoorDash):</span>
+              <span>${deliveryQuote.fee.toFixed(2)}</span>
+            </div>
+          )}
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '18px' }}>
+            <span style={{ color: '#fff' }}>Total:</span>
+            <span style={{ color: '#fc3678' }}>${getOrderTotal().toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
+
       <div>
         <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: '#f1d00f' }}>Order Type</h3>
         
@@ -725,34 +754,6 @@ export default function Checkout() {
       }}>
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
           <h1 style={{ fontSize: '36px', fontWeight: 'bold', color: '#f1d00f', marginBottom: '32px', textAlign: 'center' }}>Checkout</h1>
-
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.05)',
-            backdropFilter: 'blur(10px)',
-            borderRadius: '16px',
-            border: '1px solid rgba(252, 54, 120, 0.2)',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-            padding: '24px',
-            marginBottom: '24px'
-          }}>
-            <h2 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '16px', color: '#f1d00f' }}>Order Summary</h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {items.map((item) => (
-                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#ccc' }}>
-                  <span>
-                    {item.name} x{item.quantity}
-                  </span>
-                  <span>${(item.price * item.quantity).toFixed(2)}</span>
-                </div>
-              ))}
-            </div>
-            <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', marginTop: '16px', paddingTop: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '18px' }}>
-                <span style={{ color: '#fff' }}>Total:</span>
-                <span style={{ color: '#fc3678' }}>${getTotalPrice().toFixed(2)}</span>
-              </div>
-            </div>
-          </div>
 
           <div style={{
             background: 'rgba(255, 255, 255, 0.05)',
