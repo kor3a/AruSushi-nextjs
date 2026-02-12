@@ -88,6 +88,7 @@ export default async function handler(
         // No quote ID provided - order will be created without DoorDash
         console.warn('No delivery quote ID provided for delivery order');
         doordashError = 'No delivery quote provided';
+        doordashDeliveryStatus = 'failed';
       } else {
         try {
           // Accept the delivery quote - this dispatches a Dasher
@@ -111,11 +112,9 @@ export default async function handler(
       }
     }
 
-    // Prepare order notes (include DoorDash error if any)
-    let orderNotes = notes || '';
-    if (doordashError) {
-      orderNotes = `[DELIVERY ISSUE: ${doordashError}] ${orderNotes}`.trim();
-    }
+    // Keep user notes clean - don't mix in internal delivery system errors
+    // DoorDash delivery issues are tracked via doordashDeliveryStatus field
+    const orderNotes = notes || '';
 
     // Create order
     const order = await db.createOrder({
