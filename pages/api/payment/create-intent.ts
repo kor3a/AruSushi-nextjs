@@ -6,6 +6,16 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-11-17.clover',
 });
 
+const STRIPE_METADATA_LIMIT = 500;
+
+function toMetadataValue(value: unknown): string {
+  const text = String(value ?? '');
+  if (text.length <= STRIPE_METADATA_LIMIT) {
+    return text;
+  }
+  return `${text.slice(0, STRIPE_METADATA_LIMIT - 3)}...`;
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -34,9 +44,8 @@ export default async function handler(
       return res.status(400).json({ message: 'No items in order' });
     }
 
-    // Build a compact items summary for Stripe metadata (500 char limit per value)
     const itemsSummary = items
-      .map((item: any) => `${item.quantity}x ${item.name}`)
+      .map((item: any) => `${String(item?.name || 'Item')} x${Number(item?.quantity || 1)}`)
       .join(', ');
 
     // Create a PaymentIntent with the order amount and currency
@@ -45,15 +54,16 @@ export default async function handler(
       currency: 'usd',
       metadata: {
         userId: user.id,
-        userEmail: user.email || '',
-        userName: user.user_metadata?.name || '',
-        deliveryAddress: deliveryAddress || '',
-        deliveryPhone: deliveryPhone || '',
-        notes: notes || '',
-        items: JSON.stringify(items),
-        rewardRedemptionId: rewardRedemptionId || '',
-        rewardType: rewardType || '',
-        rewardDiscount: rewardDiscount ? String(rewardDiscount) : '',
+        userEmail: toMetadataValue(user.email || ''),
+        userName: toMetadataValue(user.user_metadata?.name || ''),
+        deliveryAddress: toMetadataValue(deliveryAddress || ''),
+        deliveryPhone: toMetadataValue(deliveryPhone || ''),
+        notes: toMetadataValue(notes || ''),
+        itemCount: toMetadataValue(items.length),
+        items: toMetadataValue(itemsSummary),
+        rewardRedemptionId: toMetadataValue(rewardRedemptionId || ''),
+        rewardType: toMetadataValue(rewardType || ''),
+        rewardDiscount: toMetadataValue(rewardDiscount ? String(rewardDiscount) : ''),
       },
       automatic_payment_methods: {
         enabled: true,
