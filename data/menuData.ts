@@ -3,6 +3,9 @@ export interface MenuItemOption {
   name: string;
   required: boolean;
   choices: string[];
+  choicePrices?: { [key: string]: number };
+  isMultiSelect?: boolean;
+  addonPrices?: { [key: string]: number };
 }
 
 export interface MenuItemData {
@@ -25,7 +28,7 @@ export const lunchMenu: MenuCategory[] = [
     items: [
       {
         name: 'Lunch Bento Special: Choice of 2 Items below',
-        price: 18.95,
+        price: 19.95,
         description:
           '*Served with miso soup, rice, and salad. (1st choice: Chicken Teriyaki, Beef Teriyaki, Chicken Cutlet, Spicy Sesame Chicken, Salmon Teriyaki, Shrimp & Veggie Tempura) (2nd choice: Sashimi, Sushi, California roll, Spicy Albacore Roll)',
         options: [
@@ -57,7 +60,7 @@ export const lunchMenu: MenuCategory[] = [
       },
       {
         name: 'Special Combination',
-        price: 21.9,
+        price: 24.95,
         description:
           "5pcs sushi of Chef's choice & customer's choice of 1 roll (911 roll, Alaskan roll, Aloha roll, Caterpillar roll, Crunchy roll, Dragon roll, Fire Cracker roll, Shrimp roll, Baked Salmon roll, Rainbow roll, Red Dragon roll)",
         options: [
@@ -83,15 +86,99 @@ export const lunchMenu: MenuCategory[] = [
       },
       {
         name: 'Choose Any 2 Different Items',
-        price: 19.95,
+        price: 21.95,
         description:
           'Beef Teriyaki, Chicken Teriyaki, Salmon Teriyaki, Spicy Pork, Shrimp & Vegetable Tempura, Gyoza, Chicken Cutlet, California & Spicy Tuna roll, Sushi 5pcs',
+        options: [
+          {
+            label: '1st Choice',
+            name: 'firstChoice',
+            required: true,
+            choices: [
+              'Chicken Teriyaki',
+              'Beef Teriyaki',
+              'Chicken Cutlet',
+              'Spicy Pork',
+              'Salmon Teriyaki',
+              'Shrimp & Veggie Tempura',
+              'Gyoza',
+              'California & Spicy Tuna roll',
+              'Sushi 5pcs'
+            ]
+          },
+          {
+            label: '2nd Choice',
+            name: 'secondChoice',
+            required: true,
+            choices: [
+              'Chicken Teriyaki',
+              'Beef Teriyaki',
+              'Chicken Cutlet',
+              'Spicy Pork',
+              'Salmon Teriyaki',
+              'Shrimp & Veggie Tempura',
+              'Gyoza',
+              'California & Spicy Tuna roll',
+              'Sushi 5pcs'
+            ]
+          }
+        ]
       },
       {
         name: 'Choose Any 3 Different Items',
-        price: 24.95,
+        price: 26.95,
         description:
           'Beef Teriyaki, Chicken Teriyaki, Salmon Teriyaki, Spicy Pork, Shrimp & Vegetable Tempura, Gyoza, Chicken Cutlet, California & Spicy Tuna roll, Sushi 5pcs',
+        options: [
+          {
+            label: '1st Choice',
+            name: 'firstChoice',
+            required: true,
+            choices: [
+              'Chicken Teriyaki',
+              'Beef Teriyaki',
+              'Chicken Cutlet',
+              'Spicy Pork',
+              'Salmon Teriyaki',
+              'Shrimp & Veggie Tempura',
+              'Gyoza',
+              'California & Spicy Tuna roll',
+              'Sushi 5pcs'
+            ]
+          },
+          {
+            label: '2nd Choice',
+            name: 'secondChoice',
+            required: true,
+            choices: [
+              'Chicken Teriyaki',
+              'Beef Teriyaki',
+              'Chicken Cutlet',
+              'Spicy Pork',
+              'Salmon Teriyaki',
+              'Shrimp & Veggie Tempura',
+              'Gyoza',
+              'California & Spicy Tuna roll',
+              'Sushi 5pcs'
+            ]
+          },
+          {
+            label: '3rd Choice',
+            name: 'thirdChoice',
+            required: true,
+            choices: [
+              'Chicken Teriyaki',
+              'Beef Teriyaki',
+              'Chicken Cutlet',
+              'Spicy Pork',
+              'Salmon Teriyaki',
+              'Shrimp & Veggie Tempura',
+              'Gyoza',
+              'California & Spicy Tuna roll',
+              'Sushi 5pcs'
+            ]
+          },
+        ]
       },
     ],
   },
@@ -101,7 +188,7 @@ export const lunchMenu: MenuCategory[] = [
     items: [
       {
         name: 'Sashimi Salad',
-        price: 19.95,
+        price: 21.95,
         description: 'Assorted fish with mixed salad and ginger dressing'
       },
     ],
@@ -110,15 +197,10 @@ export const lunchMenu: MenuCategory[] = [
     category: 'A La Carte',
     image: '/img/carte.png',
     items: [
-      { name: 'Sashimi Combination', price: 29.5 },
-      {
-        name: 'Hot Stone Bibimbap',
-        price: 21.95,
-        description: 'Korean style beef, vegetables, and egg over rice'
-      },
+      { name: 'Sashimi Combination', price: 29.50 },
       {
         name: 'Fried Rice',
-        price: 14.95,
+        price: 15.95,
         description: 'Chicken, shrimp, and vegetables'
       },
     ],
@@ -129,13 +211,42 @@ export const lunchMenu: MenuCategory[] = [
     items: [
       {
         name: 'Udon with choice of one item below',
-        price: 16.95,
-        description: 'Roll (California or Spicy tuna) or Shrimp & Vegetable Tempura'
+        price: 19.95,
+        description: 'Roll (California or Spicy tuna) or Shrimp & Vegetable Tempura',
+        options: [
+          {
+            label: 'Choose One Item',
+            name: 'udonChoice',
+            required: true,
+            choices: ['California Roll', 'Spicy Tuna Roll', 'Shrimp & Vegetable Tempura']
+          }
+        ]
       },
       {
         name: 'Ramen',
-        price: 13.5,
-        description: 'Mild or Spicy Korean style ramen noodle (Add-ons: ham(+$1.50), cheese(+$1.00), egg(+$1.00), rice cake(+$1.00))'
+        price: 13.50,
+        description: 'Mild or Spicy Korean style ramen noodle (Add-ons: ham(+$1.50), cheese(+$1.00), egg(+$1.00), rice cake(+$1.00))',
+        options: [
+          {
+            label: 'Spice Level',
+            name: 'spiceLevel',
+            required: true,
+            choices: ['Mild', 'Spicy']
+          },
+          {
+            label: 'Add-ons',
+            name: 'addons',
+            required: false,
+            choices: ['Ham', 'Cheese', 'Egg', 'Rice Cake'],
+            isMultiSelect: true,
+            addonPrices: {
+              'Ham': 1.50,
+              'Cheese': 1.00,
+              'Egg': 1.00,
+              'Rice Cake': 1.00
+            }
+          }
+        ]
       },
     ],
   },
@@ -145,7 +256,7 @@ export const lunchMenu: MenuCategory[] = [
     items: [
       {
         name: 'Bulgogi Bowl',
-        price: 16.95,
+        price: 19.95,
         description: 'Korean marinated beef bulgogi & vegetables over rice'
       },
       {
@@ -458,18 +569,174 @@ export const dinnerMenu: MenuCategory[] = [
     category: 'Basic Rolls',
     image: '/img/Rolls.png',
     items: [
-      { name: 'Tuna Roll', price: 11.5, description: 'Hand: $9.50 | Cut: $11.50' },
-      { name: 'California Roll', price: 10.5, description: 'Hand: $9.50 | Cut: $10.50' },
-      { name: 'Spicy Tuna Roll', price: 9.5, description: 'Hand: $8.50 | Cut: $9.50' },
-      { name: 'Cucumber Roll', price: 7.95, description: 'Hand: $5.50 | Cut: $7.95' },
-      { name: 'Salmon Skin Roll', price: 8.95, description: 'Hand: $7.50 | Cut: $8.95' },
-      { name: 'Scallop Roll', price: 9.5, description: 'Hand: $7.50 | Cut: $9.50' },
-      { name: 'Yellowtail Roll', price: 10.95, description: 'Hand: $9.50 | Cut: $10.95' },
-      { name: 'Salmon Roll', price: 9.5, description: 'Hand: $8.50 | Cut: $9.50' },
-      { name: 'Avocado Roll', price: 8.5, description: 'Hand: $7.50 | Cut: $8.50' },
-      { name: 'Unagi Roll', price: 11.5, description: 'Hand: $9.50 | Cut: $11.50' },
-      { name: 'Shrimp Tempura Roll', price: 13.5, description: 'Hand: $9.50 | Cut: $13.50' },
-      { name: 'Albacore Tempura Roll', price: 12.5, description: 'Hand: $9.50 | Cut: $12.50' },
+      {
+        name: 'Tuna Roll',
+        price: 11.5,
+        description: 'Hand: $9.50 | Cut: $11.50',
+        options: [
+          {
+            label: 'Roll Type',
+            name: 'rollType',
+            required: true,
+            choices: ['Hand Roll', 'Cut Roll'],
+            choicePrices: { 'Hand Roll': 9.5, 'Cut Roll': 11.5 }
+          }
+        ]
+      },
+      {
+        name: 'California Roll',
+        price: 10.5,
+        description: 'Hand: $9.50 | Cut: $10.50',
+        options: [
+          {
+            label: 'Roll Type',
+            name: 'rollType',
+            required: true,
+            choices: ['Hand Roll', 'Cut Roll'],
+            choicePrices: { 'Hand Roll': 9.5, 'Cut Roll': 10.5 }
+          }
+        ]
+      },
+      {
+        name: 'Spicy Tuna Roll',
+        price: 9.5,
+        description: 'Hand: $8.50 | Cut: $9.50',
+        options: [
+          {
+            label: 'Roll Type',
+            name: 'rollType',
+            required: true,
+            choices: ['Hand Roll', 'Cut Roll'],
+            choicePrices: { 'Hand Roll': 8.5, 'Cut Roll': 9.5 }
+          }
+        ]
+      },
+      {
+        name: 'Cucumber Roll',
+        price: 7.95,
+        description: 'Hand: $5.50 | Cut: $7.95',
+        options: [
+          {
+            label: 'Roll Type',
+            name: 'rollType',
+            required: true,
+            choices: ['Hand Roll', 'Cut Roll'],
+            choicePrices: { 'Hand Roll': 5.5, 'Cut Roll': 7.95 }
+          }
+        ]
+      },
+      {
+        name: 'Salmon Skin Roll',
+        price: 8.95,
+        description: 'Hand: $7.50 | Cut: $8.95',
+        options: [
+          {
+            label: 'Roll Type',
+            name: 'rollType',
+            required: true,
+            choices: ['Hand Roll', 'Cut Roll'],
+            choicePrices: { 'Hand Roll': 7.5, 'Cut Roll': 8.95 }
+          }
+        ]
+      },
+      {
+        name: 'Scallop Roll',
+        price: 9.5,
+        description: 'Hand: $7.50 | Cut: $9.50',
+        options: [
+          {
+            label: 'Roll Type',
+            name: 'rollType',
+            required: true,
+            choices: ['Hand Roll', 'Cut Roll'],
+            choicePrices: { 'Hand Roll': 7.5, 'Cut Roll': 9.5 }
+          }
+        ]
+      },
+      {
+        name: 'Yellowtail Roll',
+        price: 10.95,
+        description: 'Hand: $9.50 | Cut: $10.95',
+        options: [
+          {
+            label: 'Roll Type',
+            name: 'rollType',
+            required: true,
+            choices: ['Hand Roll', 'Cut Roll'],
+            choicePrices: { 'Hand Roll': 9.5, 'Cut Roll': 10.95 }
+          }
+        ]
+      },
+      {
+        name: 'Salmon Roll',
+        price: 9.5,
+        description: 'Hand: $8.50 | Cut: $9.50',
+        options: [
+          {
+            label: 'Roll Type',
+            name: 'rollType',
+            required: true,
+            choices: ['Hand Roll', 'Cut Roll'],
+            choicePrices: { 'Hand Roll': 8.5, 'Cut Roll': 9.5 }
+          }
+        ]
+      },
+      {
+        name: 'Avocado Roll',
+        price: 8.5,
+        description: 'Hand: $7.50 | Cut: $8.50',
+        options: [
+          {
+            label: 'Roll Type',
+            name: 'rollType',
+            required: true,
+            choices: ['Hand Roll', 'Cut Roll'],
+            choicePrices: { 'Hand Roll': 7.5, 'Cut Roll': 8.5 }
+          }
+        ]
+      },
+      {
+        name: 'Unagi Roll',
+        price: 11.5,
+        description: 'Hand: $9.50 | Cut: $11.50',
+        options: [
+          {
+            label: 'Roll Type',
+            name: 'rollType',
+            required: true,
+            choices: ['Hand Roll', 'Cut Roll'],
+            choicePrices: { 'Hand Roll': 9.5, 'Cut Roll': 11.5 }
+          }
+        ]
+      },
+      {
+        name: 'Shrimp Tempura Roll',
+        price: 13.5,
+        description: 'Hand: $9.50 | Cut: $13.50',
+        options: [
+          {
+            label: 'Roll Type',
+            name: 'rollType',
+            required: true,
+            choices: ['Hand Roll', 'Cut Roll'],
+            choicePrices: { 'Hand Roll': 9.5, 'Cut Roll': 13.5 }
+          }
+        ]
+      },
+      {
+        name: 'Albacore Tempura Roll',
+        price: 12.5,
+        description: 'Hand: $9.50 | Cut: $12.50',
+        options: [
+          {
+            label: 'Roll Type',
+            name: 'rollType',
+            required: true,
+            choices: ['Hand Roll', 'Cut Roll'],
+            choicePrices: { 'Hand Roll': 9.5, 'Cut Roll': 12.5 }
+          }
+        ]
+      },
     ],
   },
   {

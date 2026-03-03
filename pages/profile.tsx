@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useAuth } from '../contexts/AuthContext';
+import { useRewards } from '../contexts/RewardsContext';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import type { RewardType, RewardsSummary } from '../lib/rewards/types';
 
 interface UserProfile {
   id: string;
@@ -14,10 +16,25 @@ interface UserProfile {
   createdAt: string;
 }
 
+function parseRewardsSummary(data: any): RewardsSummary {
+  return {
+    pointsBalance: Number(data?.pointsBalance ?? 0),
+    lifetimePointsEarned: Number(data?.lifetimePointsEarned ?? 0),
+    lifetimePointsRedeemed: Number(data?.lifetimePointsRedeemed ?? 0),
+    pointsPerDollar: Number(data?.pointsPerDollar ?? 1),
+    rewardsCatalog: Array.isArray(data?.rewardsCatalog) ? data.rewardsCatalog : [],
+    availableRedemptions: Array.isArray(data?.availableRedemptions) ? data.availableRedemptions : [],
+  };
+}
+
 export default function Profile() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const { refreshRewards } = useRewards();
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [rewardsSummary, setRewardsSummary] = useState<RewardsSummary | null>(null);
+  const [rewardsLoading, setRewardsLoading] = useState(true);
+  const [redeemingReward, setRedeemingReward] = useState<RewardType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -55,26 +72,67 @@ export default function Profile() {
 
   const fetchProfile = async () => {
     try {
-      const response = await fetch('/api/user/profile');
-      const data = await response.json();
+      const [profileResponse, rewardsResponse] = await Promise.all([
+        fetch('/api/user/profile'),
+        fetch('/api/rewards'),
+      ]);
 
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to fetch profile');
+      const profileData = await profileResponse.json();
+      const rewardsData = await rewardsResponse.json();
+
+      if (!profileResponse.ok) {
+        throw new Error(profileData.message || 'Failed to fetch profile');
       }
 
-      setProfile(data.user);
+      setProfile(profileData.user);
       setFormData({
-        name: data.user.name || '',
-        phone: data.user.phone || '',
-        address: data.user.address || '',
+        name: profileData.user.name || '',
+        phone: profileData.user.phone || '',
+        address: profileData.user.address || '',
         currentPassword: '',
         newPassword: '',
         confirmPassword: '',
       });
+
+      if (rewardsResponse.ok) {
+        setRewardsSummary(parseRewardsSummary(rewardsData));
+      } else {
+        console.error('Failed to fetch rewards summary:', rewardsData.message || rewardsData);
+      }
     } catch (err: any) {
       setError(err.message || 'An error occurred');
     } finally {
+      setRewardsLoading(false);
       setLoading(false);
+    }
+  };
+
+  const handleRedeemReward = async (rewardType: RewardType) => {
+    setError('');
+    setSuccess('');
+    setRedeemingReward(rewardType);
+
+    try {
+      const response = await fetch('/api/rewards', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ rewardType }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to claim reward');
+      }
+
+      setRewardsSummary(parseRewardsSummary(data));
+      setSuccess(data.message || 'Reward claimed successfully');
+      await refreshRewards();
+    } catch (redeemError: any) {
+      setError(redeemError.message || 'Failed to claim reward');
+    } finally {
+      setRedeemingReward(null);
     }
   };
 
@@ -213,6 +271,137 @@ export default function Profile() {
               {success}
             </div>
           )}
+
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.05)',
+            backdropFilter: 'blur(10px)',
+            borderRadius: '16px',
+            border: '1px solid rgba(241, 208, 15, 0.2)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+            padding: '28px',
+            marginBottom: '24px'
+          }}>
+            <h2 style={{ fontSize: '28px', fontWeight: 'bold', color: '#f1d00f', marginBottom: '12px' }}>Sushi Rewards</h2>
+            <p style={{ fontSize: '14px', color: '#ccc', marginBottom: '20px' }}>
+              Earn points whenever you spend and claim free appetizers or house special rolls.
+            </p>
+
+            {rewardsLoading ? (
+              <p style={{ color: '#f1d00f', fontSize: '14px' }}>Loading rewards...</p>
+            ) : (
+              <>
+                <div style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '16px',
+                  marginBottom: '20px',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '14px',
+                  borderRadius: '10px',
+                  background: 'rgba(241, 208, 15, 0.08)',
+                  border: '1px solid rgba(241, 208, 15, 0.25)',
+                }}>
+                  <div>
+                    <p style={{ color: '#ccc', fontSize: '12px', marginBottom: '4px' }}>Current Points</p>
+                    <p style={{ color: '#f1d00f', fontSize: '28px', fontWeight: '700', margin: 0 }}>
+                      🍣 {rewardsSummary?.pointsBalance ?? 0}
+                    </p>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <p style={{ color: '#ccc', fontSize: '12px', marginBottom: '4px' }}>Earning Rate</p>
+                    <p style={{ color: '#fff', fontSize: '16px', fontWeight: '600', margin: 0 }}>
+                      {rewardsSummary?.pointsPerDollar ?? 1} point per $1
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gap: '12px', marginBottom: '16px' }}>
+                  {(rewardsSummary?.rewardsCatalog || []).map((reward) => {
+                    const hasEnoughPoints = (rewardsSummary?.pointsBalance ?? 0) >= reward.pointsCost;
+                    const isRedeeming = redeemingReward === reward.type;
+
+                    return (
+                      <div
+                        key={reward.type}
+                        style={{
+                          padding: '14px',
+                          borderRadius: '10px',
+                          border: '1px solid rgba(255, 255, 255, 0.12)',
+                          background: 'rgba(255, 255, 255, 0.03)',
+                          display: 'flex',
+                          flexWrap: 'wrap',
+                          gap: '12px',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <div>
+                          <p style={{ color: '#fff', fontSize: '15px', fontWeight: '600', marginBottom: '4px' }}>
+                            {reward.label}
+                          </p>
+                          <p style={{ color: '#aaa', fontSize: '13px', marginBottom: '4px' }}>
+                            {reward.description}
+                          </p>
+                          <p style={{ color: '#f1d00f', fontSize: '13px', fontWeight: '600' }}>
+                            Cost: {reward.pointsCost} points
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={!hasEnoughPoints || isRedeeming}
+                          onClick={() => handleRedeemReward(reward.type)}
+                          style={{
+                            padding: '10px 16px',
+                            borderRadius: '8px',
+                            border: 'none',
+                            background: hasEnoughPoints ? '#fc3678' : 'rgba(252, 54, 120, 0.35)',
+                            color: '#fff',
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            cursor: hasEnoughPoints && !isRedeeming ? 'pointer' : 'not-allowed',
+                          }}
+                        >
+                          {isRedeeming ? 'Claiming...' : hasEnoughPoints ? 'Claim Reward' : 'Not enough points'}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div style={{
+                  borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                  paddingTop: '14px'
+                }}>
+                  <h3 style={{ color: '#f1d00f', fontSize: '16px', marginBottom: '10px' }}>Available Claimed Rewards</h3>
+                  {(rewardsSummary?.availableRedemptions?.length || 0) === 0 ? (
+                    <p style={{ color: '#aaa', fontSize: '13px' }}>
+                      No claimed rewards yet. Claim one above, then apply it during checkout.
+                    </p>
+                  ) : (
+                    <div style={{ display: 'grid', gap: '8px' }}>
+                      {rewardsSummary?.availableRedemptions.map((reward) => (
+                        <div
+                          key={reward.id}
+                          style={{
+                            padding: '10px 12px',
+                            borderRadius: '8px',
+                            background: 'rgba(76, 175, 80, 0.1)',
+                            border: '1px solid rgba(76, 175, 80, 0.3)',
+                            color: '#d9ffd9',
+                            fontSize: '13px',
+                          }}
+                        >
+                          <strong>{reward.rewardLabel}</strong> claimed on{' '}
+                          {new Date(reward.claimedAt).toLocaleDateString()}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
 
           <div style={{
             background: 'rgba(255, 255, 255, 0.05)',

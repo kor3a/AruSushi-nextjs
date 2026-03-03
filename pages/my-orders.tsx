@@ -18,10 +18,15 @@ interface Order {
   userId: string;
   items: OrderItem[];
   total: number | string;
+  orderType: string;
   status: string;
   paymentStatus: string;
   deliveryAddress?: string | null;
   deliveryPhone?: string | null;
+  deliveryFee?: number | string | null;
+  doordashDeliveryId?: string | null;
+  doordashDeliveryStatus?: string | null;
+  doordashTrackingUrl?: string | null;
   customerName?: string | null;
   customerEmail?: string | null;
   notes?: string | null;
@@ -260,37 +265,61 @@ export default function MyOrders() {
                   </div>
 
                   {/* Delivery Info */}
-                  {(order.deliveryAddress || order.deliveryPhone) && (
+                  {order.orderType === 'delivery' && (
                     <div style={{
                       borderTop: '1px solid rgba(255, 255, 255, 0.1)',
                       marginTop: '16px',
                       paddingTop: '16px'
                     }}>
+                      <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#f1d00f', marginBottom: '8px' }}>
+                        Delivery Details
+                      </h3>
                       {order.deliveryAddress && (
                         <p style={{ fontSize: '14px', color: '#ccc', marginBottom: '4px' }}>
-                          <span style={{ color: '#f1d00f' }}>Delivery:</span> {order.deliveryAddress}
+                          <span style={{ color: '#f1d00f' }}>Address:</span> {order.deliveryAddress}
                         </p>
                       )}
                       {order.deliveryPhone && (
-                        <p style={{ fontSize: '14px', color: '#ccc' }}>
+                        <p style={{ fontSize: '14px', color: '#ccc', marginBottom: '4px' }}>
                           <span style={{ color: '#f1d00f' }}>Phone:</span> {order.deliveryPhone}
+                        </p>
+                      )}
+                      {order.deliveryFee != null && Number(order.deliveryFee) > 0 && (
+                        <p style={{ fontSize: '14px', color: '#ccc', marginBottom: '4px' }}>
+                          <span style={{ color: '#f1d00f' }}>Delivery Fee:</span> ${Number(order.deliveryFee).toFixed(2)}
+                        </p>
+                      )}
+                      {order.doordashTrackingUrl && (
+                        <p style={{ fontSize: '14px', marginBottom: '4px' }}>
+                          <a
+                            href={order.doordashTrackingUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: '#fc3678', textDecoration: 'underline' }}
+                          >
+                            Track your delivery
+                          </a>
                         </p>
                       )}
                     </div>
                   )}
 
                   {/* Order Notes */}
-                  {order.notes && (
-                    <div style={{
-                      borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-                      marginTop: '16px',
-                      paddingTop: '16px'
-                    }}>
-                      <p style={{ fontSize: '14px', color: '#ccc' }}>
-                        <span style={{ color: '#f1d00f' }}>Notes:</span> {order.notes}
-                      </p>
-                    </div>
-                  )}
+                  {order.notes && (() => {
+                    // Strip internal delivery issue tags from display
+                    const displayNotes = order.notes.replace(/\[DELIVERY ISSUE:[^\]]*\]\s*/g, '').trim();
+                    return displayNotes ? (
+                      <div style={{
+                        borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                        marginTop: '16px',
+                        paddingTop: '16px'
+                      }}>
+                        <p style={{ fontSize: '14px', color: '#ccc' }}>
+                          <span style={{ color: '#f1d00f' }}>Notes:</span> {displayNotes}
+                        </p>
+                      </div>
+                    ) : null;
+                  })()}
 
                   {/* Order Total */}
                   <div style={{

@@ -85,7 +85,7 @@ export default async function handler(
     return res.status(200).json({
       available: true,
       quote: {
-        id: quote.id,
+        id: quote.external_delivery_id, // Use external_delivery_id as the identifier (used to accept the quote via /drive/v2/quotes/{id}/accept)
         externalDeliveryId: quote.external_delivery_id,
         fee: quote.fee / 100, // Convert from cents to dollars
         currency: quote.currency || 'USD',
