@@ -5,6 +5,7 @@ import {
   sendOrderNotificationToRestaurant,
   sendOrderConfirmationToCustomer,
 } from '../../../lib/email/sendOrderNotification';
+import { sendOrderTicketsToPrintNode } from '../../../lib/printing/sendOrderTicketsToPrintNode';
 import { doordashClient } from '../../../lib/doordash/client';
 import { restaurantInfo } from '../../../data/restaurantInfo';
 import { POINTS_PER_DOLLAR } from '../../../lib/rewards/catalog';
@@ -285,6 +286,9 @@ export default async function handler(
       );
       sendOrderConfirmationToCustomer(order).catch((error) =>
         console.error('Failed to send customer confirmation:', error)
+      );
+      sendOrderTicketsToPrintNode(order).catch((error) =>
+        console.error('Failed to print station tickets via PrintNode:', error)
       );
     }
 
