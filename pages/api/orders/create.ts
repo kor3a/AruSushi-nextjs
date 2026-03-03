@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createApiClient } from '../../../lib/supabase/server';
-import { db } from '../../../lib/db';
+import { db, isRewardsSchemaMissingError } from '../../../lib/db';
 import {
   sendOrderNotificationToRestaurant,
   sendOrderConfirmationToCustomer,
@@ -106,10 +106,21 @@ export default async function handler(
     let appliedRewardDiscount = 0;
 
     if (rewardRedemptionId) {
-      const rewardRedemption = await db.getRewardRedemptionById(
-        user.id,
-        String(rewardRedemptionId)
-      );
+      let rewardRedemption = null;
+      try {
+        rewardRedemption = await db.getRewardRedemptionById(
+          user.id,
+          String(rewardRedemptionId)
+        );
+      } catch (error) {
+        if (isRewardsSchemaMissingError(error)) {
+          return res.status(503).json({
+            message:
+              'Rewards tables are not set up yet. Please run add_user_points_rewards.sql migration.',
+          });
+        }
+        throw error;
+      }
 
       if (!rewardRedemption || rewardRedemption.status !== 'available') {
         return res.status(400).json({ message: 'Selected reward is no longer available' });
@@ -231,24 +242,39 @@ export default async function handler(
     let pointsBalance: number | undefined;
 
     if (appliedReward) {
-      const usedReward = await db.markRewardRedemptionUsed(
-        user.id,
-        appliedReward.id,
-        order.id
-      );
+      try {
+        const usedReward = await db.markRewardRedemptionUsed(
+          user.id,
+          appliedReward.id,
+          order.id
+        );
 
-      if (!usedReward) {
-        console.warn('Reward could not be marked as used:', appliedReward.id);
+        if (!usedReward) {
+          console.warn('Reward could not be marked as used:', appliedReward.id);
+        }
+      } catch (error) {
+        if (!isRewardsSchemaMissingError(error)) {
+          throw error;
+        }
+        console.warn('Rewards schema missing; could not mark redemption as used.');
       }
     }
 
     if (paymentStatus === 'paid') {
       pointsEarned = Math.floor(expectedTotal * POINTS_PER_DOLLAR);
-      const pointsSummary =
-        pointsEarned > 0
-          ? await db.addPointsToUser(user.id, pointsEarned)
-          : await db.getUserPointsSummary(user.id);
-      pointsBalance = pointsSummary.pointsBalance;
+      try {
+        const pointsSummary =
+          pointsEarned > 0
+            ? await db.addPointsToUser(user.id, pointsEarned)
+            : await db.getUserPointsSummary(user.id);
+        pointsBalance = pointsSummary.pointsBalance;
+      } catch (error) {
+        if (!isRewardsSchemaMissingError(error)) {
+          throw error;
+        }
+        console.warn('Rewards schema missing; skipping points update for order.');
+        pointsEarned = 0;
+      }
     }
 
     // Send email notifications (don't wait for them to complete)
