@@ -49,6 +49,28 @@ type RewardRedemptionRow = {
   order_id: string | null;
 };
 
+export function isRewardsSchemaMissingError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const prismaError = error as {
+    code?: string;
+    message?: string;
+    meta?: { message?: string };
+  };
+
+  if (prismaError.code !== 'P2010') {
+    return false;
+  }
+
+  const fullMessage = `${prismaError.message || ''} ${prismaError.meta?.message || ''}`.toLowerCase();
+  return (
+    fullMessage.includes('relation "user_points" does not exist') ||
+    fullMessage.includes('relation "reward_redemptions" does not exist')
+  );
+}
+
 // Helper types for creating records
 export type CreateUserInput = Prisma.UserCreateInput;
 export type CreateOrderInput = {
@@ -116,7 +138,15 @@ class Database {
       },
     });
 
-    await this.ensureUserPointsAccount(createdUser.id);
+    try {
+      await this.ensureUserPointsAccount(createdUser.id);
+    } catch (error) {
+      if (!isRewardsSchemaMissingError(error)) {
+        throw error;
+      }
+      console.warn('Rewards schema not ready while creating user profile.');
+    }
+
     return createdUser;
   }
 
@@ -134,7 +164,15 @@ class Database {
       create: { id: userData.id, email: userData.email, name: userData.name },
     });
 
-    await this.ensureUserPointsAccount(user.id);
+    try {
+      await this.ensureUserPointsAccount(user.id);
+    } catch (error) {
+      if (!isRewardsSchemaMissingError(error)) {
+        throw error;
+      }
+      console.warn('Rewards schema not ready while upserting user profile.');
+    }
+
     return user;
   }
 

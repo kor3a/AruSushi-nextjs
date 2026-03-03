@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createApiClient } from '../../../lib/supabase/server';
-import { db } from '../../../lib/db';
+import { db, isRewardsSchemaMissingError } from '../../../lib/db';
 import { POINTS_PER_DOLLAR, REWARD_CATALOG, getRewardByType, isRewardType } from '../../../lib/rewards/catalog';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -30,10 +30,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (req.method === 'GET') {
-      const [pointsSummary, availableRedemptions] = await Promise.all([
-        db.getUserPointsSummary(user.id),
-        db.getAvailableRewardRedemptions(user.id),
-      ]);
+      let pointsSummary;
+      let availableRedemptions;
+      try {
+        [pointsSummary, availableRedemptions] = await Promise.all([
+          db.getUserPointsSummary(user.id),
+          db.getAvailableRewardRedemptions(user.id),
+        ]);
+      } catch (error) {
+        if (!isRewardsSchemaMissingError(error)) {
+          throw error;
+        }
+
+        return res.status(200).json({
+          pointsBalance: 0,
+          lifetimePointsEarned: 0,
+          lifetimePointsRedeemed: 0,
+          pointsPerDollar: POINTS_PER_DOLLAR,
+          rewardsCatalog: REWARD_CATALOG,
+          availableRedemptions: [],
+          rewardsEnabled: false,
+        });
+      }
 
       return res.status(200).json({
         pointsBalance: pointsSummary.pointsBalance,
@@ -90,6 +108,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } catch (error: any) {
       if (error?.message === 'INSUFFICIENT_POINTS') {
         return res.status(400).json({ message: 'Not enough points to claim this reward' });
+      }
+      if (isRewardsSchemaMissingError(error)) {
+        return res.status(503).json({
+          message:
+            'Rewards database tables are not set up yet. Run the add_user_points_rewards.sql migration.',
+        });
       }
       throw error;
     }
