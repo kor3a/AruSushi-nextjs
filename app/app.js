@@ -1,28 +1,37 @@
 const axios = require('axios')
-
 const jwt = require('jsonwebtoken')
 
-const accessKey = process.env.DOORDASH_SIGNING_SECRET
+const developerId = process.env.DOORDASH_DEVELOPER_ID
+const keyId = process.env.DOORDASH_KEY_ID
+const signingSecret = process.env.DOORDASH_SIGNING_SECRET
 
-const data = {
+if (!developerId || !keyId || !signingSecret) {
+  throw new Error(
+    'Missing DoorDash credentials. Set DOORDASH_DEVELOPER_ID, DOORDASH_KEY_ID, and DOORDASH_SIGNING_SECRET (run with "node --env-file=../.env app.js" if needed).',
+  )
+}
+
+const payload = {
   aud: 'doordash',
-  iss: accessKey.developer_id,
-  kid: accessKey.key_id,
-  exp: Math.floor(Date.now() / 1000 + 300),
+  iss: developerId,
+  kid: keyId,
+  exp: Math.floor(Date.now() / 1000) + 300,
   iat: Math.floor(Date.now() / 1000),
 }
 
-const headers = { algorithm: 'HS256', header: { 'dd-ver': 'DD-JWT-V1' } }
-
-const token = jwt.sign(
-  data,
-  Buffer.from(accessKey.signing_secret, 'base64'),
-  headers,
-)
+const token = jwt.sign(payload, Buffer.from(signingSecret, 'base64'), {
+  algorithm: 'HS256',
+  header: {
+    'dd-ver': 'DD-JWT-V1',
+    alg: 'HS256',
+    typ: 'JWT',
+    kid: keyId,
+  },
+})
 
 console.log(token)
 
-const body = JSON.stringify({
+const body = {
   external_delivery_id: 'D-12345',
   pickup_address: '901 Market Street 6th Floor San Francisco, CA 94103',
   pickup_business_name: 'Wells Fargo SF Downtown',
@@ -33,18 +42,18 @@ const body = JSON.stringify({
   dropoff_phone_number: '+16505555555',
   dropoff_instructions: 'Enter gate code 1234 on the callbox.',
   order_value: 1999,
-})
+}
 
 axios
   .post('https://openapi.doordash.com/drive/v2/deliveries', body, {
     headers: {
-      Authorization: 'Bearer ' + token,
+      Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
   })
-  .then(function (response) {
+  .then((response) => {
     console.log(response.data)
   })
-  .catch(function (error) {
-    console.log(error)
+  .catch((error) => {
+    console.error(error.response?.data || error.message)
   })
