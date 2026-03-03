@@ -6,7 +6,6 @@ import {
   sendOrderConfirmationToCustomer,
 } from '../../../lib/email/sendOrderNotification';
 import { doordashClient } from '../../../lib/doordash/client';
-import { restaurantInfo } from '../../../data/restaurantInfo';
 
 export default async function handler(
   req: NextApiRequest,
@@ -17,6 +16,8 @@ export default async function handler(
   }
 
   try {
+    const deliveryFeatureEnabled = process.env.NEXT_PUBLIC_ENABLE_DOORDASH_DELIVERY === 'true';
+
     // Check if user is authenticated with Supabase
     const supabase = createApiClient(req, res);
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -37,6 +38,16 @@ export default async function handler(
       deliveryFee, // Delivery fee from quote
       notes,
     } = req.body;
+
+    if (orderType !== 'pickup' && orderType !== 'delivery') {
+      return res.status(400).json({ message: 'Invalid order type' });
+    }
+
+    if (orderType === 'delivery' && !deliveryFeatureEnabled) {
+      return res.status(503).json({
+        message: 'Delivery is temporarily unavailable while DoorDash developer approval is pending.',
+      });
+    }
 
     // Validation
     if (!items || items.length === 0) {
@@ -83,7 +94,7 @@ export default async function handler(
     // Accept DoorDash delivery quote if order type is delivery
     let doordashError: string | undefined;
     
-    if (orderType === 'delivery' && doordashClient.isConfigured()) {
+    if (orderType === 'delivery' && deliveryFeatureEnabled && doordashClient.isConfigured()) {
       if (!deliveryQuoteId) {
         // No quote ID provided - order will be created without DoorDash
         console.warn('No delivery quote ID provided for delivery order');
@@ -149,14 +160,18 @@ export default async function handler(
     }
 
     // Return response with delivery status info
-    const responseMessage = doordashError 
+    const responseMessage = orderType === 'delivery' && doordashError
       ? 'Order created. Note: There was an issue with delivery scheduling. The restaurant will contact you about delivery arrangements.'
       : 'Order created successfully';
+
+    const deliveryStatus = orderType === 'delivery'
+      ? (doordashError ? 'manual' : 'scheduled')
+      : 'not_requested';
 
     return res.status(201).json({
       message: responseMessage,
       order,
-      deliveryStatus: doordashError ? 'manual' : 'scheduled',
+      deliveryStatus,
       deliveryError: doordashError,
     });
   } catch (error: any) {

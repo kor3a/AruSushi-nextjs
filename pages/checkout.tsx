@@ -9,6 +9,7 @@ import Footer from '../components/Footer';
 import { useCart } from '../contexts/CartContext';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+const DELIVERY_FEATURE_ENABLED = process.env.NEXT_PUBLIC_ENABLE_DOORDASH_DELIVERY === 'true';
 
 // Delivery quote interface
 interface DeliveryQuote {
@@ -42,20 +43,35 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
   const [deliveryQuoteLoading, setDeliveryQuoteLoading] = useState(false);
   const [deliveryQuoteError, setDeliveryQuoteError] = useState('');
 
+  // Force pickup when delivery is disabled via feature flag
+  useEffect(() => {
+    if (!DELIVERY_FEATURE_ENABLED && orderType === 'delivery') {
+      setOrderType('pickup');
+      setDeliveryQuote(null);
+      setDeliveryQuoteError('');
+    }
+  }, [orderType]);
+
   // Restore delivery quote and form data from sessionStorage on mount (in case of Stripe redirect)
   useEffect(() => {
     const savedData = sessionStorage.getItem('checkoutData');
     if (savedData) {
       try {
         const data = JSON.parse(savedData);
-        if (data.orderType) setOrderType(data.orderType);
+        if (data.orderType === 'pickup') {
+          setOrderType('pickup');
+        } else if (data.orderType === 'delivery' && DELIVERY_FEATURE_ENABLED) {
+          setOrderType('delivery');
+        }
         if (data.phone) setPhone(data.phone);
-        if (data.deliveryAddress) setDeliveryAddress(data.deliveryAddress);
-        if (data.deliveryCity) setDeliveryCity(data.deliveryCity);
-        if (data.deliveryState) setDeliveryState(data.deliveryState);
-        if (data.deliveryZip) setDeliveryZip(data.deliveryZip);
+        if (DELIVERY_FEATURE_ENABLED) {
+          if (data.deliveryAddress) setDeliveryAddress(data.deliveryAddress);
+          if (data.deliveryCity) setDeliveryCity(data.deliveryCity);
+          if (data.deliveryState) setDeliveryState(data.deliveryState);
+          if (data.deliveryZip) setDeliveryZip(data.deliveryZip);
+        }
         if (data.notes) setNotes(data.notes);
-        if (data.deliveryQuote) setDeliveryQuote(data.deliveryQuote);
+        if (DELIVERY_FEATURE_ENABLED && data.deliveryQuote) setDeliveryQuote(data.deliveryQuote);
       } catch (e) {
         console.error('Failed to restore checkout data:', e);
       }
@@ -79,6 +95,13 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
 
   // Fetch delivery quote when address is complete
   const fetchDeliveryQuote = async (silent: boolean = false): Promise<DeliveryQuote | null> => {
+    if (!DELIVERY_FEATURE_ENABLED) {
+      if (!silent) {
+        setDeliveryQuoteError('Delivery is temporarily unavailable while DoorDash API approval is pending.');
+      }
+      return null;
+    }
+
     if (orderType !== 'delivery' || !deliveryAddress || !deliveryCity || !deliveryState || !deliveryZip || !phone) {
       return null;
     }
@@ -155,6 +178,12 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
     e.preventDefault();
 
     if (!stripe || !elements) {
+      return;
+    }
+
+    if (!DELIVERY_FEATURE_ENABLED && orderType === 'delivery') {
+      setError('Delivery is temporarily unavailable. Please place a pickup order.');
+      setOrderType('pickup');
       return;
     }
 
@@ -319,35 +348,52 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
               name="orderType"
               value="pickup"
               checked={orderType === 'pickup'}
-              onChange={(e) => setOrderType(e.target.value as 'pickup' | 'delivery')}
+              onChange={() => setOrderType('pickup')}
               style={{ display: 'none' }}
             />
             <div style={{ color: '#fff', fontWeight: '600', marginBottom: '4px' }}>Pickup</div>
             <div style={{ color: '#ccc', fontSize: '12px' }}>Pick up at restaurant</div>
           </label>
 
-          <label style={{
-            flex: 1,
-            padding: '16px',
-            background: orderType === 'delivery' ? 'rgba(252, 54, 120, 0.2)' : 'rgba(255, 255, 255, 0.05)',
-            border: `2px solid ${orderType === 'delivery' ? '#fc3678' : 'rgba(255, 255, 255, 0.1)'}`,
-            borderRadius: '8px',
-            cursor: 'pointer',
-            transition: 'all 0.3s',
-            textAlign: 'center'
-          }}>
-            <input
-              type="radio"
-              name="orderType"
-              value="delivery"
-              checked={orderType === 'delivery'}
-              onChange={(e) => setOrderType(e.target.value as 'pickup' | 'delivery')}
-              style={{ display: 'none' }}
-            />
-            <div style={{ color: '#fff', fontWeight: '600', marginBottom: '4px' }}>Delivery</div>
-            <div style={{ color: '#ccc', fontSize: '12px' }}>Delivered via DoorDash</div>
-          </label>
+          {DELIVERY_FEATURE_ENABLED && (
+            <label style={{
+              flex: 1,
+              padding: '16px',
+              background: orderType === 'delivery' ? 'rgba(252, 54, 120, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+              border: `2px solid ${orderType === 'delivery' ? '#fc3678' : 'rgba(255, 255, 255, 0.1)'}`,
+              borderRadius: '8px',
+              cursor: 'pointer',
+              transition: 'all 0.3s',
+              textAlign: 'center'
+            }}>
+              <input
+                type="radio"
+                name="orderType"
+                value="delivery"
+                checked={orderType === 'delivery'}
+                onChange={() => setOrderType('delivery')}
+                style={{ display: 'none' }}
+              />
+              <div style={{ color: '#fff', fontWeight: '600', marginBottom: '4px' }}>Delivery</div>
+              <div style={{ color: '#ccc', fontSize: '12px' }}>Delivered via DoorDash</div>
+            </label>
+          )}
         </div>
+
+        {!DELIVERY_FEATURE_ENABLED && (
+          <div style={{
+            marginTop: '-8px',
+            marginBottom: '8px',
+            padding: '12px',
+            background: 'rgba(241, 208, 15, 0.12)',
+            border: '1px solid rgba(241, 208, 15, 0.3)',
+            borderRadius: '8px',
+            color: '#f1d00f',
+            fontSize: '13px'
+          }}>
+            Delivery is temporarily unavailable while DoorDash developer approval is pending.
+          </div>
+        )}
       </div>
 
       <div>

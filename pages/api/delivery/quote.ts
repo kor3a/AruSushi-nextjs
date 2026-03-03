@@ -12,12 +12,21 @@ export default async function handler(
   }
 
   try {
+    const deliveryFeatureEnabled = process.env.NEXT_PUBLIC_ENABLE_DOORDASH_DELIVERY === 'true';
+
     // Check if user is authenticated with Supabase
     const supabase = createApiClient(req, res);
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
       return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    if (!deliveryFeatureEnabled) {
+      return res.status(503).json({
+        message: 'Delivery is temporarily unavailable while DoorDash developer approval is pending.',
+        available: false,
+      });
     }
 
     // Check if DoorDash is configured
