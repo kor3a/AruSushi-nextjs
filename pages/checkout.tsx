@@ -7,6 +7,8 @@ import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { useCart } from '../contexts/CartContext';
+import { calculateRewardDiscount } from '../lib/rewards/eligibility';
+import type { RewardsSummary } from '../lib/rewards/types';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
@@ -22,11 +24,38 @@ interface DeliveryQuote {
   expiresAt?: string;
 }
 
-function CheckoutForm({ clientSecret }: { clientSecret: string }) {
+function parseRewardsSummary(data: any): RewardsSummary {
+  return {
+    pointsBalance: Number(data?.pointsBalance ?? 0),
+    lifetimePointsEarned: Number(data?.lifetimePointsEarned ?? 0),
+    lifetimePointsRedeemed: Number(data?.lifetimePointsRedeemed ?? 0),
+    pointsPerDollar: Number(data?.pointsPerDollar ?? 1),
+    rewardsCatalog: Array.isArray(data?.rewardsCatalog) ? data.rewardsCatalog : [],
+    availableRedemptions: Array.isArray(data?.availableRedemptions) ? data.availableRedemptions : [],
+  };
+}
+
+interface CheckoutFormProps {
+  rewardsSummary: RewardsSummary | null;
+  selectedRewardRedemptionId: string;
+  onSelectRewardRedemption: (redemptionId: string) => void;
+  rewardDiscount: number;
+}
+
+function CheckoutForm({
+  rewardsSummary,
+  selectedRewardRedemptionId,
+  onSelectRewardRedemption,
+  rewardDiscount,
+}: CheckoutFormProps) {
   const router = useRouter();
   const stripe = useStripe();
   const elements = useElements();
   const { items, getTotalPrice, clearCart } = useCart();
+  const selectedRedemption =
+    rewardsSummary?.availableRedemptions.find(
+      (redemption) => redemption.id === selectedRewardRedemptionId
+    ) ?? null;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [orderType, setOrderType] = useState<'pickup' | 'delivery'>('pickup');
@@ -56,11 +85,14 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
         if (data.deliveryZip) setDeliveryZip(data.deliveryZip);
         if (data.notes) setNotes(data.notes);
         if (data.deliveryQuote) setDeliveryQuote(data.deliveryQuote);
+        if (data.selectedRewardRedemptionId) {
+          onSelectRewardRedemption(data.selectedRewardRedemptionId);
+        }
       } catch (e) {
         console.error('Failed to restore checkout data:', e);
       }
     }
-  }, []);
+  }, [onSelectRewardRedemption]);
 
   // Save checkout data to sessionStorage whenever it changes
   useEffect(() => {
@@ -73,9 +105,10 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
       deliveryZip,
       notes,
       deliveryQuote,
+      selectedRewardRedemptionId,
     };
     sessionStorage.setItem('checkoutData', JSON.stringify(data));
-  }, [orderType, phone, deliveryAddress, deliveryCity, deliveryState, deliveryZip, notes, deliveryQuote]);
+  }, [orderType, phone, deliveryAddress, deliveryCity, deliveryState, deliveryZip, notes, deliveryQuote, selectedRewardRedemptionId]);
 
   // Fetch delivery quote when address is complete
   const fetchDeliveryQuote = async (silent: boolean = false): Promise<DeliveryQuote | null> => {
@@ -148,7 +181,8 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
   const getOrderTotal = () => {
     const subtotal = getTotalPrice();
     const deliveryFee = orderType === 'delivery' && deliveryQuote ? deliveryQuote.fee : 0;
-    return subtotal + deliveryFee;
+    const activeRewardDiscount = selectedRedemption ? rewardDiscount : 0;
+    return Math.max(subtotal + deliveryFee - activeRewardDiscount, 0);
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -161,6 +195,11 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
     // Validate delivery quote for delivery orders
     if (orderType === 'delivery' && !deliveryQuote) {
       setError('Please get a delivery quote before proceeding');
+      return;
+    }
+
+    if (selectedRedemption && rewardDiscount <= 0) {
+      setError('Add an eligible item to use the selected reward.');
       return;
     }
 
@@ -227,7 +266,8 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
 
       // Calculate total with the current quote (might be refreshed)
       const finalDeliveryFee = orderType === 'delivery' && currentQuote ? currentQuote.fee : 0;
-      const finalTotal = getTotalPrice() + finalDeliveryFee;
+      const appliedRewardDiscount = selectedRedemption ? rewardDiscount : 0;
+      const finalTotal = getTotalPrice() + finalDeliveryFee - appliedRewardDiscount;
 
       // Create order in database (this will accept the DoorDash quote)
       const orderResponse = await fetch('/api/orders/create', {
@@ -245,6 +285,8 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
           deliveryPhone: phone,
           deliveryQuoteId: currentQuote?.id, // DoorDash quote ID to accept (possibly refreshed)
           deliveryFee: currentQuote?.fee, // Delivery fee from quote
+          rewardRedemptionId: selectedRedemption?.id,
+          rewardDiscount: appliedRewardDiscount,
           notes,
         }),
       });
@@ -293,12 +335,89 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
               <span>${deliveryQuote.fee.toFixed(2)}</span>
             </div>
           )}
+          {selectedRedemption && rewardDiscount > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#4ade80' }}>
+              <span>{selectedRedemption.rewardLabel}:</span>
+              <span>-${rewardDiscount.toFixed(2)}</span>
+            </div>
+          )}
           <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '18px' }}>
             <span style={{ color: '#fff' }}>Total:</span>
             <span style={{ color: '#fc3678' }}>${getOrderTotal().toFixed(2)}</span>
           </div>
         </div>
       </div>
+
+      {rewardsSummary && rewardsSummary.availableRedemptions.length > 0 && (
+        <div>
+          <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '12px', color: '#f1d00f' }}>
+            Apply Claimed Reward
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <label
+              style={{
+                display: 'flex',
+                gap: '10px',
+                alignItems: 'center',
+                color: '#ccc',
+                fontSize: '14px',
+                padding: '10px',
+                borderRadius: '8px',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+              }}
+            >
+              <input
+                type="radio"
+                name="rewardRedemption"
+                checked={!selectedRewardRedemptionId}
+                onChange={() => onSelectRewardRedemption('')}
+              />
+              <span>Do not apply a reward</span>
+            </label>
+
+            {rewardsSummary.availableRedemptions.map((reward) => {
+              const possibleDiscount = calculateRewardDiscount(reward.rewardType, items);
+              const isEligible = possibleDiscount > 0;
+
+              return (
+                <label
+                  key={reward.id}
+                  style={{
+                    display: 'flex',
+                    gap: '10px',
+                    alignItems: 'flex-start',
+                    color: '#ccc',
+                    fontSize: '14px',
+                    padding: '10px',
+                    borderRadius: '8px',
+                    border: `1px solid ${isEligible ? 'rgba(76, 175, 80, 0.45)' : 'rgba(255, 255, 255, 0.15)'}`,
+                    background: isEligible ? 'rgba(76, 175, 80, 0.08)' : 'transparent',
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="rewardRedemption"
+                    checked={selectedRewardRedemptionId === reward.id}
+                    onChange={() => onSelectRewardRedemption(reward.id)}
+                  />
+                  <div>
+                    <p style={{ color: '#fff', fontWeight: 600, marginBottom: '2px' }}>{reward.rewardLabel}</p>
+                    {isEligible ? (
+                      <p style={{ color: '#4ade80', fontSize: '12px' }}>
+                        Eligible now • Discount: ${possibleDiscount.toFixed(2)}
+                      </p>
+                    ) : (
+                      <p style={{ color: '#f59e0b', fontSize: '12px' }}>
+                        Add an eligible item to use this reward
+                      </p>
+                    )}
+                  </div>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div>
         <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: '#f1d00f' }}>Order Type</h3>
@@ -635,10 +754,50 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
 export default function Checkout() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const { items, getTotalPrice } = useCart();
+  const { items } = useCart();
+  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const [rewardsSummary, setRewardsSummary] = useState<RewardsSummary | null>(null);
+  const [selectedRewardRedemptionId, setSelectedRewardRedemptionId] = useState('');
   const [clientSecret, setClientSecret] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  const selectedRedemption =
+    rewardsSummary?.availableRedemptions.find(
+      (redemption) => redemption.id === selectedRewardRedemptionId
+    ) ?? null;
+  const rewardDiscount = selectedRedemption
+    ? calculateRewardDiscount(selectedRedemption.rewardType, items)
+    : 0;
+
+  useEffect(() => {
+    if (selectedRewardRedemptionId && !selectedRedemption) {
+      setSelectedRewardRedemptionId('');
+    }
+  }, [selectedRewardRedemptionId, selectedRedemption]);
+
+  useEffect(() => {
+    if (!user || authLoading || items.length === 0) {
+      return;
+    }
+
+    const loadRewardsSummary = async () => {
+      try {
+        const response = await fetch('/api/rewards');
+        const data = await response.json();
+
+        if (response.ok) {
+          setRewardsSummary(parseRewardsSummary(data));
+        } else {
+          console.error('Failed to load rewards summary:', data.message || data);
+        }
+      } catch (loadRewardsError) {
+        console.error('Failed to load rewards summary:', loadRewardsError);
+      }
+    };
+
+    void loadRewardsSummary();
+  }, [user, authLoading, items.length]);
 
   useEffect(() => {
     // Redirect to sign in if not authenticated
@@ -657,14 +816,21 @@ export default function Checkout() {
       // Create payment intent
       const createPaymentIntent = async () => {
         try {
+          setLoading(true);
+          setError('');
+          const amountToCharge = Math.max(Number((subtotal - rewardDiscount).toFixed(2)), 0.5);
+
           const response = await fetch('/api/payment/create-intent', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              amount: getTotalPrice(),
+              amount: amountToCharge,
               items,
+              rewardRedemptionId: selectedRedemption?.id,
+              rewardType: selectedRedemption?.rewardType,
+              rewardDiscount,
             }),
           });
 
@@ -682,9 +848,18 @@ export default function Checkout() {
         }
       };
 
-      createPaymentIntent();
+      void createPaymentIntent();
     }
-  }, [user, authLoading, items, router, getTotalPrice]);
+  }, [
+    user,
+    authLoading,
+    items,
+    router,
+    subtotal,
+    rewardDiscount,
+    selectedRedemption?.id,
+    selectedRedemption?.rewardType,
+  ]);
 
   if (authLoading || loading) {
     return (
@@ -765,7 +940,12 @@ export default function Checkout() {
           }}>
             {clientSecret && (
               <Elements stripe={stripePromise} options={{ clientSecret }}>
-                <CheckoutForm clientSecret={clientSecret} />
+                <CheckoutForm
+                  rewardsSummary={rewardsSummary}
+                  selectedRewardRedemptionId={selectedRewardRedemptionId}
+                  onSelectRewardRedemption={setSelectedRewardRedemptionId}
+                  rewardDiscount={rewardDiscount}
+                />
               </Elements>
             )}
           </div>

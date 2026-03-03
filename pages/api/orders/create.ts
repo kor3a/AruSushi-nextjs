@@ -7,6 +7,15 @@ import {
 } from '../../../lib/email/sendOrderNotification';
 import { doordashClient } from '../../../lib/doordash/client';
 import { restaurantInfo } from '../../../data/restaurantInfo';
+import { POINTS_PER_DOLLAR } from '../../../lib/rewards/catalog';
+import { calculateRewardDiscount } from '../../../lib/rewards/eligibility';
+
+interface NormalizedOrderItem {
+  name: string;
+  price: number;
+  quantity: number;
+  specialNotes?: string;
+}
 
 export default async function handler(
   req: NextApiRequest,
@@ -35,6 +44,8 @@ export default async function handler(
       deliveryPhone,
       deliveryQuoteId, // DoorDash quote ID to accept
       deliveryFee, // Delivery fee from quote
+      rewardRedemptionId,
+      rewardDiscount,
       notes,
     } = req.body;
 
@@ -66,9 +77,82 @@ export default async function handler(
       });
     }
 
+    const normalizedItems: NormalizedOrderItem[] = items.map((item: any) => ({
+      name: String(item.name || '').trim(),
+      price: Number(item.price),
+      quantity: Number(item.quantity),
+      specialNotes: item.specialNotes,
+    }));
+
+    const hasInvalidItem = normalizedItems.some(
+      (item) =>
+        !item.name ||
+        Number.isNaN(item.price) ||
+        item.price < 0 ||
+        Number.isNaN(item.quantity) ||
+        item.quantity <= 0
+    );
+    if (hasInvalidItem) {
+      return res.status(400).json({ message: 'Order contains invalid item data' });
+    }
+
+    const subtotal = Number(
+      normalizedItems.reduce((sum, item) => sum + item.price * item.quantity, 0).toFixed(2)
+    );
+    const normalizedDeliveryFee =
+      orderType === 'delivery' ? Number(deliveryFee || 0) : 0;
+
+    let appliedReward: Awaited<ReturnType<typeof db.getRewardRedemptionById>> = null;
+    let appliedRewardDiscount = 0;
+
+    if (rewardRedemptionId) {
+      const rewardRedemption = await db.getRewardRedemptionById(
+        user.id,
+        String(rewardRedemptionId)
+      );
+
+      if (!rewardRedemption || rewardRedemption.status !== 'available') {
+        return res.status(400).json({ message: 'Selected reward is no longer available' });
+      }
+
+      appliedRewardDiscount = calculateRewardDiscount(
+        rewardRedemption.rewardType,
+        normalizedItems
+      );
+
+      if (appliedRewardDiscount <= 0) {
+        return res.status(400).json({
+          message: `Add an eligible item to use ${rewardRedemption.rewardLabel}`,
+        });
+      }
+
+      if (
+        rewardDiscount !== undefined &&
+        Math.abs(Number(rewardDiscount) - appliedRewardDiscount) > 0.01
+      ) {
+        return res.status(400).json({ message: 'Reward discount mismatch' });
+      }
+
+      appliedReward = rewardRedemption;
+    }
+
+    const expectedTotal = Number(
+      (subtotal + normalizedDeliveryFee - appliedRewardDiscount).toFixed(2)
+    );
+
+    if (expectedTotal <= 0) {
+      return res.status(400).json({ message: 'Invalid final order total' });
+    }
+
+    if (Math.abs(expectedTotal - Number(total)) > 0.01) {
+      return res.status(400).json({
+        message: 'Order total does not match calculated total',
+        expectedTotal,
+      });
+    }
+
     // Create order items
-    const orderItems = items.map((item: any) => ({
-      id: item.id,
+    const orderItems = normalizedItems.map((item) => ({
       itemName: item.name,
       itemPrice: item.price,
       quantity: item.quantity,
@@ -112,22 +196,29 @@ export default async function handler(
       }
     }
 
-    // Keep user notes clean - don't mix in internal delivery system errors
-    // DoorDash delivery issues are tracked via doordashDeliveryStatus field
-    const orderNotes = notes || '';
+    // Prepare order notes (include DoorDash error if any)
+    let orderNotes = notes || '';
+    if (doordashError) {
+      orderNotes = `[DELIVERY ISSUE: ${doordashError}] ${orderNotes}`.trim();
+    }
+    if (appliedReward) {
+      orderNotes = `[REWARD APPLIED: ${appliedReward.rewardLabel} -$${appliedRewardDiscount.toFixed(
+        2
+      )}] ${orderNotes}`.trim();
+    }
 
     // Create order
     const order = await db.createOrder({
       userId: user.id,
       items: orderItems,
-      total,
+      total: expectedTotal,
       orderType,
       status: doordashError ? 'pending' : 'pending', // Could set to 'needs_attention' if you add that status
       paymentIntentId,
       paymentStatus: paymentStatus || 'pending',
       deliveryAddress: orderType === 'delivery' ? deliveryAddress : undefined,
       deliveryPhone,
-      deliveryFee: orderType === 'delivery' ? deliveryFee : undefined,
+      deliveryFee: orderType === 'delivery' ? normalizedDeliveryFee : undefined,
       doordashDeliveryId,
       doordashDeliveryStatus,
       doordashTrackingUrl,
@@ -135,6 +226,30 @@ export default async function handler(
       customerEmail: user.email,
       notes: orderNotes,
     });
+
+    let pointsEarned = 0;
+    let pointsBalance: number | undefined;
+
+    if (appliedReward) {
+      const usedReward = await db.markRewardRedemptionUsed(
+        user.id,
+        appliedReward.id,
+        order.id
+      );
+
+      if (!usedReward) {
+        console.warn('Reward could not be marked as used:', appliedReward.id);
+      }
+    }
+
+    if (paymentStatus === 'paid') {
+      pointsEarned = Math.floor(expectedTotal * POINTS_PER_DOLLAR);
+      const pointsSummary =
+        pointsEarned > 0
+          ? await db.addPointsToUser(user.id, pointsEarned)
+          : await db.getUserPointsSummary(user.id);
+      pointsBalance = pointsSummary.pointsBalance;
+    }
 
     // Send email notifications (don't wait for them to complete)
     // Only send if payment is successful
@@ -155,6 +270,16 @@ export default async function handler(
     return res.status(201).json({
       message: responseMessage,
       order,
+      pointsEarned,
+      pointsBalance,
+      appliedReward: appliedReward
+        ? {
+            id: appliedReward.id,
+            rewardType: appliedReward.rewardType,
+            rewardLabel: appliedReward.rewardLabel,
+            discount: appliedRewardDiscount,
+          }
+        : null,
       deliveryStatus: doordashError ? 'manual' : 'scheduled',
       deliveryError: doordashError,
     });

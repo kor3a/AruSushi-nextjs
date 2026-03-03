@@ -23,7 +23,7 @@ export default async function handler(
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    const { amount, items, deliveryAddress, deliveryPhone, notes } = req.body;
+    const { amount, items, deliveryAddress, deliveryPhone, notes, rewardRedemptionId, rewardType, rewardDiscount } = req.body;
 
     // Validation
     if (!amount || amount <= 0) {
@@ -49,11 +49,11 @@ export default async function handler(
         userName: user.user_metadata?.name || '',
         deliveryAddress: deliveryAddress || '',
         deliveryPhone: deliveryPhone || '',
-        notes: (notes || '').slice(0, 500),
-        itemCount: String(items.length),
-        items: itemsSummary.length <= 500
-          ? itemsSummary
-          : itemsSummary.slice(0, 497) + '...',
+        notes: notes || '',
+        items: JSON.stringify(items),
+        rewardRedemptionId: rewardRedemptionId || '',
+        rewardType: rewardType || '',
+        rewardDiscount: rewardDiscount ? String(rewardDiscount) : '',
       },
       automatic_payment_methods: {
         enabled: true,
