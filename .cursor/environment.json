@@ -1,0 +1,8 @@
+{
+  "baseImage": "ghcr.io/cursor-images/node-20:latest",
+  "install": "npm ci",
+  "env": {
+    "PATH": "/workspace/node_modules/.bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  },
+  "start": "next --version && npx tsc --noEmit"
+}
