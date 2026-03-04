@@ -6,20 +6,53 @@ import { useAuth } from '../contexts/AuthContext';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { FaCheckCircle, FaClock } from 'react-icons/fa';
+import PickupOrderProgress from '../components/PickupOrderProgress';
+
+interface ConfirmedOrder {
+  id: string;
+  orderType: string;
+  status: string;
+}
 
 export default function OrderConfirmation() {
   const router = useRouter();
   const { orderId } = router.query;
   const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [order, setOrder] = useState<ConfirmedOrder | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/auth/signin');
-    } else if (user) {
-      setLoading(false);
+      return;
     }
-  }, [user, authLoading, router]);
+
+    if (!user) {
+      return;
+    }
+
+    const fetchOrder = async () => {
+      if (!orderId || typeof orderId !== 'string') {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/orders/${orderId}`);
+        const data = await response.json();
+        if (response.ok) {
+          setOrder(data.order);
+        }
+      } catch (error) {
+        console.error('Failed to fetch order for confirmation page', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrder();
+  }, [user, authLoading, router, orderId]);
 
   if (authLoading || loading) {
     return (
@@ -72,6 +105,12 @@ export default function OrderConfirmation() {
               </div>
             </div>
 
+            {order?.orderType === 'pickup' ? (
+              <div className="text-left mb-6 bg-gray-50 rounded-lg p-4">
+                <PickupOrderProgress status={order.status} />
+              </div>
+            ) : null}
+
             <div className="space-y-4 mb-8">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <p className="text-sm text-blue-800">
@@ -92,6 +131,12 @@ export default function OrderConfirmation() {
             </div>
 
             <div className="space-y-3">
+              <Link
+                href={orderId ? `/order-tracking?orderId=${orderId}` : '/my-orders'}
+                className="block w-full bg-white border border-pink-600 text-pink-600 px-6 py-3 rounded-md hover:bg-pink-50 font-semibold"
+              >
+                Track My Order
+              </Link>
               <Link
                 href="/menu"
                 className="block w-full bg-pink-600 text-white px-6 py-3 rounded-md hover:bg-pink-700 font-semibold"

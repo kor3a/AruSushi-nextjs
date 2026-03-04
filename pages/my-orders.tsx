@@ -4,6 +4,8 @@ import { useRouter } from 'next/router';
 import { useAuth } from '../contexts/AuthContext';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import PickupOrderProgress from '../components/PickupOrderProgress';
+import { createClient } from '../lib/supabase/client';
 
 interface OrderItem {
   id: string;
@@ -41,9 +43,11 @@ export default function MyOrders() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const fetchOrders = useCallback(async () => {
+  const fetchOrders = useCallback(async (showLoader = false) => {
     try {
-      setLoading(true);
+      if (showLoader) {
+        setLoading(true);
+      }
       const response = await fetch('/api/orders/my-orders');
       const data = await response.json();
 
@@ -56,7 +60,9 @@ export default function MyOrders() {
       console.error('Error fetching orders:', err);
       setError(err.message || 'An error occurred');
     } finally {
-      setLoading(false);
+      if (showLoader) {
+        setLoading(false);
+      }
     }
   }, []);
 
@@ -73,8 +79,35 @@ export default function MyOrders() {
     }
 
     // Fetch orders if authenticated
-    fetchOrders();
+    fetchOrders(true);
   }, [user, authLoading, router, fetchOrders]);
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`my-orders-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'orders',
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          fetchOrders();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, fetchOrders]);
 
   const getStatusStyle = (status: string) => {
     const styles: { [key: string]: { background: string; color: string } } = {
@@ -82,10 +115,19 @@ export default function MyOrders() {
       confirmed: { background: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa' },
       preparing: { background: 'rgba(168, 85, 247, 0.2)', color: '#c084fc' },
       ready: { background: 'rgba(34, 197, 94, 0.2)', color: '#4ade80' },
+      picked_up: { background: 'rgba(148, 163, 184, 0.2)', color: '#cbd5e1' },
       delivered: { background: 'rgba(156, 163, 175, 0.2)', color: '#9ca3af' },
       cancelled: { background: 'rgba(239, 68, 68, 0.2)', color: '#f87171' },
     };
     return styles[status] || { background: 'rgba(156, 163, 175, 0.2)', color: '#9ca3af' };
+  };
+
+  const formatStatusLabel = (status: string) => {
+    if (status === 'picked_up') {
+      return 'Picked Up';
+    }
+
+    return status.charAt(0).toUpperCase() + status.slice(1);
   };
 
   // Show loading state while auth is loading or while fetching orders
@@ -213,7 +255,7 @@ export default function MyOrders() {
                         fontWeight: '600',
                         ...getStatusStyle(order.status)
                       }}>
-                        {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                        {formatStatusLabel(order.status)}
                       </span>
                       <span style={{
                         padding: '6px 12px',
@@ -229,6 +271,18 @@ export default function MyOrders() {
                       </span>
                     </div>
                   </div>
+
+                  {order.orderType === 'pickup' && (
+                    <div
+                      style={{
+                        borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                        marginTop: '16px',
+                        paddingTop: '16px',
+                      }}
+                    >
+                      <PickupOrderProgress status={order.status} />
+                    </div>
+                  )}
 
                   {/* Order Items */}
                   <div style={{
