@@ -121,8 +121,8 @@ export default function AdminOrdersPage() {
   return (
     <>
       <Head>
-        <title>Admin Orders - A-Ru Sushi</title>
-        <meta name="description" content="Admin order history and date-filtered order management" />
+        <title>Orders - A-Ru Sushi</title>
+        <meta name="description" content="Order history and date-filtered order management" />
       </Head>
       <Header />
 
@@ -143,7 +143,7 @@ export default function AdminOrdersPage() {
               textAlign: 'center',
             }}
           >
-            Admin Order History
+            Orders
           </h1>
 
           <form

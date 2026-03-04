@@ -51,7 +51,7 @@ const Header = () => {
         <Link href="/" onClick={closeMenu}>Home</Link>
         <Link href="/menu" onClick={closeMenu}>Menu</Link>
         {user && !showAdminOrders && <Link href="/my-orders" onClick={closeMenu}>My Orders</Link>}
-        {showAdminOrders && <Link href="/admin/orders" onClick={closeMenu}>Admin Orders</Link>}
+        {showAdminOrders && <Link href="/admin/orders" onClick={closeMenu}>Orders</Link>}
         <Link href="/contact" onClick={closeMenu}>Contact Us</Link>
       </nav>
       <div className="icons" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
