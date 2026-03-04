@@ -40,11 +40,16 @@ export default function MyOrders() {
   const { user, loading: authLoading } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
 
-  const fetchOrders = useCallback(async () => {
+  const fetchOrders = useCallback(async (isBackgroundRefresh = false) => {
     try {
-      setLoading(true);
+      if (isBackgroundRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       const response = await fetch('/api/orders/my-orders');
       const data = await response.json();
 
@@ -57,7 +62,10 @@ export default function MyOrders() {
       console.error('Error fetching orders:', err);
       setError(err.message || 'An error occurred');
     } finally {
-      setLoading(false);
+      if (!isBackgroundRefresh) {
+        setLoading(false);
+      }
+      setRefreshing(false);
     }
   }, []);
 
@@ -74,8 +82,24 @@ export default function MyOrders() {
     }
 
     // Fetch orders if authenticated
-    fetchOrders();
+    fetchOrders(false);
   }, [user, authLoading, router, fetchOrders]);
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    const pollIntervalMs = 5000;
+
+    const intervalId = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchOrders(true);
+      }
+    }, pollIntervalMs);
+
+    return () => clearInterval(intervalId);
+  }, [user, fetchOrders]);
 
   const getStatusStyle = (status: string) => {
     const styles: { [key: string]: { background: string; color: string } } = {
@@ -140,6 +164,11 @@ export default function MyOrders() {
           <h1 style={{ fontSize: '36px', fontWeight: 'bold', color: '#f1d00f', marginBottom: '32px', textAlign: 'center' }}>
             My Orders
           </h1>
+          {refreshing && !loading ? (
+            <p style={{ color: '#888', fontSize: '12px', textAlign: 'center', marginTop: '-18px', marginBottom: '18px' }}>
+              Updating order status...
+            </p>
+          ) : null}
 
           {error && (
             <div style={{
