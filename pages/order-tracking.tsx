@@ -7,6 +7,7 @@ import Footer from '../components/Footer';
 import { useAuth } from '../contexts/AuthContext';
 import HorizontalOrderProgress from '../components/HorizontalOrderProgress';
 import { getPickupStatusLabel } from '../lib/orders/pickupStatus';
+import { createClient } from '../lib/supabase/client';
 
 interface Order {
   id: string;
@@ -24,10 +25,9 @@ export default function OrderTrackingPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [refreshing, setRefreshing] = useState(false);
 
   const fetchOrder = useCallback(
-    async (isBackgroundRefresh = false) => {
+    async (showLoader = false) => {
       if (!orderId || typeof orderId !== 'string') {
         setError('Missing order ID. Please open this page from your checkout confirmation.');
         setLoading(false);
@@ -35,9 +35,7 @@ export default function OrderTrackingPage() {
       }
 
       try {
-        if (isBackgroundRefresh) {
-          setRefreshing(true);
-        } else {
+        if (showLoader) {
           setLoading(true);
         }
 
@@ -53,8 +51,9 @@ export default function OrderTrackingPage() {
       } catch (err: any) {
         setError(err.message || 'Unable to load order');
       } finally {
-        setLoading(false);
-        setRefreshing(false);
+        if (showLoader) {
+          setLoading(false);
+        }
       }
     },
     [orderId]
@@ -70,7 +69,7 @@ export default function OrderTrackingPage() {
       return;
     }
 
-    fetchOrder(false);
+    fetchOrder(true);
   }, [authLoading, user, router, fetchOrder]);
 
   useEffect(() => {
@@ -78,11 +77,26 @@ export default function OrderTrackingPage() {
       return;
     }
 
-    const intervalId = setInterval(() => {
-      fetchOrder(true);
-    }, 5000);
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`order-tracking-${orderId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'orders',
+          filter: `id=eq.${orderId}`,
+        },
+        () => {
+          fetchOrder();
+        }
+      )
+      .subscribe();
 
-    return () => clearInterval(intervalId);
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user, orderId, fetchOrder]);
 
   const statusText = order?.orderType === 'pickup' && order?.status
@@ -190,7 +204,7 @@ export default function OrderTrackingPage() {
                 )}
 
                 <div style={{ marginTop: '16px', textAlign: 'center', color: '#888', fontSize: '12px' }}>
-                  {refreshing ? 'Refreshing status...' : `Last updated: ${new Date(order.updatedAt).toLocaleTimeString()}`}
+                  Last updated: {new Date(order.updatedAt).toLocaleTimeString()}
                 </div>
               </>
             ) : null}

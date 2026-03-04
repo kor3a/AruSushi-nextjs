@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import PickupOrderProgress from '../components/PickupOrderProgress';
+import { createClient } from '../lib/supabase/client';
 
 interface OrderItem {
   id: string;
@@ -40,14 +41,11 @@ export default function MyOrders() {
   const { user, loading: authLoading } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
 
-  const fetchOrders = useCallback(async (isBackgroundRefresh = false) => {
+  const fetchOrders = useCallback(async (showLoader = false) => {
     try {
-      if (isBackgroundRefresh) {
-        setRefreshing(true);
-      } else {
+      if (showLoader) {
         setLoading(true);
       }
       const response = await fetch('/api/orders/my-orders');
@@ -62,10 +60,9 @@ export default function MyOrders() {
       console.error('Error fetching orders:', err);
       setError(err.message || 'An error occurred');
     } finally {
-      if (!isBackgroundRefresh) {
+      if (showLoader) {
         setLoading(false);
       }
-      setRefreshing(false);
     }
   }, []);
 
@@ -82,7 +79,7 @@ export default function MyOrders() {
     }
 
     // Fetch orders if authenticated
-    fetchOrders(false);
+    fetchOrders(true);
   }, [user, authLoading, router, fetchOrders]);
 
   useEffect(() => {
@@ -90,15 +87,26 @@ export default function MyOrders() {
       return;
     }
 
-    const pollIntervalMs = 5000;
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`my-orders-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'orders',
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          fetchOrders();
+        }
+      )
+      .subscribe();
 
-    const intervalId = setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        fetchOrders(true);
-      }
-    }, pollIntervalMs);
-
-    return () => clearInterval(intervalId);
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user, fetchOrders]);
 
   const getStatusStyle = (status: string) => {
@@ -164,11 +172,6 @@ export default function MyOrders() {
           <h1 style={{ fontSize: '36px', fontWeight: 'bold', color: '#f1d00f', marginBottom: '32px', textAlign: 'center' }}>
             My Orders
           </h1>
-          {refreshing && !loading ? (
-            <p style={{ color: '#888', fontSize: '12px', textAlign: 'center', marginTop: '-18px', marginBottom: '18px' }}>
-              Updating order status...
-            </p>
-          ) : null}
 
           {error && (
             <div style={{
