@@ -53,7 +53,6 @@ const Header = () => {
         {user && <Link href="/my-orders" onClick={closeMenu}>My Orders</Link>}
         {showAdminOrders && <Link href="/admin/orders" onClick={closeMenu}>Admin Orders</Link>}
         <Link href="/contact" onClick={closeMenu}>Contact Us</Link>
-        <a href="https://www.doordash.com/en-CA/store/a-ru-japanese-restaurant-buellton-632339/" target="_blank" rel="noopener noreferrer" onClick={closeMenu}>Order via DoorDash</a>
       </nav>
       <div className="icons" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
         <Link href="/cart" style={{ position: 'relative', display: 'inline-block' }}>
