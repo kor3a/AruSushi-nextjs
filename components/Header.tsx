@@ -50,7 +50,7 @@ const Header = () => {
       <nav className={`navbar ${isMenuOpen ? 'active' : ''}`}>
         <Link href="/" onClick={closeMenu}>Home</Link>
         <Link href="/menu" onClick={closeMenu}>Menu</Link>
-        {user && <Link href="/my-orders" onClick={closeMenu}>My Orders</Link>}
+        {user && !showAdminOrders && <Link href="/my-orders" onClick={closeMenu}>My Orders</Link>}
         {showAdminOrders && <Link href="/admin/orders" onClick={closeMenu}>Admin Orders</Link>}
         <Link href="/contact" onClick={closeMenu}>Contact Us</Link>
       </nav>
