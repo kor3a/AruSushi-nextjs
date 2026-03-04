@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
 import { useRewards } from '../contexts/RewardsContext';
+import { canManageOrders } from '../lib/auth/roles';
 import { FaShoppingCart, FaUser, FaSignOutAlt, FaSignInAlt } from 'react-icons/fa';
 
 const Header = () => {
@@ -14,6 +15,7 @@ const Header = () => {
   const [cartItemsCount, setCartItemsCount] = useState(0);
   const [mounted, setMounted] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const showAdminOrders = canManageOrders(user?.email);
 
   // Only get cart count on client side to prevent hydration mismatch
   useEffect(() => {
@@ -48,9 +50,9 @@ const Header = () => {
       <nav className={`navbar ${isMenuOpen ? 'active' : ''}`}>
         <Link href="/" onClick={closeMenu}>Home</Link>
         <Link href="/menu" onClick={closeMenu}>Menu</Link>
-        {user && <Link href="/my-orders" onClick={closeMenu}>My Orders</Link>}
+        {user && !showAdminOrders && <Link href="/my-orders" onClick={closeMenu}>My Orders</Link>}
+        {showAdminOrders && <Link href="/admin/orders" onClick={closeMenu}>Orders</Link>}
         <Link href="/contact" onClick={closeMenu}>Contact Us</Link>
-        <a href="https://www.doordash.com/en-CA/store/a-ru-japanese-restaurant-buellton-632339/" target="_blank" rel="noopener noreferrer" onClick={closeMenu}>Order via DoorDash</a>
       </nav>
       <div className="icons" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
         <Link href="/cart" style={{ position: 'relative', display: 'inline-block' }}>
@@ -77,27 +79,29 @@ const Header = () => {
         </Link>
         {user ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Link
-              href="/profile"
-              style={{
-                color: '#f1d00f',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '4px 8px',
-                border: '1px solid rgba(241, 208, 15, 0.3)',
-                borderRadius: '999px',
-                textDecoration: 'none',
-              }}
-              title="Sushi points"
-            >
-              <span role="img" aria-label="Sushi icon" style={{ fontSize: '16px', lineHeight: 1 }}>
-                🍣
-              </span>
-              <span style={{ fontSize: '12px', fontWeight: 700, color: '#f1d00f', whiteSpace: 'nowrap' }}>
-                {rewardsLoading ? '...' : `${pointsBalance} pts`}
-              </span>
-            </Link>
+            {!showAdminOrders && (
+              <Link
+                href="/profile"
+                style={{
+                  color: '#f1d00f',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '4px 8px',
+                  border: '1px solid rgba(241, 208, 15, 0.3)',
+                  borderRadius: '999px',
+                  textDecoration: 'none',
+                }}
+                title="Sushi points"
+              >
+                <span role="img" aria-label="Sushi icon" style={{ fontSize: '16px', lineHeight: 1 }}>
+                  🍣
+                </span>
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#f1d00f', whiteSpace: 'nowrap' }}>
+                  {rewardsLoading ? '...' : `${pointsBalance} pts`}
+                </span>
+              </Link>
+            )}
             <Link href="/profile" style={{ color: '#f1d00f', display: 'flex', alignItems: 'center' }} title="Profile">
               <FaUser size={18} style={{ color: '#f1d00f' }} />
             </Link>

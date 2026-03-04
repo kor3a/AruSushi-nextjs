@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { createApiClient } from '../../../lib/supabase/server';
 import { db } from '../../../lib/db';
+import { getUserRoleByEmail } from '../../../lib/auth/roles';
 
 export default async function handler(
   req: NextApiRequest,
@@ -31,6 +32,7 @@ export default async function handler(
         user: {
           id: dbUser.id,
           email: dbUser.email,
+          role: getUserRoleByEmail(dbUser.email),
           name: dbUser.name,
           phone: dbUser.phone,
           address: dbUser.address,
@@ -75,6 +77,7 @@ export default async function handler(
         user: {
           id: updatedUser.id,
           email: updatedUser.email,
+          role: getUserRoleByEmail(updatedUser.email),
           name: updatedUser.name,
           phone: updatedUser.phone,
           address: updatedUser.address,

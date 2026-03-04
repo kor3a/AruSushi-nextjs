@@ -406,6 +406,19 @@ class Database {
     });
   }
 
+  async findAllOrdersByDateRange(startDate?: Date, endDate?: Date) {
+    return prisma.order.findMany({
+      where: {
+        createdAt: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      include: { items: true },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   async updateOrder(id: string, updates: Partial<{ status: string; paymentStatus: string; doordashDeliveryId: string; doordashDeliveryStatus: string }>) {
     return prisma.order.update({
       where: { id },
