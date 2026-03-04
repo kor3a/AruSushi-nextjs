@@ -226,7 +226,7 @@ function CheckoutForm({
       const { error: stripeError, paymentIntent } = await stripe.confirmPayment({
         elements,
         confirmParams: {
-          return_url: `${window.location.origin}/order-confirmation`,
+          return_url: `${window.location.origin}/order-tracking`,
         },
         redirect: 'if_required',
       });
@@ -304,7 +304,7 @@ function CheckoutForm({
       // Clear cart, checkout data, and redirect to confirmation
       clearCart();
       sessionStorage.removeItem('checkoutData');
-      router.push(`/order-confirmation?orderId=${orderData.order.id}`);
+      router.push(`/order-tracking?orderId=${orderData.order.id}`);
     } catch (err: any) {
       setError(err.message || 'An error occurred');
       setLoading(false);

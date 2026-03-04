@@ -132,7 +132,7 @@ export default function OrderConfirmation() {
 
             <div className="space-y-3">
               <Link
-                href="/my-orders"
+                href={orderId ? `/order-tracking?orderId=${orderId}` : '/my-orders'}
                 className="block w-full bg-white border border-pink-600 text-pink-600 px-6 py-3 rounded-md hover:bg-pink-50 font-semibold"
               >
                 Track My Order
