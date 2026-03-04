@@ -5,6 +5,7 @@ import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 import { useAuth } from '../../contexts/AuthContext';
 import { canManageOrders } from '../../lib/auth/roles';
+import { getPickupStatusLabel, isPickupOrderActive } from '../../lib/orders/pickupStatus';
 
 interface OrderItem {
   id: string;
@@ -28,6 +29,7 @@ interface Order {
   customerEmail?: string | null;
   notes?: string | null;
   createdAt: string;
+  updatedAt: string;
 }
 
 function formatDateForInput(date: Date): string {
@@ -52,6 +54,7 @@ export default function AdminOrdersPage() {
   const [error, setError] = useState('');
   const [startDate, setStartDate] = useState<string>(getDefaultStartDate());
   const [endDate, setEndDate] = useState<string>(getDefaultEndDate());
+  const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
 
   const canAccess = useMemo(() => canManageOrders(user?.email), [user?.email]);
 
@@ -116,6 +119,53 @@ export default function AdminOrdersPage() {
     setStartDate(defaultStart);
     setEndDate(defaultEnd);
     fetchOrders(defaultStart, defaultEnd);
+  };
+
+  const updateOrderStatus = async (orderId: string, status: string) => {
+    try {
+      setUpdatingOrderId(orderId);
+      setError('');
+
+      const response = await fetch('/api/orders/update-status', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, status }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to update order status');
+      }
+
+      setOrders((prevOrders) =>
+        prevOrders.map((order) => (order.id === orderId ? data.order : order))
+      );
+    } catch (err: any) {
+      setError(err.message || 'An error occurred while updating order status');
+    } finally {
+      setUpdatingOrderId(null);
+    }
+  };
+
+  const activePickupOrders = orders.filter(
+    (order) => order.orderType === 'pickup' && isPickupOrderActive(order.status)
+  );
+
+  const getStatusOptions = (orderType: string, currentStatus: string) => {
+    const options =
+      orderType === 'pickup'
+        ? ['confirmed', 'preparing', 'ready', 'picked_up', 'cancelled']
+        : ['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled'];
+
+    return options.includes(currentStatus) ? options : [currentStatus, ...options];
+  };
+
+  const getStatusLabel = (orderType: string, status: string) => {
+    if (orderType === 'pickup') {
+      return getPickupStatusLabel(status);
+    }
+
+    return status.charAt(0).toUpperCase() + status.slice(1);
   };
 
   return (
@@ -245,6 +295,24 @@ export default function AdminOrdersPage() {
             </div>
           ) : null}
 
+          {!loading && !error && activePickupOrders.length > 0 ? (
+            <div
+              style={{
+                marginBottom: '20px',
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid rgba(241, 208, 15, 0.35)',
+                borderRadius: '12px',
+                padding: '16px',
+              }}
+            >
+              <h2 style={{ color: '#f1d00f', fontSize: '18px', marginBottom: '8px' }}>Active Pickup Orders</h2>
+              <p style={{ color: '#ddd', fontSize: '13px', marginBottom: 0 }}>
+                {activePickupOrders.length} currently active pickup
+                {activePickupOrders.length === 1 ? '' : 's'} requiring updates.
+              </p>
+            </div>
+          ) : null}
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {orders.map((order) => (
               <div
@@ -266,9 +334,45 @@ export default function AdminOrdersPage() {
                   <div style={{ textAlign: 'right' }}>
                     <p style={{ color: '#fff', fontWeight: 700, fontSize: '20px' }}>${Number(order.total).toFixed(2)}</p>
                     <p style={{ color: '#ddd', fontSize: '13px' }}>Type: {order.orderType}</p>
-                    <p style={{ color: '#ddd', fontSize: '13px' }}>Status: {order.status}</p>
+                    <p style={{ color: '#ddd', fontSize: '13px' }}>Status: {getStatusLabel(order.orderType, order.status)}</p>
                     <p style={{ color: '#ddd', fontSize: '13px' }}>Payment: {order.paymentStatus}</p>
                   </div>
+                </div>
+
+                <div
+                  style={{
+                    marginTop: '12px',
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '10px',
+                    alignItems: 'center',
+                  }}
+                >
+                  <label style={{ color: '#ccc', fontSize: '13px' }}>
+                    Update status:
+                    <select
+                      value={order.status}
+                      onChange={(e) => updateOrderStatus(order.id, e.target.value)}
+                      disabled={updatingOrderId === order.id}
+                      style={{
+                        marginLeft: '8px',
+                        background: '#111',
+                        color: '#fff',
+                        border: '1px solid #444',
+                        borderRadius: '8px',
+                        padding: '6px 8px',
+                      }}
+                    >
+                      {getStatusOptions(order.orderType, order.status).map((status) => (
+                        <option key={status} value={status}>
+                          {getStatusLabel(order.orderType, status)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {updatingOrderId === order.id ? (
+                    <span style={{ color: '#f1d00f', fontSize: '12px' }}>Saving...</span>
+                  ) : null}
                 </div>
 
                 <div style={{ marginTop: '12px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>

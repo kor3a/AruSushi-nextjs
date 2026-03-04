@@ -219,12 +219,14 @@ export default async function handler(
     }
 
     // Create order
+    const initialStatus = orderType === 'pickup' ? 'confirmed' : 'pending';
+
     const order = await db.createOrder({
       userId: user.id,
       items: orderItems,
       total: expectedTotal,
       orderType,
-      status: doordashError ? 'pending' : 'pending', // Could set to 'needs_attention' if you add that status
+      status: initialStatus,
       paymentIntentId,
       paymentStatus: paymentStatus || 'pending',
       deliveryAddress: orderType === 'delivery' ? deliveryAddress : undefined,
