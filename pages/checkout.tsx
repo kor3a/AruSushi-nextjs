@@ -759,6 +759,7 @@ export default function Checkout() {
   const [rewardsSummary, setRewardsSummary] = useState<RewardsSummary | null>(null);
   const [selectedRewardRedemptionId, setSelectedRewardRedemptionId] = useState('');
   const [clientSecret, setClientSecret] = useState('');
+  const [paymentIntentId, setPaymentIntentId] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -816,7 +817,7 @@ export default function Checkout() {
       // Create payment intent
       const createPaymentIntent = async () => {
         try {
-          setLoading(true);
+          setLoading(!clientSecret);
           setError('');
           const amountToCharge = Math.max(Number((subtotal - rewardDiscount).toFixed(2)), 0.5);
 
@@ -831,6 +832,7 @@ export default function Checkout() {
               rewardRedemptionId: selectedRedemption?.id,
               rewardType: selectedRedemption?.rewardType,
               rewardDiscount,
+              paymentIntentId: paymentIntentId || undefined,
             }),
           });
 
@@ -841,10 +843,15 @@ export default function Checkout() {
           }
 
           setClientSecret(data.clientSecret);
+          if (data.paymentIntentId) {
+            setPaymentIntentId(data.paymentIntentId);
+          }
         } catch (err: any) {
           setError(err.message || 'An error occurred');
         } finally {
-          setLoading(false);
+          if (!clientSecret) {
+            setLoading(false);
+          }
         }
       };
 
