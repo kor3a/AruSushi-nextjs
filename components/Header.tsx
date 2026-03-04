@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
 import { useRewards } from '../contexts/RewardsContext';
+import { canManageOrders } from '../lib/auth/roles';
 import { FaShoppingCart, FaUser, FaSignOutAlt, FaSignInAlt } from 'react-icons/fa';
 
 const Header = () => {
@@ -14,6 +15,7 @@ const Header = () => {
   const [cartItemsCount, setCartItemsCount] = useState(0);
   const [mounted, setMounted] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const showAdminOrders = canManageOrders(user?.email);
 
   // Only get cart count on client side to prevent hydration mismatch
   useEffect(() => {
@@ -49,6 +51,7 @@ const Header = () => {
         <Link href="/" onClick={closeMenu}>Home</Link>
         <Link href="/menu" onClick={closeMenu}>Menu</Link>
         {user && <Link href="/my-orders" onClick={closeMenu}>My Orders</Link>}
+        {showAdminOrders && <Link href="/admin/orders" onClick={closeMenu}>Admin Orders</Link>}
         <Link href="/contact" onClick={closeMenu}>Contact Us</Link>
         <a href="https://www.doordash.com/en-CA/store/a-ru-japanese-restaurant-buellton-632339/" target="_blank" rel="noopener noreferrer" onClick={closeMenu}>Order via DoorDash</a>
       </nav>
