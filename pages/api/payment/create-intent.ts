@@ -33,17 +33,7 @@ export default async function handler(
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    const {
-      amount,
-      items,
-      deliveryAddress,
-      deliveryPhone,
-      notes,
-      rewardRedemptionId,
-      rewardType,
-      rewardDiscount,
-      paymentIntentId,
-    } = req.body;
+    const { amount, items, deliveryAddress, deliveryPhone, notes, rewardRedemptionId, rewardType, rewardDiscount } = req.body;
 
     // Validation
     if (!amount || amount <= 0) {
@@ -58,58 +48,27 @@ export default async function handler(
       .map((item: any) => `${String(item?.name || 'Item')} x${Number(item?.quantity || 1)}`)
       .join(', ');
 
-    const metadata = {
-      userId: user.id,
-      userEmail: toMetadataValue(user.email || ''),
-      userName: toMetadataValue(user.user_metadata?.name || ''),
-      deliveryAddress: toMetadataValue(deliveryAddress || ''),
-      deliveryPhone: toMetadataValue(deliveryPhone || ''),
-      notes: toMetadataValue(notes || ''),
-      itemCount: toMetadataValue(items.length),
-      items: toMetadataValue(itemsSummary),
-      rewardRedemptionId: toMetadataValue(rewardRedemptionId || ''),
-      rewardType: toMetadataValue(rewardType || ''),
-      rewardDiscount: toMetadataValue(rewardDiscount ? String(rewardDiscount) : ''),
-    };
-
-    let paymentIntent: Stripe.Response<Stripe.PaymentIntent>;
-
-    if (paymentIntentId && typeof paymentIntentId === 'string') {
-      const existingIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-
-      if (existingIntent.metadata?.userId && existingIntent.metadata.userId !== user.id) {
-        return res.status(403).json({ message: 'Forbidden: Payment intent does not belong to user' });
-      }
-
-      if (
-        existingIntent.status === 'succeeded' ||
-        existingIntent.status === 'canceled' ||
-        existingIntent.status === 'processing'
-      ) {
-        paymentIntent = await stripe.paymentIntents.create({
-          amount: Math.round(amount * 100),
-          currency: 'usd',
-          metadata,
-          automatic_payment_methods: {
-            enabled: true,
-          },
-        });
-      } else {
-        paymentIntent = await stripe.paymentIntents.update(paymentIntentId, {
-          amount: Math.round(amount * 100),
-          metadata,
-        });
-      }
-    } else {
-      paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(amount * 100), // Convert to cents
-        currency: 'usd',
-        metadata,
-        automatic_payment_methods: {
-          enabled: true,
-        },
-      });
-    }
+    // Create a PaymentIntent with the order amount and currency
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(amount * 100), // Convert to cents
+      currency: 'usd',
+      metadata: {
+        userId: user.id,
+        userEmail: toMetadataValue(user.email || ''),
+        userName: toMetadataValue(user.user_metadata?.name || ''),
+        deliveryAddress: toMetadataValue(deliveryAddress || ''),
+        deliveryPhone: toMetadataValue(deliveryPhone || ''),
+        notes: toMetadataValue(notes || ''),
+        itemCount: toMetadataValue(items.length),
+        items: toMetadataValue(itemsSummary),
+        rewardRedemptionId: toMetadataValue(rewardRedemptionId || ''),
+        rewardType: toMetadataValue(rewardType || ''),
+        rewardDiscount: toMetadataValue(rewardDiscount ? String(rewardDiscount) : ''),
+      },
+      automatic_payment_methods: {
+        enabled: true,
+      },
+    });
 
     res.status(200).json({
       clientSecret: paymentIntent.client_secret,
