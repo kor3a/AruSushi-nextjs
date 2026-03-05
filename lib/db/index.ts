@@ -525,10 +525,32 @@ class Database {
     });
   }
 
-  async updateOrder(id: string, updates: Partial<{ status: string; paymentStatus: string; doordashDeliveryId: string; doordashDeliveryStatus: string }>) {
+  async updateOrder(id: string, updates: Partial<{
+    status: string;
+    paymentStatus: string;
+    doordashDeliveryId: string;
+    doordashDeliveryStatus: string;
+    doordashTrackingUrl: string;
+    dasherName: string;
+    dasherPhone: string;
+    dasherLatitude: number;
+    dasherLongitude: number;
+    estimatedPickupTime: Date;
+    estimatedDropoffTime: Date;
+    actualPickupTime: Date;
+    actualDropoffTime: Date;
+    deliveryLastEvent: string;
+  }>) {
     return prisma.order.update({
       where: { id },
       data: updates,
+      include: { items: true },
+    });
+  }
+
+  async findOrderByDoordashDeliveryId(doordashDeliveryId: string) {
+    return prisma.order.findFirst({
+      where: { doordashDeliveryId },
       include: { items: true },
     });
   }

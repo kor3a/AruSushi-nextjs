@@ -38,9 +38,18 @@ model Order {
   deliveryAddress String?     @map("delivery_address")
   deliveryPhone   String?     @map("delivery_phone")
   deliveryFee         Decimal?  @map("delivery_fee") @db.Decimal(10, 2) // Delivery fee
-  doordashDeliveryId String?  @map("doordash_delivery_id") // DoorDash delivery ID
-  doordashDeliveryStatus String? @map("doordash_delivery_status") // DoorDash delivery status
-  doordashTrackingUrl String? @map("doordash_tracking_url") // DoorDash tracking URL
+  doordashDeliveryId String?  @map("doordash_delivery_id")
+  doordashDeliveryStatus String? @map("doordash_delivery_status")
+  doordashTrackingUrl String? @map("doordash_tracking_url")
+  dasherName          String?  @map("dasher_name")
+  dasherPhone         String?  @map("dasher_phone")
+  dasherLatitude      Float?   @map("dasher_latitude")
+  dasherLongitude     Float?   @map("dasher_longitude")
+  estimatedPickupTime DateTime? @map("estimated_pickup_time")
+  estimatedDropoffTime DateTime? @map("estimated_dropoff_time")
+  actualPickupTime    DateTime? @map("actual_pickup_time")
+  actualDropoffTime   DateTime? @map("actual_dropoff_time")
+  deliveryLastEvent   String?  @map("delivery_last_event")
   customerName    String?     @map("customer_name")
   customerEmail   String?     @map("customer_email")
   notes           String?
