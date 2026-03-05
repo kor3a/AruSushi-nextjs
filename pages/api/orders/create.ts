@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createApiClient } from '../../../lib/supabase/server';
-import { db, isRewardsSchemaMissingError } from '../../../lib/db';
+import { db, isRewardsSchemaMissingError, isStoreSettingsMissingError } from '../../../lib/db';
 import {
   sendOrderNotificationToRestaurant,
   sendOrderConfirmationToCustomer,
@@ -32,6 +32,24 @@ export default async function handler(
 
     if (authError || !user) {
       return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    try {
+      const { paused, settings } = await db.areOrdersPaused();
+      if (paused) {
+        const msg = settings.pauseReason
+          ? `New orders are temporarily paused: ${settings.pauseReason}`
+          : 'New orders are temporarily paused. Please try again later.';
+        return res.status(503).json({
+          message: msg,
+          ordersPaused: true,
+          resumeAt: settings.resumeAt,
+        });
+      }
+    } catch (pauseCheckError) {
+      if (!isStoreSettingsMissingError(pauseCheckError)) {
+        throw pauseCheckError;
+      }
     }
 
     const {

@@ -8,6 +8,12 @@ import Footer from '../components/Footer';
 import { useCart } from '../contexts/CartContext';
 import { FaTrash, FaMinus, FaPlus } from 'react-icons/fa';
 
+interface OrderPauseInfo {
+  ordersPaused: boolean;
+  pauseReason: string | null;
+  resumeAt: string | null;
+}
+
 export default function Cart() {
   const router = useRouter();
   const { user } = useAuth();
@@ -16,10 +22,17 @@ export default function Cart() {
   const [editingNotes, setEditingNotes] = useState<{ [key: string]: boolean }>({});
   const [notesValue, setNotesValue] = useState<{ [key: string]: string }>({});
   const [mounted, setMounted] = useState(false);
+  const [pauseInfo, setPauseInfo] = useState<OrderPauseInfo | null>(null);
 
-  // Wait for client-side mount to prevent hydration issues
   useEffect(() => {
     setMounted(true);
+    const checkPauseStatus = async () => {
+      try {
+        const res = await fetch('/api/store/settings');
+        if (res.ok) setPauseInfo(await res.json());
+      } catch { /* not critical */ }
+    };
+    checkPauseStatus();
   }, []);
 
   const handleCheckout = () => {
@@ -62,6 +75,36 @@ export default function Cart() {
       }}>
         <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
           <h1 style={{ fontSize: '36px', fontWeight: 'bold', color: '#f1d00f', marginBottom: '32px', textAlign: 'center' }}>Shopping Cart</h1>
+
+          {pauseInfo?.ordersPaused && (
+            <div
+              style={{
+                marginBottom: '24px',
+                padding: '20px',
+                borderRadius: '12px',
+                background: 'rgba(255, 152, 0, 0.12)',
+                border: '1px solid rgba(255, 152, 0, 0.4)',
+                textAlign: 'center',
+              }}
+            >
+              <p style={{ color: '#FF9800', fontWeight: 700, fontSize: '18px', marginBottom: '8px' }}>
+                Ordering is Temporarily Paused
+              </p>
+              {pauseInfo.pauseReason && (
+                <p style={{ color: '#ddd', fontSize: '14px', marginBottom: '4px' }}>
+                  {pauseInfo.pauseReason}
+                </p>
+              )}
+              {pauseInfo.resumeAt && (
+                <p style={{ color: '#ccc', fontSize: '13px' }}>
+                  Orders will resume at {new Date(pauseInfo.resumeAt).toLocaleString()}
+                </p>
+              )}
+              <p style={{ color: '#999', fontSize: '13px', marginTop: '8px' }}>
+                You can still browse the menu, but checkout is temporarily unavailable.
+              </p>
+            </div>
+          )}
 
           {!mounted ? (
             <div style={{
@@ -309,21 +352,27 @@ export default function Cart() {
                   </button>
                   <button
                     onClick={handleCheckout}
+                    disabled={!!pauseInfo?.ordersPaused}
                     style={{
                       width: '100%',
                       padding: '14px 24px',
-                      background: '#fc3678',
+                      background: pauseInfo?.ordersPaused ? 'rgba(252, 54, 120, 0.3)' : '#fc3678',
                       color: '#fff',
                       border: 'none',
                       borderRadius: '8px',
                       fontSize: '16px',
                       fontWeight: '600',
-                      cursor: 'pointer',
-                      boxShadow: '0 4px 12px rgba(252, 54, 120, 0.3)',
-                      transition: 'all 0.3s'
+                      cursor: pauseInfo?.ordersPaused ? 'not-allowed' : 'pointer',
+                      boxShadow: pauseInfo?.ordersPaused ? 'none' : '0 4px 12px rgba(252, 54, 120, 0.3)',
+                      transition: 'all 0.3s',
+                      opacity: pauseInfo?.ordersPaused ? 0.5 : 1,
                     }}
                   >
-                    {user ? 'Proceed to Checkout' : 'Sign In to Checkout'}
+                    {pauseInfo?.ordersPaused
+                      ? 'Ordering Paused'
+                      : user
+                        ? 'Proceed to Checkout'
+                        : 'Sign In to Checkout'}
                   </button>
                 </div>
 

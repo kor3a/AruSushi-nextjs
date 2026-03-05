@@ -751,6 +751,12 @@ function CheckoutForm({
   );
 }
 
+interface OrderPauseInfo {
+  ordersPaused: boolean;
+  pauseReason: string | null;
+  resumeAt: string | null;
+}
+
 export default function Checkout() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
@@ -761,6 +767,7 @@ export default function Checkout() {
   const [clientSecret, setClientSecret] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [pauseInfo, setPauseInfo] = useState<OrderPauseInfo | null>(null);
 
   const selectedRedemption =
     rewardsSummary?.availableRedemptions.find(
@@ -769,6 +776,20 @@ export default function Checkout() {
   const rewardDiscount = selectedRedemption
     ? calculateRewardDiscount(selectedRedemption.rewardType, items)
     : 0;
+
+  useEffect(() => {
+    const checkPauseStatus = async () => {
+      try {
+        const res = await fetch('/api/store/settings');
+        if (res.ok) {
+          setPauseInfo(await res.json());
+        }
+      } catch {
+        // not critical
+      }
+    };
+    checkPauseStatus();
+  }, []);
 
   useEffect(() => {
     if (selectedRewardRedemptionId && !selectedRedemption) {
@@ -929,6 +950,36 @@ export default function Checkout() {
       }}>
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
           <h1 style={{ fontSize: '36px', fontWeight: 'bold', color: '#f1d00f', marginBottom: '32px', textAlign: 'center' }}>Checkout</h1>
+
+          {pauseInfo?.ordersPaused && (
+            <div
+              style={{
+                marginBottom: '24px',
+                padding: '20px',
+                borderRadius: '12px',
+                background: 'rgba(255, 152, 0, 0.12)',
+                border: '1px solid rgba(255, 152, 0, 0.4)',
+                textAlign: 'center',
+              }}
+            >
+              <p style={{ color: '#FF9800', fontWeight: 700, fontSize: '18px', marginBottom: '8px' }}>
+                Ordering is Temporarily Paused
+              </p>
+              {pauseInfo.pauseReason && (
+                <p style={{ color: '#ddd', fontSize: '14px', marginBottom: '4px' }}>
+                  {pauseInfo.pauseReason}
+                </p>
+              )}
+              {pauseInfo.resumeAt && (
+                <p style={{ color: '#ccc', fontSize: '13px' }}>
+                  Orders will resume at {new Date(pauseInfo.resumeAt).toLocaleString()}
+                </p>
+              )}
+              <p style={{ color: '#999', fontSize: '13px', marginTop: '8px' }}>
+                Please check back shortly. We apologize for the inconvenience.
+              </p>
+            </div>
+          )}
 
           <div style={{
             background: 'rgba(255, 255, 255, 0.05)',

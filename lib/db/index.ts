@@ -49,6 +49,30 @@ type RewardRedemptionRow = {
   order_id: string | null;
 };
 
+export interface StoreSettings {
+  ordersPaused: boolean;
+  pauseReason: string | null;
+  pausedAt: Date | null;
+  resumeAt: Date | null;
+  pausedByEmail: string | null;
+}
+
+type StoreSettingsRow = {
+  orders_paused: boolean;
+  pause_reason: string | null;
+  paused_at: Date | null;
+  resume_at: Date | null;
+  paused_by_email: string | null;
+};
+
+export function isStoreSettingsMissingError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const e = error as { code?: string; message?: string; meta?: { message?: string } };
+  if (e.code !== 'P2010') return false;
+  const msg = `${e.message || ''} ${e.meta?.message || ''}`.toLowerCase();
+  return msg.includes('relation "store_settings" does not exist');
+}
+
 export function isRewardsSchemaMissingError(error: unknown): boolean {
   if (!error || typeof error !== 'object') {
     return false;
@@ -350,6 +374,88 @@ class Database {
         redemption: this.mapRewardRedemptionRow(redemptionRows[0]),
       };
     });
+  }
+
+  // Store settings operations
+  private mapStoreSettingsRow(row: StoreSettingsRow): StoreSettings {
+    return {
+      ordersPaused: row.orders_paused,
+      pauseReason: row.pause_reason,
+      pausedAt: row.paused_at,
+      resumeAt: row.resume_at,
+      pausedByEmail: row.paused_by_email,
+    };
+  }
+
+  async getStoreSettings(): Promise<StoreSettings> {
+    const rows = await prisma.$queryRaw<StoreSettingsRow[]>`
+      SELECT orders_paused, pause_reason, paused_at, resume_at, paused_by_email
+      FROM store_settings
+      WHERE id = 1
+      LIMIT 1
+    `;
+
+    if (!rows.length) {
+      return {
+        ordersPaused: false,
+        pauseReason: null,
+        pausedAt: null,
+        resumeAt: null,
+        pausedByEmail: null,
+      };
+    }
+
+    return this.mapStoreSettingsRow(rows[0]);
+  }
+
+  async pauseOrders(params: {
+    reason?: string;
+    resumeAt?: Date | null;
+    pausedByEmail: string;
+  }): Promise<StoreSettings> {
+    const rows = await prisma.$queryRaw<StoreSettingsRow[]>`
+      UPDATE store_settings
+      SET
+        orders_paused = TRUE,
+        pause_reason = ${params.reason ?? null},
+        paused_at = NOW(),
+        resume_at = ${params.resumeAt ?? null}::timestamptz,
+        paused_by_email = ${params.pausedByEmail},
+        updated_at = NOW()
+      WHERE id = 1
+      RETURNING orders_paused, pause_reason, paused_at, resume_at, paused_by_email
+    `;
+    return this.mapStoreSettingsRow(rows[0]);
+  }
+
+  async resumeOrders(): Promise<StoreSettings> {
+    const rows = await prisma.$queryRaw<StoreSettingsRow[]>`
+      UPDATE store_settings
+      SET
+        orders_paused = FALSE,
+        pause_reason = NULL,
+        paused_at = NULL,
+        resume_at = NULL,
+        paused_by_email = NULL,
+        updated_at = NOW()
+      WHERE id = 1
+      RETURNING orders_paused, pause_reason, paused_at, resume_at, paused_by_email
+    `;
+    return this.mapStoreSettingsRow(rows[0]);
+  }
+
+  async areOrdersPaused(): Promise<{ paused: boolean; settings: StoreSettings }> {
+    const settings = await this.getStoreSettings();
+
+    if (settings.ordersPaused && settings.resumeAt) {
+      const now = new Date();
+      if (now >= settings.resumeAt) {
+        const resumed = await this.resumeOrders();
+        return { paused: false, settings: resumed };
+      }
+    }
+
+    return { paused: settings.ordersPaused, settings };
   }
 
   // Order operations
