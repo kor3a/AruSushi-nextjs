@@ -132,6 +132,17 @@ export default function OrderConfirmation() {
               </div>
             ) : null}
 
+            {order?.orderType === 'delivery' ? (
+              <div className="mb-6 bg-pink-50 border border-pink-200 rounded-lg p-4">
+                <p className="text-sm text-pink-800">
+                  <strong>🛵 Delivery in Progress</strong>
+                  <br />
+                  A DoorDash Dasher will be assigned shortly. Use the tracking page below
+                  to see live updates and your Dasher&apos;s location on the map.
+                </p>
+              </div>
+            ) : null}
+
             <div className="space-y-4 mb-8">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <p className="text-sm text-blue-800">

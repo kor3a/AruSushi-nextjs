@@ -1,10 +1,13 @@
 import { useEffect, useState, useCallback } from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAuth } from '../contexts/AuthContext';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import PickupOrderProgress from '../components/PickupOrderProgress';
+import DeliveryOrderProgress from '../components/DeliveryOrderProgress';
+import { getDeliveryEventLabel } from '../lib/orders/deliveryStatus';
 import { createClient } from '../lib/supabase/client';
 
 interface OrderItem {
@@ -29,6 +32,9 @@ interface Order {
   doordashDeliveryId?: string | null;
   doordashDeliveryStatus?: string | null;
   doordashTrackingUrl?: string | null;
+  dasherName?: string | null;
+  deliveryLastEvent?: string | null;
+  estimatedDropoffTime?: string | null;
   customerName?: string | null;
   customerEmail?: string | null;
   notes?: string | null;
@@ -311,7 +317,43 @@ export default function MyOrders() {
                     </div>
                   </div>
 
-                  {/* Delivery Info */}
+                  {/* Delivery Progress */}
+                  {order.orderType === 'delivery' && (
+                    <div
+                      style={{
+                        borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                        marginTop: '16px',
+                        paddingTop: '16px',
+                      }}
+                    >
+                      <DeliveryOrderProgress
+                        deliveryEvent={order.deliveryLastEvent}
+                        cancelled={order.status === 'cancelled'}
+                      />
+
+                      {order.deliveryLastEvent && order.status !== 'cancelled' && order.status !== 'delivered' && (
+                        <p style={{ fontSize: '13px', color: '#9ca3af', marginTop: '10px', textAlign: 'center' }}>
+                          {getDeliveryEventLabel(order.deliveryLastEvent)}
+                        </p>
+                      )}
+
+                      {order.dasherName && order.status !== 'cancelled' && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '10px', justifyContent: 'center' }}>
+                          <span style={{ fontSize: '16px' }}>🛵</span>
+                          <span style={{ color: '#fff', fontSize: '14px', fontWeight: 600 }}>
+                            {order.dasherName}
+                          </span>
+                          {order.estimatedDropoffTime && order.status !== 'delivered' && (
+                            <span style={{ color: '#4ade80', fontSize: '13px' }}>
+                              · ETA {new Date(order.estimatedDropoffTime).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Delivery Details */}
                   {order.orderType === 'delivery' && (
                     <div style={{
                       borderTop: '1px solid rgba(255, 255, 255, 0.1)',
@@ -336,15 +378,37 @@ export default function MyOrders() {
                           <span style={{ color: '#f1d00f' }}>Delivery Fee:</span> ${Number(order.deliveryFee).toFixed(2)}
                         </p>
                       )}
+                      {order.doordashDeliveryId && order.status !== 'cancelled' && order.status !== 'delivered' && (
+                        <div style={{ marginTop: '10px' }}>
+                          <Link
+                            href={`/order-tracking?orderId=${order.id}`}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              background: '#fc3678',
+                              color: '#fff',
+                              padding: '8px 16px',
+                              borderRadius: '8px',
+                              textDecoration: 'none',
+                              fontWeight: 600,
+                              fontSize: '13px',
+                              boxShadow: '0 2px 8px rgba(252, 54, 120, 0.3)',
+                            }}
+                          >
+                            📍 Track Live Delivery
+                          </Link>
+                        </div>
+                      )}
                       {order.doordashTrackingUrl && (
-                        <p style={{ fontSize: '14px', marginBottom: '4px' }}>
+                        <p style={{ fontSize: '14px', marginTop: '6px', marginBottom: '4px' }}>
                           <a
                             href={order.doordashTrackingUrl}
                             target="_blank"
                             rel="noopener noreferrer"
                             style={{ color: '#fc3678', textDecoration: 'underline' }}
                           >
-                            Track your delivery
+                            DoorDash tracker ↗
                           </a>
                         </p>
                       )}
