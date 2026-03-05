@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -7,6 +7,7 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { FaCheckCircle, FaClock } from 'react-icons/fa';
 import PickupOrderProgress from '../components/PickupOrderProgress';
+import { createClient } from '../lib/supabase/client';
 
 interface ConfirmedOrder {
   id: string;
@@ -21,6 +22,26 @@ export default function OrderConfirmation() {
   const [loading, setLoading] = useState(true);
   const [order, setOrder] = useState<ConfirmedOrder | null>(null);
 
+  const fetchOrder = useCallback(async (showLoader = false) => {
+    if (!orderId || typeof orderId !== 'string') {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      if (showLoader) setLoading(true);
+      const response = await fetch(`/api/orders/${orderId}`);
+      const data = await response.json();
+      if (response.ok) {
+        setOrder(data.order);
+      }
+    } catch (error) {
+      console.error('Failed to fetch order for confirmation page', error);
+    } finally {
+      if (showLoader) setLoading(false);
+    }
+  }, [orderId]);
+
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/auth/signin');
@@ -31,28 +52,28 @@ export default function OrderConfirmation() {
       return;
     }
 
-    const fetchOrder = async () => {
-      if (!orderId || typeof orderId !== 'string') {
-        setLoading(false);
-        return;
-      }
+    fetchOrder(true);
+  }, [user, authLoading, router, fetchOrder]);
 
-      try {
-        setLoading(true);
-        const response = await fetch(`/api/orders/${orderId}`);
-        const data = await response.json();
-        if (response.ok) {
-          setOrder(data.order);
+  useEffect(() => {
+    if (!user || !orderId || typeof orderId !== 'string') {
+      return;
+    }
+
+    const supabase = createClient();
+    const channel = supabase
+      .channel('order-updates')
+      .on('broadcast', { event: 'order-status-changed' }, (message) => {
+        if (message.payload?.orderId === orderId) {
+          fetchOrder();
         }
-      } catch (error) {
-        console.error('Failed to fetch order for confirmation page', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+      })
+      .subscribe();
 
-    fetchOrder();
-  }, [user, authLoading, router, orderId]);
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, orderId, fetchOrder]);
 
   if (authLoading || loading) {
     return (

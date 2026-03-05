@@ -89,19 +89,12 @@ export default function MyOrders() {
 
     const supabase = createClient();
     const channel = supabase
-      .channel(`my-orders-${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'orders',
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => {
+      .channel('order-updates')
+      .on('broadcast', { event: 'order-status-changed' }, (message) => {
+        if (message.payload?.userId === user.id) {
           fetchOrders();
         }
-      )
+      })
       .subscribe();
 
     return () => {

@@ -1,10 +1,50 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { createApiClient } from '../../../lib/supabase/server';
 import { db } from '../../../lib/db';
 import { canManageOrders } from '../../../lib/auth/roles';
 
 const PICKUP_ALLOWED_STATUSES = ['confirmed', 'preparing', 'ready', 'picked_up', 'cancelled'];
 const DELIVERY_ALLOWED_STATUSES = ['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled'];
+
+async function broadcastOrderUpdate(orderId: string, status: string, userId: string) {
+  const supabase = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
+  const channel = supabase.channel('order-updates', {
+    config: { broadcast: { ack: true } },
+  });
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        supabase.removeChannel(channel);
+        reject(new Error('Broadcast subscription timed out'));
+      }, 5000);
+
+      channel.subscribe(async (subStatus) => {
+        if (subStatus === 'SUBSCRIBED') {
+          try {
+            await channel.send({
+              type: 'broadcast',
+              event: 'order-status-changed',
+              payload: { orderId, status, userId },
+            });
+            clearTimeout(timeout);
+            resolve();
+          } catch (sendErr) {
+            clearTimeout(timeout);
+            reject(sendErr);
+          }
+        }
+      });
+    });
+  } finally {
+    supabase.removeChannel(channel);
+  }
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'PATCH') {
@@ -44,6 +84,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const updatedOrder = await db.updateOrder(orderId, { status });
+
+    try {
+      await broadcastOrderUpdate(orderId, status, existingOrder.userId);
+    } catch (broadcastErr) {
+      console.error('Failed to broadcast order status update:', broadcastErr);
+    }
+
     return res.status(200).json({ order: updatedOrder });
   } catch (error: any) {
     console.error('Error updating order status:', error);

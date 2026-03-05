@@ -79,19 +79,12 @@ export default function OrderTrackingPage() {
 
     const supabase = createClient();
     const channel = supabase
-      .channel(`order-tracking-${orderId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'orders',
-          filter: `id=eq.${orderId}`,
-        },
-        () => {
+      .channel('order-updates')
+      .on('broadcast', { event: 'order-status-changed' }, (message) => {
+        if (message.payload?.orderId === orderId) {
           fetchOrder();
         }
-      )
+      })
       .subscribe();
 
     return () => {
