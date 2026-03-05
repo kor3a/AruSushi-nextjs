@@ -46,6 +46,12 @@ function getDefaultEndDate(): string {
   return formatDateForInput(new Date());
 }
 
+interface PauseState {
+  ordersPaused: boolean;
+  pauseReason: string | null;
+  resumeAt: string | null;
+}
+
 export default function AdminOrdersPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
@@ -56,7 +62,105 @@ export default function AdminOrdersPage() {
   const [endDate, setEndDate] = useState<string>(getDefaultEndDate());
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
 
+  const [pauseState, setPauseState] = useState<PauseState>({
+    ordersPaused: false,
+    pauseReason: null,
+    resumeAt: null,
+  });
+  const [pauseLoading, setPauseLoading] = useState(false);
+  const [showPauseForm, setShowPauseForm] = useState(false);
+  const [pauseReason, setPauseReason] = useState('');
+  const [pauseDuration, setPauseDuration] = useState<string>('');
+  const [customResumeTime, setCustomResumeTime] = useState<string>('');
+
   const canAccess = useMemo(() => canManageOrders(user?.email), [user?.email]);
+
+  const fetchPauseState = async () => {
+    try {
+      const response = await fetch('/api/store/settings');
+      if (response.ok) {
+        const data = await response.json();
+        setPauseState(data);
+      }
+    } catch {
+      // silently ignore – not critical
+    }
+  };
+
+  const handlePauseOrders = async () => {
+    setPauseLoading(true);
+    setError('');
+
+    let resumeAt: string | null = null;
+
+    if (pauseDuration === 'custom' && customResumeTime) {
+      resumeAt = new Date(customResumeTime).toISOString();
+    } else if (pauseDuration && pauseDuration !== 'custom') {
+      const minutes = parseInt(pauseDuration, 10);
+      if (!isNaN(minutes) && minutes > 0) {
+        resumeAt = new Date(Date.now() + minutes * 60 * 1000).toISOString();
+      }
+    }
+
+    try {
+      const response = await fetch('/api/store/pause-orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'pause',
+          reason: pauseReason || undefined,
+          resumeAt,
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to pause orders');
+      }
+
+      setPauseState({
+        ordersPaused: true,
+        pauseReason: pauseReason || null,
+        resumeAt,
+      });
+      setShowPauseForm(false);
+      setPauseReason('');
+      setPauseDuration('');
+      setCustomResumeTime('');
+    } catch (err: any) {
+      setError(err.message || 'Failed to pause orders');
+    } finally {
+      setPauseLoading(false);
+    }
+  };
+
+  const handleResumeOrders = async () => {
+    setPauseLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/store/pause-orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'resume' }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to resume orders');
+      }
+
+      setPauseState({
+        ordersPaused: false,
+        pauseReason: null,
+        resumeAt: null,
+      });
+    } catch (err: any) {
+      setError(err.message || 'Failed to resume orders');
+    } finally {
+      setPauseLoading(false);
+    }
+  };
 
   const fetchOrders = async (rangeStart: string, rangeEnd: string) => {
     try {
@@ -104,6 +208,7 @@ export default function AdminOrdersPage() {
     }
 
     fetchOrders(startDate, endDate);
+    fetchPauseState();
     // Intentionally do not add startDate/endDate to avoid auto-refetch while typing.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user, canAccess, router]);
@@ -195,6 +300,194 @@ export default function AdminOrdersPage() {
           >
             Orders
           </h1>
+
+          {/* Pause / Resume Orders Panel */}
+          <div
+            style={{
+              marginBottom: '20px',
+              padding: '16px',
+              borderRadius: '12px',
+              background: pauseState.ordersPaused
+                ? 'rgba(255, 152, 0, 0.1)'
+                : 'rgba(76, 175, 80, 0.08)',
+              border: `1px solid ${pauseState.ordersPaused ? 'rgba(255, 152, 0, 0.4)' : 'rgba(76, 175, 80, 0.3)'}`,
+            }}
+          >
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+              <div>
+                <p style={{ color: pauseState.ordersPaused ? '#FF9800' : '#4CAF50', fontWeight: 700, fontSize: '16px', marginBottom: '4px' }}>
+                  {pauseState.ordersPaused ? 'New Orders Are Paused' : 'Accepting New Orders'}
+                </p>
+                {pauseState.ordersPaused && pauseState.pauseReason && (
+                  <p style={{ color: '#ddd', fontSize: '13px', marginBottom: '2px' }}>
+                    Reason: {pauseState.pauseReason}
+                  </p>
+                )}
+                {pauseState.ordersPaused && pauseState.resumeAt && (
+                  <p style={{ color: '#ddd', fontSize: '13px' }}>
+                    Auto-resumes: {new Date(pauseState.resumeAt).toLocaleString()}
+                  </p>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {pauseState.ordersPaused ? (
+                  <button
+                    type="button"
+                    onClick={handleResumeOrders}
+                    disabled={pauseLoading}
+                    style={{
+                      background: '#4CAF50',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '10px 20px',
+                      fontWeight: 700,
+                      cursor: pauseLoading ? 'not-allowed' : 'pointer',
+                      opacity: pauseLoading ? 0.6 : 1,
+                    }}
+                  >
+                    {pauseLoading ? 'Resuming...' : 'Resume Orders'}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowPauseForm(!showPauseForm)}
+                    disabled={pauseLoading}
+                    style={{
+                      background: '#FF9800',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '10px 20px',
+                      fontWeight: 700,
+                      cursor: pauseLoading ? 'not-allowed' : 'pointer',
+                      opacity: pauseLoading ? 0.6 : 1,
+                    }}
+                  >
+                    Pause New Orders
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {showPauseForm && !pauseState.ordersPaused && (
+              <div style={{ marginTop: '16px', borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '16px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div>
+                    <label style={{ color: '#ccc', fontSize: '13px', display: 'block', marginBottom: '4px' }}>
+                      Reason (optional, shown to customers)
+                    </label>
+                    <input
+                      type="text"
+                      value={pauseReason}
+                      onChange={(e) => setPauseReason(e.target.value)}
+                      placeholder="e.g. Kitchen is busy, back soon!"
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        borderRadius: '8px',
+                        border: '1px solid #555',
+                        background: '#111',
+                        color: '#fff',
+                        fontSize: '14px',
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ color: '#ccc', fontSize: '13px', display: 'block', marginBottom: '4px' }}>
+                      Auto-resume after
+                    </label>
+                    <select
+                      value={pauseDuration}
+                      onChange={(e) => setPauseDuration(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        borderRadius: '8px',
+                        border: '1px solid #555',
+                        background: '#111',
+                        color: '#fff',
+                        fontSize: '14px',
+                      }}
+                    >
+                      <option value="">No auto-resume (manual only)</option>
+                      <option value="15">15 minutes</option>
+                      <option value="30">30 minutes</option>
+                      <option value="45">45 minutes</option>
+                      <option value="60">1 hour</option>
+                      <option value="90">1.5 hours</option>
+                      <option value="120">2 hours</option>
+                      <option value="custom">Custom date/time</option>
+                    </select>
+                  </div>
+
+                  {pauseDuration === 'custom' && (
+                    <div>
+                      <label style={{ color: '#ccc', fontSize: '13px', display: 'block', marginBottom: '4px' }}>
+                        Resume at
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={customResumeTime}
+                        onChange={(e) => setCustomResumeTime(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          borderRadius: '8px',
+                          border: '1px solid #555',
+                          background: '#111',
+                          color: '#fff',
+                          fontSize: '14px',
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      type="button"
+                      onClick={handlePauseOrders}
+                      disabled={pauseLoading || (pauseDuration === 'custom' && !customResumeTime)}
+                      style={{
+                        background: '#fc3678',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '10px 20px',
+                        fontWeight: 700,
+                        cursor: pauseLoading ? 'not-allowed' : 'pointer',
+                        opacity: pauseLoading || (pauseDuration === 'custom' && !customResumeTime) ? 0.6 : 1,
+                      }}
+                    >
+                      {pauseLoading ? 'Pausing...' : 'Confirm Pause'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowPauseForm(false);
+                        setPauseReason('');
+                        setPauseDuration('');
+                        setCustomResumeTime('');
+                      }}
+                      style={{
+                        background: 'transparent',
+                        color: '#ccc',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        borderRadius: '8px',
+                        padding: '10px 20px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
 
           <form
             onSubmit={applyFilters}
