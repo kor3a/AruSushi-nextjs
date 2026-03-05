@@ -97,9 +97,34 @@ async function broadcastDeliveryUpdate(
   }
 }
 
+function verifyBasicAuth(req: NextApiRequest): boolean {
+  const webhookUser = process.env.DOORDASH_WEBHOOK_USER;
+  const webhookPass = process.env.DOORDASH_WEBHOOK_PASSWORD;
+
+  if (!webhookUser || !webhookPass) {
+    console.warn('DoorDash webhook auth not configured — skipping verification');
+    return true;
+  }
+
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Basic ')) {
+    return false;
+  }
+
+  const decoded = Buffer.from(authHeader.slice(6), 'base64').toString('utf-8');
+  const [user, pass] = decoded.split(':');
+
+  return user === webhookUser && pass === webhookPass;
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method not allowed' });
+  }
+
+  if (!verifyBasicAuth(req)) {
+    console.warn('DoorDash webhook: Basic Auth verification failed');
+    return res.status(401).json({ message: 'Unauthorized' });
   }
 
   try {
