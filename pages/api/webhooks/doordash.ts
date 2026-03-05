@@ -97,24 +97,30 @@ async function broadcastDeliveryUpdate(
   }
 }
 
-function verifyBasicAuth(req: NextApiRequest): boolean {
+function verifyWebhookAuth(req: NextApiRequest): boolean {
+  const authHeader = req.headers.authorization;
+
+  // Option 1: Verify the full authorization header value directly
+  // Set DOORDASH_WEBHOOK_AUTH_HEADER to the exact header value DoorDash sends
+  const expectedHeader = process.env.DOORDASH_WEBHOOK_AUTH_HEADER;
+  if (expectedHeader) {
+    return authHeader === expectedHeader;
+  }
+
+  // Option 2: Verify Basic Auth username/password separately
   const webhookUser = process.env.DOORDASH_WEBHOOK_USER;
   const webhookPass = process.env.DOORDASH_WEBHOOK_PASSWORD;
-
-  if (!webhookUser || !webhookPass) {
-    console.warn('DoorDash webhook auth not configured — skipping verification');
-    return true;
+  if (webhookUser && webhookPass) {
+    if (!authHeader || !authHeader.startsWith('Basic ')) {
+      return false;
+    }
+    const decoded = Buffer.from(authHeader.slice(6), 'base64').toString('utf-8');
+    const [user, pass] = decoded.split(':');
+    return user === webhookUser && pass === webhookPass;
   }
 
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Basic ')) {
-    return false;
-  }
-
-  const decoded = Buffer.from(authHeader.slice(6), 'base64').toString('utf-8');
-  const [user, pass] = decoded.split(':');
-
-  return user === webhookUser && pass === webhookPass;
+  console.warn('DoorDash webhook auth not configured — skipping verification');
+  return true;
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -122,8 +128,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
-  if (!verifyBasicAuth(req)) {
-    console.warn('DoorDash webhook: Basic Auth verification failed');
+  if (!verifyWebhookAuth(req)) {
+    console.warn('DoorDash webhook: auth verification failed');
     return res.status(401).json({ message: 'Unauthorized' });
   }
 
