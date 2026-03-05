@@ -9,6 +9,8 @@ import HorizontalOrderProgress from '../components/HorizontalOrderProgress';
 import { getPickupStatusLabel } from '../lib/orders/pickupStatus';
 import { createClient } from '../lib/supabase/client';
 
+const ORDER_STATUS_POLLING_INTERVAL_MS = 10000;
+
 interface Order {
   id: string;
   orderType: string;
@@ -96,6 +98,30 @@ export default function OrderTrackingPage() {
 
     return () => {
       supabase.removeChannel(channel);
+    };
+  }, [user, orderId, fetchOrder]);
+
+  useEffect(() => {
+    if (!user || !orderId || typeof orderId !== 'string') {
+      return;
+    }
+
+    const poll = () => {
+      fetchOrder();
+    };
+
+    const interval = window.setInterval(poll, ORDER_STATUS_POLLING_INTERVAL_MS);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        poll();
+      }
+    };
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
     };
   }, [user, orderId, fetchOrder]);
 

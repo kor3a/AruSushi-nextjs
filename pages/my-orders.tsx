@@ -7,6 +7,8 @@ import Footer from '../components/Footer';
 import PickupOrderProgress from '../components/PickupOrderProgress';
 import { createClient } from '../lib/supabase/client';
 
+const ORDER_STATUS_POLLING_INTERVAL_MS = 10000;
+
 interface OrderItem {
   id: string;
   itemName: string;
@@ -106,6 +108,30 @@ export default function MyOrders() {
 
     return () => {
       supabase.removeChannel(channel);
+    };
+  }, [user, fetchOrders]);
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    const poll = () => {
+      fetchOrders();
+    };
+
+    const interval = window.setInterval(poll, ORDER_STATUS_POLLING_INTERVAL_MS);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        poll();
+      }
+    };
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
     };
   }, [user, fetchOrders]);
 
