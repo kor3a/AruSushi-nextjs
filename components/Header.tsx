@@ -52,31 +52,34 @@ const Header = () => {
         <Link href="/menu" onClick={closeMenu}>Menu</Link>
         {user && !showAdminOrders && <Link href="/my-orders" onClick={closeMenu}>My Orders</Link>}
         {showAdminOrders && <Link href="/admin/orders" onClick={closeMenu}>Orders</Link>}
+        {showAdminOrders && <Link href="/admin/menu-prices" onClick={closeMenu}>Menu Prices</Link>}
         <Link href="/contact" onClick={closeMenu}>Contact Us</Link>
       </nav>
       <div className="icons" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <Link href="/cart" style={{ position: 'relative', display: 'inline-block' }}>
-          <FaShoppingCart size={20} style={{ color: '#f1d00f' }} />
-          {cartItemsCount > 0 && (
-            <span style={{
-              position: 'absolute',
-              top: '-8px',
-              right: '-8px',
-              background: '#fc3678',
-              color: 'white',
-              borderRadius: '50%',
-              width: '20px',
-              height: '20px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '12px',
-              fontWeight: 'bold'
-            }}>
-              {cartItemsCount}
-            </span>
-          )}
-        </Link>
+        {!showAdminOrders && (
+          <Link href="/cart" style={{ position: 'relative', display: 'inline-block' }}>
+            <FaShoppingCart size={20} style={{ color: '#f1d00f' }} />
+            {cartItemsCount > 0 && (
+              <span style={{
+                position: 'absolute',
+                top: '-8px',
+                right: '-8px',
+                background: '#fc3678',
+                color: 'white',
+                borderRadius: '50%',
+                width: '20px',
+                height: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '12px',
+                fontWeight: 'bold'
+              }}>
+                {cartItemsCount}
+              </span>
+            )}
+          </Link>
+        )}
         {user ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             {!showAdminOrders && (
