@@ -49,11 +49,18 @@ const Header = () => {
       </Link>
       <nav className={`navbar ${isMenuOpen ? 'active' : ''}`}>
         <Link href="/" onClick={closeMenu}>Home</Link>
-        <Link href="/menu" onClick={closeMenu}>Menu</Link>
-        {user && !showAdminOrders && <Link href="/my-orders" onClick={closeMenu}>My Orders</Link>}
-        {showAdminOrders && <Link href="/admin/orders" onClick={closeMenu}>Orders</Link>}
-        {showAdminOrders && <Link href="/admin/menu-prices" onClick={closeMenu}>Menu Prices</Link>}
-        <Link href="/contact" onClick={closeMenu}>Contact Us</Link>
+        {showAdminOrders ? (
+          <>
+            <Link href="/admin/orders" onClick={closeMenu}>Orders</Link>
+            <Link href="/admin/menu-prices" onClick={closeMenu}>Menu Prices</Link>
+          </>
+        ) : (
+          <>
+            <Link href="/menu" onClick={closeMenu}>Menu</Link>
+            {user && <Link href="/my-orders" onClick={closeMenu}>My Orders</Link>}
+            <Link href="/contact" onClick={closeMenu}>Contact Us</Link>
+          </>
+        )}
       </nav>
       <div className="icons" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
         {!showAdminOrders && (
