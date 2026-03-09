@@ -1,4 +1,4 @@
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, useRef, FormEvent } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useAuth } from '../contexts/AuthContext';
@@ -40,6 +40,7 @@ interface CheckoutFormProps {
   selectedRewardRedemptionId: string;
   onSelectRewardRedemption: (redemptionId: string) => void;
   rewardDiscount: number;
+  onOrderSubmitted: () => void;
 }
 
 function CheckoutForm({
@@ -47,6 +48,7 @@ function CheckoutForm({
   selectedRewardRedemptionId,
   onSelectRewardRedemption,
   rewardDiscount,
+  onOrderSubmitted,
 }: CheckoutFormProps) {
   const router = useRouter();
   const stripe = useStripe();
@@ -301,10 +303,10 @@ function CheckoutForm({
         throw new Error(orderData.message || 'Failed to create order. Please try again.');
       }
 
-      // Clear cart, checkout data, and redirect to confirmation
+      onOrderSubmitted();
       clearCart();
       sessionStorage.removeItem('checkoutData');
-      router.push(`/order-tracking?orderId=${orderData.order.id}`);
+      router.push(`/order-confirmation?orderId=${orderData.order.id}`);
     } catch (err: any) {
       setError(err.message || 'An error occurred');
       setLoading(false);
@@ -761,6 +763,7 @@ export default function Checkout() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { items } = useCart();
+  const orderSubmittedRef = useRef(false);
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const [rewardsSummary, setRewardsSummary] = useState<RewardsSummary | null>(null);
   const [selectedRewardRedemptionId, setSelectedRewardRedemptionId] = useState('');
@@ -827,8 +830,8 @@ export default function Checkout() {
       return;
     }
 
-    // Redirect to cart if no items
-    if (items.length === 0) {
+    // Redirect to cart if no items (skip if order was just submitted)
+    if (items.length === 0 && !orderSubmittedRef.current) {
       router.push('/cart');
       return;
     }
@@ -996,6 +999,7 @@ export default function Checkout() {
                   selectedRewardRedemptionId={selectedRewardRedemptionId}
                   onSelectRewardRedemption={setSelectedRewardRedemptionId}
                   rewardDiscount={rewardDiscount}
+                  onOrderSubmitted={() => { orderSubmittedRef.current = true; }}
                 />
               </Elements>
             )}
