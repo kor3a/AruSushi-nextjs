@@ -4,6 +4,7 @@ import { db, isRewardsSchemaMissingError, isStoreSettingsMissingError } from '..
 import {
   sendOrderNotificationToRestaurant,
   sendOrderConfirmationToCustomer,
+  sendCustomerConfirmationFallbackToStore,
 } from '../../../lib/email/sendOrderNotification';
 import { doordashClient } from '../../../lib/doordash/client';
 import { restaurantInfo } from '../../../data/restaurantInfo';
@@ -297,15 +298,22 @@ export default async function handler(
       }
     }
 
-    // Send email notifications (don't wait for them to complete)
-    // Only send if payment is successful
+    // Send email notifications when payment is successful
     if (paymentStatus === 'paid') {
       sendOrderNotificationToRestaurant(order).catch((error) =>
         console.error('Failed to send restaurant notification:', error)
       );
-      sendOrderConfirmationToCustomer(order).catch((error) =>
-        console.error('Failed to send customer confirmation:', error)
-      );
+
+      sendOrderConfirmationToCustomer(order)
+        .then((result) => {
+          if (!result.success) {
+            // Customer email failed — send order confirmation to store as fallback
+            return sendCustomerConfirmationFallbackToStore(order);
+          }
+        })
+        .catch((error) =>
+          console.error('Failed to send customer confirmation:', error)
+        );
     }
 
     // Return response with delivery status info
