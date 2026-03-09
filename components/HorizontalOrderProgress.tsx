@@ -6,11 +6,59 @@ interface HorizontalOrderProgressProps {
 
 export default function HorizontalOrderProgress({ status }: HorizontalOrderProgressProps) {
   const activeIndex = getPickupProgressIndex(status);
+  const stepCount = PICKUP_STATUS_STEPS.length;
 
   return (
-    <div style={{ width: '100%', overflowX: 'auto', paddingBottom: '4px' }}>
-      <div style={{ minWidth: '650px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${PICKUP_STATUS_STEPS.length}, 1fr)`, gap: '8px' }}>
+    <div style={{ width: '100%', overflowX: 'auto' }}>
+      <div style={{ minWidth: '500px', position: 'relative', padding: '0 0 8px' }}>
+        {/* Connecting line (behind circles) */}
+        <div
+          style={{
+            position: 'absolute',
+            top: '10px',
+            left: `${100 / stepCount / 2}%`,
+            right: `${100 / stepCount / 2}%`,
+            height: '3px',
+            zIndex: 0,
+          }}
+        >
+          <div
+            style={{
+              position: 'relative',
+              width: '100%',
+              height: '100%',
+              background: 'rgba(255,255,255,0.15)',
+              borderRadius: '9999px',
+            }}
+          >
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                height: '100%',
+                borderRadius: '9999px',
+                background: '#4ade80',
+                width:
+                  activeIndex <= 0
+                    ? '0%'
+                    : `${(activeIndex / (stepCount - 1)) * 100}%`,
+                transition: 'width 0.35s ease',
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Step nodes + labels */}
+        <div
+          style={{
+            position: 'relative',
+            display: 'grid',
+            gridTemplateColumns: `repeat(${stepCount}, 1fr)`,
+            gap: '8px',
+            zIndex: 1,
+          }}
+        >
           {PICKUP_STATUS_STEPS.map((step, index) => {
             const complete = activeIndex >= index;
             const isCurrent = activeIndex === index;
@@ -44,35 +92,7 @@ export default function HorizontalOrderProgress({ status }: HorizontalOrderProgr
             );
           })}
         </div>
-
-        <div
-          style={{
-            marginTop: '-42px',
-            padding: '0 38px',
-            position: 'relative',
-            zIndex: 0,
-          }}
-        >
-          <div style={{ position: 'relative', height: '3px', background: 'rgba(255,255,255,0.15)', borderRadius: '9999px' }}>
-            <div
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                height: '100%',
-                borderRadius: '9999px',
-                background: '#4ade80',
-                width:
-                  activeIndex <= 0
-                    ? '0%'
-                    : `${(activeIndex / (PICKUP_STATUS_STEPS.length - 1)) * 100}%`,
-                transition: 'width 0.35s ease',
-              }}
-            />
-          </div>
-        </div>
       </div>
     </div>
   );
 }
-

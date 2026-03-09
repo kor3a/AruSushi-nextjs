@@ -30,29 +30,71 @@ export default function DeliveryOrderProgress({ deliveryEvent, cancelled }: Deli
   }
 
   const activeIndex = getDeliveryProgressIndex(deliveryEvent);
+  const stepCount = DELIVERY_STATUS_STEPS.length;
+
+  const icons: Record<string, string> = {
+    confirmed: '\u2713',
+    dasher_confirmed: '\uD83D\uDE97',
+    dasher_at_store: '\uD83C\uDFEA',
+    picked_up: '\uD83D\uDCE6',
+    dasher_near_customer: '\uD83D\uDCCD',
+    delivered: '\u2705',
+  };
 
   return (
-    <div style={{ width: '100%', overflowX: 'auto', paddingBottom: '4px' }}>
-      <div style={{ minWidth: '700px' }}>
+    <div style={{ width: '100%', overflowX: 'auto' }}>
+      <div style={{ minWidth: '600px', position: 'relative', padding: '0 0 8px' }}>
+        {/* Connecting line (behind circles) */}
         <div
           style={{
+            position: 'absolute',
+            top: '18px',
+            left: `${100 / stepCount / 2}%`,
+            right: `${100 / stepCount / 2}%`,
+            height: '3px',
+            zIndex: 0,
+          }}
+        >
+          <div
+            style={{
+              position: 'relative',
+              width: '100%',
+              height: '100%',
+              background: 'rgba(255,255,255,0.15)',
+              borderRadius: '9999px',
+            }}
+          >
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                height: '100%',
+                borderRadius: '9999px',
+                background: '#4ade80',
+                width:
+                  activeIndex <= 0
+                    ? '0%'
+                    : `${(activeIndex / (stepCount - 1)) * 100}%`,
+                transition: 'width 0.35s ease',
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Step nodes + labels */}
+        <div
+          style={{
+            position: 'relative',
             display: 'grid',
-            gridTemplateColumns: `repeat(${DELIVERY_STATUS_STEPS.length}, 1fr)`,
+            gridTemplateColumns: `repeat(${stepCount}, 1fr)`,
             gap: '8px',
+            zIndex: 1,
           }}
         >
           {DELIVERY_STATUS_STEPS.map((step, index) => {
             const complete = activeIndex >= index;
             const isCurrent = activeIndex === index;
-
-            const icons: Record<string, string> = {
-              confirmed: '\u2713',
-              dasher_confirmed: '\uD83D\uDE97',
-              dasher_at_store: '\uD83C\uDFEA',
-              picked_up: '\uD83D\uDCE6',
-              dasher_near_customer: '\uD83D\uDCCD',
-              delivered: '\u2705',
-            };
 
             return (
               <div key={step} style={{ textAlign: 'center' }}>
@@ -89,40 +131,6 @@ export default function DeliveryOrderProgress({ deliveryEvent, cancelled }: Deli
               </div>
             );
           })}
-        </div>
-
-        <div
-          style={{
-            marginTop: '-50px',
-            padding: '0 45px',
-            position: 'relative',
-            zIndex: 0,
-          }}
-        >
-          <div
-            style={{
-              position: 'relative',
-              height: '3px',
-              background: 'rgba(255,255,255,0.15)',
-              borderRadius: '9999px',
-            }}
-          >
-            <div
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                height: '100%',
-                borderRadius: '9999px',
-                background: '#4ade80',
-                width:
-                  activeIndex <= 0
-                    ? '0%'
-                    : `${(activeIndex / (DELIVERY_STATUS_STEPS.length - 1)) * 100}%`,
-                transition: 'width 0.35s ease',
-              }}
-            />
-          </div>
         </div>
       </div>
     </div>
