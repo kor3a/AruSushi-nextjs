@@ -5,7 +5,6 @@ import Image from 'next/image';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import CherryBlossom from '@/components/CherryBlossom';
-import Chatbot from '../components/Chatbot';
 import { AiOutlineClose } from 'react-icons/ai';
 
 const HomePage = () => {
@@ -52,7 +51,6 @@ const HomePage = () => {
                 </div>
             </div>
         </div>
-        <Chatbot />
         <section className="parallex">
             <div className="parallex-wrapper" style={{ position: 'relative', zIndex: 1 }}>
                 <Image
