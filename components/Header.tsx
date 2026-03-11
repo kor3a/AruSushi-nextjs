@@ -58,6 +58,7 @@ const Header = () => {
           <>
             <Link href="/menu" onClick={closeMenu}>Menu</Link>
             {user && <Link href="/my-orders" onClick={closeMenu}>My Orders</Link>}
+            <Link href="/members" onClick={closeMenu}>Members</Link>
             <Link href="/contact" onClick={closeMenu}>Contact Us</Link>
           </>
         )}

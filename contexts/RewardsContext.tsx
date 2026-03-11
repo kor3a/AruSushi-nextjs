@@ -2,35 +2,60 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import { useRouter } from 'next/router';
 import { useAuth } from './AuthContext';
 import type { RewardRedemption, RewardsSummary } from '../lib/rewards/types';
+import type { MemberRank, UserRankInfo } from '../lib/ranks/types';
 
 interface RewardsContextType {
   summary: RewardsSummary | null;
   pointsBalance: number;
   availableRedemptions: RewardRedemption[];
+  rankInfo: UserRankInfo | null;
   loading: boolean;
   error: string;
   refreshRewards: () => Promise<void>;
+  refreshRank: () => Promise<void>;
 }
 
 const RewardsContext = createContext<RewardsContextType>({
   summary: null,
   pointsBalance: 0,
   availableRedemptions: [],
+  rankInfo: null,
   loading: false,
   error: '',
   refreshRewards: async () => {},
+  refreshRank: async () => {},
 });
 
 export function RewardsProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [summary, setSummary] = useState<RewardsSummary | null>(null);
+  const [rankInfo, setRankInfo] = useState<UserRankInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const refreshRank = useCallback(async () => {
+    if (!user) {
+      setRankInfo(null);
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/ranks');
+      const data = await response.json();
+
+      if (response.ok) {
+        setRankInfo(data);
+      }
+    } catch {
+      // rank fetch is non-critical
+    }
+  }, [user]);
 
   const refreshRewards = useCallback(async () => {
     if (!user) {
       setSummary(null);
+      setRankInfo(null);
       setError('');
       setLoading(false);
       return;
@@ -40,14 +65,22 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
     setError('');
 
     try {
-      const response = await fetch('/api/rewards');
-      const data = await response.json();
+      const [rewardsResponse, rankResponse] = await Promise.all([
+        fetch('/api/rewards'),
+        fetch('/api/ranks'),
+      ]);
+      const rewardsData = await rewardsResponse.json();
 
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to fetch rewards');
+      if (!rewardsResponse.ok) {
+        throw new Error(rewardsData.message || 'Failed to fetch rewards');
       }
 
-      setSummary(data);
+      setSummary(rewardsData);
+
+      if (rankResponse.ok) {
+        const rankData = await rankResponse.json();
+        setRankInfo(rankData);
+      }
     } catch (fetchError: any) {
       setError(fetchError.message || 'Failed to fetch rewards');
     } finally {
@@ -62,6 +95,7 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
 
     if (!user) {
       setSummary(null);
+      setRankInfo(null);
       setError('');
       setLoading(false);
       return;
@@ -97,9 +131,11 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
         summary,
         pointsBalance: summary?.pointsBalance ?? 0,
         availableRedemptions: summary?.availableRedemptions ?? [],
+        rankInfo,
         loading,
         error,
         refreshRewards,
+        refreshRank,
       }}
     >
       {children}

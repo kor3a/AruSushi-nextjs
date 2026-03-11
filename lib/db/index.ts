@@ -1,5 +1,7 @@
 import { PrismaClient, Prisma } from '@prisma/client';
 import type { RewardType } from '../rewards/types';
+import type { MemberRank } from '../ranks/types';
+import { getNextRank, getUpgradeCost, getDiscountPercent, RANK_TIERS } from '../ranks/config';
 
 // Prevent multiple instances of Prisma Client in development
 const globalForPrisma = globalThis as unknown as {
@@ -71,6 +73,32 @@ export function isStoreSettingsMissingError(error: unknown): boolean {
   if (e.code !== 'P2010') return false;
   const msg = `${e.message || ''} ${e.meta?.message || ''}`.toLowerCase();
   return msg.includes('relation "store_settings" does not exist');
+}
+
+export interface MemberRankRecord {
+  rank: MemberRank;
+  rankStartedAt: Date;
+  rankExpiresAt: Date;
+  freeAppetizerClaimed: boolean;
+  freeRollClaimed: boolean;
+  lastMonthlyAppetizerAt: Date | null;
+}
+
+type MemberRankRow = {
+  rank: string;
+  rank_started_at: Date;
+  rank_expires_at: Date;
+  free_appetizer_claimed: boolean;
+  free_roll_claimed: boolean;
+  last_monthly_appetizer_at: Date | null;
+};
+
+export function isRanksSchemaMissingError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const e = error as { code?: string; message?: string; meta?: { message?: string } };
+  if (e.code !== 'P2010') return false;
+  const msg = `${e.message || ''} ${e.meta?.message || ''}`.toLowerCase();
+  return msg.includes('relation "member_ranks" does not exist');
 }
 
 export function isRewardsSchemaMissingError(error: unknown): boolean {
@@ -372,6 +400,136 @@ class Database {
       return {
         pointsSummary: this.mapPointsRow(updatedPointsRows[0]),
         redemption: this.mapRewardRedemptionRow(redemptionRows[0]),
+      };
+    });
+  }
+
+  // Member rank operations
+  private mapMemberRankRow(row: MemberRankRow): MemberRankRecord {
+    return {
+      rank: row.rank as MemberRank,
+      rankStartedAt: row.rank_started_at,
+      rankExpiresAt: row.rank_expires_at,
+      freeAppetizerClaimed: row.free_appetizer_claimed,
+      freeRollClaimed: row.free_roll_claimed,
+      lastMonthlyAppetizerAt: row.last_monthly_appetizer_at,
+    };
+  }
+
+  async ensureMemberRank(userId: string): Promise<void> {
+    await prisma.$executeRaw`
+      INSERT INTO member_ranks (user_id)
+      VALUES (${userId}::uuid)
+      ON CONFLICT (user_id) DO NOTHING
+    `;
+  }
+
+  async getUserRank(userId: string): Promise<MemberRankRecord> {
+    await this.ensureMemberRank(userId);
+
+    const rows = await prisma.$queryRaw<MemberRankRow[]>`
+      SELECT rank, rank_started_at, rank_expires_at,
+             free_appetizer_claimed, free_roll_claimed,
+             last_monthly_appetizer_at
+      FROM member_ranks
+      WHERE user_id = ${userId}::uuid
+      LIMIT 1
+    `;
+
+    if (!rows.length) {
+      return {
+        rank: 'silver',
+        rankStartedAt: new Date(),
+        rankExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+        freeAppetizerClaimed: false,
+        freeRollClaimed: false,
+        lastMonthlyAppetizerAt: null,
+      };
+    }
+
+    const record = this.mapMemberRankRow(rows[0]);
+
+    if (new Date() >= record.rankExpiresAt && record.rank !== 'silver') {
+      return this.resetRankToSilver(userId);
+    }
+
+    return record;
+  }
+
+  async resetRankToSilver(userId: string): Promise<MemberRankRecord> {
+    const rows = await prisma.$queryRaw<MemberRankRow[]>`
+      UPDATE member_ranks
+      SET rank = 'silver',
+          rank_started_at = NOW(),
+          rank_expires_at = NOW() + INTERVAL '1 year',
+          free_appetizer_claimed = FALSE,
+          free_roll_claimed = FALSE,
+          last_monthly_appetizer_at = NULL,
+          updated_at = NOW()
+      WHERE user_id = ${userId}::uuid
+      RETURNING rank, rank_started_at, rank_expires_at,
+                free_appetizer_claimed, free_roll_claimed,
+                last_monthly_appetizer_at
+    `;
+
+    return this.mapMemberRankRow(rows[0]);
+  }
+
+  async upgradeRank(userId: string): Promise<{
+    rankRecord: MemberRankRecord;
+    pointsSummary: UserPointsSummary;
+  }> {
+    const currentRank = await this.getUserRank(userId);
+    const nextRank = getNextRank(currentRank.rank);
+
+    if (!nextRank) {
+      throw new Error('ALREADY_MAX_RANK');
+    }
+
+    const cost = getUpgradeCost(nextRank);
+    if (!cost) {
+      throw new Error('INVALID_UPGRADE');
+    }
+
+    return prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`
+        INSERT INTO user_points (user_id)
+        VALUES (${userId}::uuid)
+        ON CONFLICT (user_id) DO NOTHING
+      `;
+
+      const updatedPointsRows = await tx.$queryRaw<UserPointsRow[]>`
+        UPDATE user_points
+        SET
+          points_balance = points_balance - ${cost},
+          lifetime_points_redeemed = lifetime_points_redeemed + ${cost},
+          updated_at = NOW()
+        WHERE user_id = ${userId}::uuid AND points_balance >= ${cost}
+        RETURNING points_balance, lifetime_points_earned, lifetime_points_redeemed
+      `;
+
+      if (!updatedPointsRows.length) {
+        throw new Error('INSUFFICIENT_POINTS');
+      }
+
+      const rankRows = await tx.$queryRaw<MemberRankRow[]>`
+        UPDATE member_ranks
+        SET rank = ${nextRank},
+            rank_started_at = NOW(),
+            rank_expires_at = NOW() + INTERVAL '1 year',
+            free_appetizer_claimed = FALSE,
+            free_roll_claimed = FALSE,
+            last_monthly_appetizer_at = NULL,
+            updated_at = NOW()
+        WHERE user_id = ${userId}::uuid
+        RETURNING rank, rank_started_at, rank_expires_at,
+                  free_appetizer_claimed, free_roll_claimed,
+                  last_monthly_appetizer_at
+      `;
+
+      return {
+        rankRecord: this.mapMemberRankRow(rankRows[0]),
+        pointsSummary: this.mapPointsRow(updatedPointsRows[0]),
       };
     });
   }
