@@ -1,8 +1,7 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
-import { useRouter } from 'next/router';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import type { RewardRedemption, RewardsSummary } from '../lib/rewards/types';
-import type { MemberRank, UserRankInfo } from '../lib/ranks/types';
+import type { UserRankInfo } from '../lib/ranks/types';
 
 interface RewardsContextType {
   summary: RewardsSummary | null;
@@ -27,12 +26,12 @@ const RewardsContext = createContext<RewardsContextType>({
 });
 
 export function RewardsProvider({ children }: { children: ReactNode }) {
-  const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [summary, setSummary] = useState<RewardsSummary | null>(null);
   const [rankInfo, setRankInfo] = useState<UserRankInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const hasFetchedOnce = useRef(false);
 
   const refreshRank = useCallback(async () => {
     if (!user) {
@@ -61,7 +60,11 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    setLoading(true);
+    // Only show loading spinner on the very first fetch; subsequent refreshes
+    // keep the stale data visible to avoid layout shifts in the navbar.
+    if (!hasFetchedOnce.current) {
+      setLoading(true);
+    }
     setError('');
 
     try {
@@ -76,6 +79,7 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
       }
 
       setSummary(rewardsData);
+      hasFetchedOnce.current = true;
 
       if (rankResponse.ok) {
         const rankData = await rankResponse.json();
@@ -98,6 +102,7 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
       setRankInfo(null);
       setError('');
       setLoading(false);
+      hasFetchedOnce.current = false;
       return;
     }
 
@@ -117,13 +122,9 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('focus', handleWindowFocus);
   }, [user, refreshRewards]);
 
-  useEffect(() => {
-    if (!user || authLoading) {
-      return;
-    }
-
-    void refreshRewards();
-  }, [router.asPath, user, authLoading, refreshRewards]);
+  // No route-change effect: rewards are fetched on login and window focus,
+  // which is sufficient. Re-fetching on every navigation caused the points
+  // badge to flash "..." and shift the navbar layout.
 
   return (
     <RewardsContext.Provider

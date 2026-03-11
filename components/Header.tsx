@@ -108,8 +108,8 @@ const Header = () => {
                 <span role="img" aria-label="Sushi icon" style={{ fontSize: '16px', lineHeight: 1 }}>
                   🍣
                 </span>
-                <span style={{ fontSize: '12px', fontWeight: 700, color: '#f1d00f', whiteSpace: 'nowrap' }}>
-                  {rewardsLoading ? '...' : `${pointsBalance} pts`}
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#f1d00f', whiteSpace: 'nowrap', minWidth: '36px', textAlign: 'center', display: 'inline-block' }}>
+                  {rewardsLoading && pointsBalance === 0 ? '...' : `${pointsBalance} pts`}
                 </span>
               </Link>
             )}
