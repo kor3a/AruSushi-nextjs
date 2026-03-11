@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Header from '../../components/Header';
@@ -52,6 +52,36 @@ interface PauseState {
   resumeAt: string | null;
 }
 
+const ORDERS_PER_PAGE = 12;
+
+const STATUS_COLORS: Record<string, { bg: string; border: string; text: string }> = {
+  pending: { bg: 'rgba(158, 158, 158, 0.15)', border: 'rgba(158, 158, 158, 0.5)', text: '#bbb' },
+  confirmed: { bg: 'rgba(33, 150, 243, 0.15)', border: 'rgba(33, 150, 243, 0.5)', text: '#64b5f6' },
+  preparing: { bg: 'rgba(255, 152, 0, 0.15)', border: 'rgba(255, 152, 0, 0.5)', text: '#ffb74d' },
+  ready: { bg: 'rgba(76, 175, 80, 0.15)', border: 'rgba(76, 175, 80, 0.5)', text: '#81c784' },
+  picked_up: { bg: 'rgba(0, 200, 83, 0.15)', border: 'rgba(0, 200, 83, 0.5)', text: '#69f0ae' },
+  delivered: { bg: 'rgba(0, 200, 83, 0.15)', border: 'rgba(0, 200, 83, 0.5)', text: '#69f0ae' },
+  cancelled: { bg: 'rgba(244, 67, 54, 0.15)', border: 'rgba(244, 67, 54, 0.5)', text: '#ef5350' },
+};
+
+function getStatusColor(status: string) {
+  return STATUS_COLORS[status] || STATUS_COLORS.pending;
+}
+
+function formatTimeAgo(dateString: string): string {
+  const now = new Date();
+  const then = new Date(dateString);
+  const diffMs = now.getTime() - then.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h ${diffMins % 60}m ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays}d ago`;
+}
+
 export default function AdminOrdersPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
@@ -61,6 +91,8 @@ export default function AdminOrdersPage() {
   const [startDate, setStartDate] = useState<string>(getDefaultStartDate());
   const [endDate, setEndDate] = useState<string>(getDefaultEndDate());
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
 
   const [pauseState, setPauseState] = useState<PauseState>({
     ordersPaused: false,
@@ -74,6 +106,16 @@ export default function AdminOrdersPage() {
   const [customResumeTime, setCustomResumeTime] = useState<string>('');
 
   const canAccess = useMemo(() => canManageOrders(user?.email), [user?.email]);
+
+  const totalPages = Math.max(1, Math.ceil(orders.length / ORDERS_PER_PAGE));
+  const paginatedOrders = orders.slice(
+    (currentPage - 1) * ORDERS_PER_PAGE,
+    currentPage * ORDERS_PER_PAGE
+  );
+
+  const activePickupOrders = orders.filter(
+    (order) => order.orderType === 'pickup' && isPickupOrderActive(order.status)
+  );
 
   const fetchPauseState = async () => {
     try {
@@ -162,7 +204,7 @@ export default function AdminOrdersPage() {
     }
   };
 
-  const fetchOrders = async (rangeStart: string, rangeEnd: string) => {
+  const fetchOrders = useCallback(async (rangeStart: string, rangeEnd: string) => {
     try {
       setLoading(true);
       setError('');
@@ -183,13 +225,14 @@ export default function AdminOrdersPage() {
       }
 
       setOrders(data.orders || []);
+      setCurrentPage(1);
     } catch (err: any) {
       setError(err.message || 'An error occurred');
       setOrders([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (authLoading) {
@@ -209,7 +252,6 @@ export default function AdminOrdersPage() {
 
     fetchOrders(startDate, endDate);
     fetchPauseState();
-    // Intentionally do not add startDate/endDate to avoid auto-refetch while typing.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user, canAccess, router]);
 
@@ -252,32 +294,54 @@ export default function AdminOrdersPage() {
     }
   };
 
-  const activePickupOrders = orders.filter(
-    (order) => order.orderType === 'pickup' && isPickupOrderActive(order.status)
-  );
-
   const getStatusOptions = (orderType: string, currentStatus: string) => {
-    const options =
-      orderType === 'pickup'
-        ? ['confirmed', 'preparing', 'ready', 'picked_up', 'cancelled']
-        : ['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled'];
-
-    return options.includes(currentStatus) ? options : [currentStatus, ...options];
+    return orderType === 'pickup'
+      ? ['confirmed', 'preparing', 'ready', 'picked_up', 'cancelled']
+      : ['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled'];
   };
 
   const getStatusLabel = (orderType: string, status: string) => {
     if (orderType === 'pickup') {
       return getPickupStatusLabel(status);
     }
+    const labels: Record<string, string> = {
+      pending: 'Pending',
+      confirmed: 'Confirmed',
+      preparing: 'Preparing',
+      ready: 'Ready',
+      delivered: 'Delivered',
+      cancelled: 'Cancelled',
+    };
+    return labels[status] || status.charAt(0).toUpperCase() + status.slice(1);
+  };
 
-    return status.charAt(0).toUpperCase() + status.slice(1);
+  const goToPage = (page: number) => {
+    if (page < 1 || page > totalPages) return;
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const getPageNumbers = (): (number | 'ellipsis')[] => {
+    const pages: (number | 'ellipsis')[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+      return pages;
+    }
+    pages.push(1);
+    if (currentPage > 3) pages.push('ellipsis');
+    const start = Math.max(2, currentPage - 1);
+    const end = Math.min(totalPages - 1, currentPage + 1);
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (currentPage < totalPages - 2) pages.push('ellipsis');
+    pages.push(totalPages);
+    return pages;
   };
 
   return (
     <>
       <Head>
         <title>Orders - A-Ru Sushi</title>
-        <meta name="description" content="Order history and date-filtered order management" />
+        <meta name="description" content="Order management dashboard" />
       </Head>
       <Header />
 
@@ -288,18 +352,23 @@ export default function AdminOrdersPage() {
           padding: '140px 20px 60px',
         }}
       >
-        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <h1
             style={{
               fontSize: '36px',
               fontWeight: 'bold',
               color: '#f1d00f',
-              marginBottom: '24px',
+              marginBottom: '8px',
               textAlign: 'center',
             }}
           >
             Orders
           </h1>
+          {!loading && orders.length > 0 && (
+            <p style={{ textAlign: 'center', color: '#999', fontSize: '14px', marginBottom: '24px' }}>
+              {orders.length} order{orders.length !== 1 ? 's' : ''} found
+            </p>
+          )}
 
           {/* Pause / Resume Orders Panel */}
           <div
@@ -489,6 +558,7 @@ export default function AdminOrdersPage() {
             )}
           </div>
 
+          {/* Date Filters */}
           <form
             onSubmit={applyFilters}
             style={{
@@ -554,11 +624,11 @@ export default function AdminOrdersPage() {
             </button>
           </form>
 
-          {authLoading || loading ? (
+          {(authLoading || loading) && (
             <p style={{ color: '#f1d00f', textAlign: 'center' }}>Loading orders...</p>
-          ) : null}
+          )}
 
-          {error ? (
+          {error && (
             <div
               style={{
                 marginBottom: '20px',
@@ -571,24 +641,25 @@ export default function AdminOrdersPage() {
             >
               {error}
             </div>
-          ) : null}
+          )}
 
-          {!loading && !error && orders.length === 0 ? (
+          {!loading && !error && orders.length === 0 && (
             <div
               style={{
                 textAlign: 'center',
                 background: 'rgba(255, 255, 255, 0.05)',
                 border: '1px solid rgba(252, 54, 120, 0.2)',
                 borderRadius: '12px',
-                padding: '24px',
+                padding: '48px 24px',
                 color: '#ccc',
               }}
             >
-              No orders found for the selected date range.
+              <p style={{ fontSize: '18px', marginBottom: '8px' }}>No orders found</p>
+              <p style={{ fontSize: '14px', color: '#888' }}>Try adjusting the date range above.</p>
             </div>
-          ) : null}
+          )}
 
-          {!loading && !error && activePickupOrders.length > 0 ? (
+          {!loading && !error && activePickupOrders.length > 0 && (
             <div
               style={{
                 marginBottom: '20px',
@@ -604,81 +675,379 @@ export default function AdminOrdersPage() {
                 {activePickupOrders.length === 1 ? '' : 's'} requiring updates.
               </p>
             </div>
-          ) : null}
+          )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {orders.map((order) => (
-              <div
-                key={order.id}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(252, 54, 120, 0.2)',
-                  borderRadius: '12px',
-                  padding: '16px',
-                }}
-              >
-                <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '8px' }}>
-                  <div>
-                    <p style={{ color: '#f1d00f', fontWeight: 700, marginBottom: '4px' }}>Order #{order.id.slice(0, 8)}...</p>
-                    <p style={{ color: '#ddd', fontSize: '14px' }}>{new Date(order.createdAt).toLocaleString()}</p>
-                    <p style={{ color: '#bbb', fontSize: '13px' }}>Customer: {order.customerName || 'N/A'} ({order.customerEmail || 'N/A'})</p>
-                    <p style={{ color: '#999', fontSize: '12px' }}>User ID: {order.userId}</p>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <p style={{ color: '#fff', fontWeight: 700, fontSize: '20px' }}>${Number(order.total).toFixed(2)}</p>
-                    <p style={{ color: '#ddd', fontSize: '13px' }}>Type: {order.orderType}</p>
-                    <p style={{ color: '#ddd', fontSize: '13px' }}>Status: {getStatusLabel(order.orderType, order.status)}</p>
-                    <p style={{ color: '#ddd', fontSize: '13px' }}>Payment: {order.paymentStatus}</p>
-                  </div>
-                </div>
+          {/* Order Cards Grid */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
+              gap: '20px',
+            }}
+          >
+            {paginatedOrders.map((order) => {
+              const statusColor = getStatusColor(order.status);
+              const isExpanded = expandedOrderId === order.id;
+              const isUpdating = updatingOrderId === order.id;
+              const statusOptions = getStatusOptions(order.orderType, order.status);
 
+              return (
                 <div
+                  key={order.id}
                   style={{
-                    marginTop: '12px',
+                    background: 'rgba(255, 255, 255, 0.04)',
+                    border: `1px solid ${statusColor.border}`,
+                    borderRadius: '16px',
+                    padding: '0',
                     display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '10px',
-                    alignItems: 'center',
+                    flexDirection: 'column',
+                    overflow: 'hidden',
+                    transition: 'border-color 0.2s',
                   }}
                 >
-                  <label style={{ color: '#ccc', fontSize: '13px' }}>
-                    Update status:
-                    <select
-                      value={order.status}
-                      onChange={(e) => updateOrderStatus(order.id, e.target.value)}
-                      disabled={updatingOrderId === order.id}
+                  {/* Status Badge Header */}
+                  <div
+                    style={{
+                      background: statusColor.bg,
+                      borderBottom: `1px solid ${statusColor.border}`,
+                      padding: '10px 16px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <span
                       style={{
-                        marginLeft: '8px',
-                        background: '#111',
-                        color: '#fff',
-                        border: '1px solid #444',
-                        borderRadius: '8px',
-                        padding: '6px 8px',
+                        color: statusColor.text,
+                        fontWeight: 700,
+                        fontSize: '13px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
                       }}
                     >
-                      {getStatusOptions(order.orderType, order.status).map((status) => (
-                        <option key={status} value={status}>
-                          {getStatusLabel(order.orderType, status)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  {updatingOrderId === order.id ? (
-                    <span style={{ color: '#f1d00f', fontSize: '12px' }}>Saving...</span>
-                  ) : null}
-                </div>
+                      {getStatusLabel(order.orderType, order.status)}
+                    </span>
+                    <span
+                      style={{
+                        color: '#999',
+                        fontSize: '12px',
+                        background: 'rgba(0,0,0,0.3)',
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        textTransform: 'uppercase',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {order.orderType}
+                    </span>
+                  </div>
 
-                <div style={{ marginTop: '12px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
-                  {order.items.map((item) => (
-                    <p key={item.id} style={{ color: '#ddd', fontSize: '14px', marginBottom: '4px' }}>
-                      {item.itemName} x{item.quantity} - ${(Number(item.itemPrice) * item.quantity).toFixed(2)}
-                      {item.specialNotes ? ` (Note: ${item.specialNotes})` : ''}
-                    </p>
-                  ))}
+                  {/* Card Body */}
+                  <div style={{ padding: '16px', flex: 1 }}>
+                    {/* Order ID and Time */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
+                      <p style={{ color: '#f1d00f', fontWeight: 700, fontSize: '15px', margin: 0 }}>
+                        #{order.id.slice(0, 8)}
+                      </p>
+                      <span style={{ color: '#999', fontSize: '12px' }}>
+                        {formatTimeAgo(order.createdAt)}
+                      </span>
+                    </div>
+
+                    {/* Customer Info */}
+                    <div style={{ marginBottom: '14px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                          <circle cx="12" cy="7" r="4" />
+                        </svg>
+                        <span style={{ color: '#eee', fontSize: '14px', fontWeight: 600 }}>
+                          {order.customerName || 'Guest'}
+                        </span>
+                      </div>
+                      {order.deliveryPhone && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                          </svg>
+                          <span style={{ color: '#bbb', fontSize: '13px' }}>{order.deliveryPhone}</span>
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="10" />
+                          <polyline points="12 6 12 12 16 14" />
+                        </svg>
+                        <span style={{ color: '#bbb', fontSize: '13px' }}>
+                          {new Date(order.createdAt).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Total and Payment */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '10px 12px',
+                        background: 'rgba(0,0,0,0.2)',
+                        borderRadius: '10px',
+                        marginBottom: '14px',
+                      }}
+                    >
+                      <span style={{ color: '#fff', fontWeight: 700, fontSize: '20px' }}>
+                        ${Number(order.total).toFixed(2)}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                          background: order.paymentStatus === 'paid'
+                            ? 'rgba(76, 175, 80, 0.2)'
+                            : order.paymentStatus === 'failed'
+                              ? 'rgba(244, 67, 54, 0.2)'
+                              : 'rgba(255, 152, 0, 0.2)',
+                          color: order.paymentStatus === 'paid'
+                            ? '#81c784'
+                            : order.paymentStatus === 'failed'
+                              ? '#ef5350'
+                              : '#ffb74d',
+                        }}
+                      >
+                        {order.paymentStatus.toUpperCase()}
+                      </span>
+                    </div>
+
+                    {/* Status Update Buttons */}
+                    <div style={{ marginBottom: '4px' }}>
+                      <p style={{ color: '#999', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px', fontWeight: 600 }}>
+                        Update Status
+                      </p>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {statusOptions.map((status) => {
+                          const isActive = order.status === status;
+                          const btnColor = getStatusColor(status);
+                          return (
+                            <button
+                              key={status}
+                              type="button"
+                              onClick={() => {
+                                if (!isActive && !isUpdating) {
+                                  updateOrderStatus(order.id, status);
+                                }
+                              }}
+                              disabled={isActive || isUpdating}
+                              style={{
+                                padding: '6px 12px',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                borderRadius: '8px',
+                                cursor: isActive || isUpdating ? 'default' : 'pointer',
+                                border: isActive
+                                  ? `2px solid ${btnColor.text}`
+                                  : '1px solid rgba(255,255,255,0.12)',
+                                background: isActive ? btnColor.bg : 'rgba(255,255,255,0.04)',
+                                color: isActive ? btnColor.text : '#aaa',
+                                opacity: isUpdating && !isActive ? 0.5 : 1,
+                                transition: 'all 0.15s ease',
+                              }}
+                            >
+                              {getStatusLabel(order.orderType, status)}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {isUpdating && (
+                        <p style={{ color: '#f1d00f', fontSize: '11px', marginTop: '6px' }}>Updating...</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Expandable Items Section */}
+                  <div
+                    style={{
+                      borderTop: '1px solid rgba(255,255,255,0.06)',
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setExpandedOrderId(isExpanded ? null : order.id)}
+                      style={{
+                        width: '100%',
+                        background: 'none',
+                        border: 'none',
+                        color: '#999',
+                        fontSize: '12px',
+                        padding: '10px 16px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        fontWeight: 600,
+                      }}
+                    >
+                      <span>
+                        {order.items.length} item{order.items.length !== 1 ? 's' : ''}
+                        {order.notes ? ' · Has notes' : ''}
+                      </span>
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        style={{
+                          transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                          transition: 'transform 0.2s',
+                        }}
+                      >
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
+                    </button>
+
+                    {isExpanded && (
+                      <div style={{ padding: '0 16px 14px' }}>
+                        {order.items.map((item) => (
+                          <div
+                            key={item.id}
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'baseline',
+                              padding: '6px 0',
+                              borderBottom: '1px solid rgba(255,255,255,0.04)',
+                            }}
+                          >
+                            <div>
+                              <span style={{ color: '#ddd', fontSize: '13px' }}>
+                                {item.itemName} <span style={{ color: '#888' }}>x{item.quantity}</span>
+                              </span>
+                              {item.specialNotes && (
+                                <p style={{ color: '#ff9800', fontSize: '11px', margin: '2px 0 0', fontStyle: 'italic' }}>
+                                  {item.specialNotes}
+                                </p>
+                              )}
+                            </div>
+                            <span style={{ color: '#aaa', fontSize: '13px', whiteSpace: 'nowrap', marginLeft: '12px' }}>
+                              ${(Number(item.itemPrice) * item.quantity).toFixed(2)}
+                            </span>
+                          </div>
+                        ))}
+                        {order.notes && (
+                          <div style={{ marginTop: '8px', padding: '8px 10px', background: 'rgba(255, 152, 0, 0.08)', borderRadius: '8px', border: '1px solid rgba(255, 152, 0, 0.2)' }}>
+                            <p style={{ color: '#ffb74d', fontSize: '12px', fontWeight: 600, marginBottom: '2px' }}>Order Notes</p>
+                            <p style={{ color: '#ddd', fontSize: '12px', margin: 0 }}>{order.notes}</p>
+                          </div>
+                        )}
+                        {order.deliveryAddress && (
+                          <div style={{ marginTop: '8px' }}>
+                            <p style={{ color: '#888', fontSize: '11px', fontWeight: 600, marginBottom: '2px', textTransform: 'uppercase' }}>Delivery Address</p>
+                            <p style={{ color: '#bbb', fontSize: '12px', margin: 0 }}>{order.deliveryAddress}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
+
+          {/* Pagination */}
+          {!loading && !error && totalPages > 1 && (
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: '6px',
+                marginTop: '32px',
+                flexWrap: 'wrap',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => goToPage(currentPage - 1)}
+                disabled={currentPage === 1}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: currentPage === 1 ? 'transparent' : 'rgba(255,255,255,0.06)',
+                  color: currentPage === 1 ? '#555' : '#ddd',
+                  cursor: currentPage === 1 ? 'default' : 'pointer',
+                  fontWeight: 600,
+                  fontSize: '13px',
+                }}
+              >
+                Previous
+              </button>
+
+              {getPageNumbers().map((page, idx) =>
+                page === 'ellipsis' ? (
+                  <span key={`ellipsis-${idx}`} style={{ color: '#666', padding: '0 4px', fontSize: '14px' }}>
+                    ...
+                  </span>
+                ) : (
+                  <button
+                    key={page}
+                    type="button"
+                    onClick={() => goToPage(page)}
+                    style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '8px',
+                      border: currentPage === page
+                        ? '2px solid #fc3678'
+                        : '1px solid rgba(255,255,255,0.1)',
+                      background: currentPage === page
+                        ? 'rgba(252, 54, 120, 0.15)'
+                        : 'rgba(255,255,255,0.04)',
+                      color: currentPage === page ? '#fc3678' : '#bbb',
+                      cursor: 'pointer',
+                      fontWeight: 700,
+                      fontSize: '13px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    {page}
+                  </button>
+                )
+              )}
+
+              <button
+                type="button"
+                onClick={() => goToPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: currentPage === totalPages ? 'transparent' : 'rgba(255,255,255,0.06)',
+                  color: currentPage === totalPages ? '#555' : '#ddd',
+                  cursor: currentPage === totalPages ? 'default' : 'pointer',
+                  fontWeight: 600,
+                  fontSize: '13px',
+                }}
+              >
+                Next
+              </button>
+            </div>
+          )}
+
+          {!loading && !error && totalPages > 1 && (
+            <p style={{ textAlign: 'center', color: '#666', fontSize: '12px', marginTop: '12px' }}>
+              Page {currentPage} of {totalPages}
+            </p>
+          )}
         </div>
       </div>
 
