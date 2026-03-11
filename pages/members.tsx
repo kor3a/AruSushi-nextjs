@@ -61,36 +61,31 @@ export default function Members() {
 
           {user && rankInfo && !loading && (
             <div style={{
-              textAlign: 'center',
-              padding: '16px 24px',
-              background: 'rgba(241, 208, 15, 0.08)',
-              border: '1px solid rgba(241, 208, 15, 0.25)',
-              borderRadius: '12px',
-              maxWidth: '500px',
-              margin: '0 auto 32px',
+              display: 'flex',
+              justifyContent: 'center',
+              marginBottom: '32px',
             }}>
-              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '32px' }}>
-                <div style={{
-                  padding: '16px 24px',
-                  background: 'rgba(241, 208, 15, 0.08)',
-                  border: '1px solid rgba(241, 208, 15, 0.25)',
-                  borderRadius: '12px',
+              <div style={{
+                textAlign: 'center',
+                padding: '16px 24px',
+                background: 'rgba(241, 208, 15, 0.08)',
+                border: '1px solid rgba(241, 208, 15, 0.25)',
+                borderRadius: '12px',
+              }}>
+                <p style={{ color: '#ccc', fontSize: '13px', marginBottom: '4px' }}>Your Current Rank</p>
+                <p style={{
+                  color: RANK_TIERS[rankInfo.rank].color,
+                  fontSize: '22px',
+                  fontWeight: '700',
+                  margin: 0,
                 }}>
-                  <p style={{ color: '#ccc', fontSize: '13px', marginBottom: '4px' }}>Your Current Rank</p>
-                  <p style={{
-                    color: RANK_TIERS[rankInfo.rank].color,
-                    fontSize: '22px',
-                    fontWeight: '700',
-                    margin: 0,
-                  }}>
-                    {rankInfo.label}
+                  {rankInfo.label}
+                </p>
+                {rankInfo.rank !== 'silver' && (
+                  <p style={{ color: '#888', fontSize: '12px', marginTop: '4px' }}>
+                    Expires {new Date(rankInfo.rankExpiresAt).toLocaleDateString()}
                   </p>
-                  {rankInfo.rank !== 'silver' && (
-                    <p style={{ color: '#888', fontSize: '12px', marginTop: '4px' }}>
-                      Expires {new Date(rankInfo.rankExpiresAt).toLocaleDateString()}
-                    </p>
-                  )}
-                </div>
+                )}
               </div>
             </div>
           )}
