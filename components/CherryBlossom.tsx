@@ -16,7 +16,7 @@ function CherryBlossom() {
     const numberOfPetals = 30;
     const newPetals = Array.from({ length: numberOfPetals }, (_, i) => ({
       id: i,
-      left: Math.random() * 100,
+      left: Math.random() * 95,
       animationDuration: 6 + Math.random() * 4,
       delay: Math.random() * 5,
       scale: 0.3 + Math.random() * 0.5,
