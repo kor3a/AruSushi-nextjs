@@ -83,7 +83,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ message: `Invalid status for ${existingOrder.orderType} order` });
     }
 
-    const updatedOrder = await db.updateOrder(orderId, { status });
+    const updateData: { status: string; readyForPickupAt?: Date } = { status };
+    if (status === 'ready') {
+      updateData.readyForPickupAt = new Date();
+    }
+
+    const updatedOrder = await db.updateOrder(orderId, updateData);
 
     try {
       await broadcastOrderUpdate(orderId, status, existingOrder.userId);
