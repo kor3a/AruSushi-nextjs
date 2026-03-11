@@ -64,6 +64,29 @@ const Header = () => {
         )}
       </nav>
       <div className="icons" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        {user && !showAdminOrders && (
+          <Link
+            href="/rewards"
+            style={{
+              color: '#f1d00f',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '4px 8px',
+              border: '1px solid rgba(241, 208, 15, 0.3)',
+              borderRadius: '999px',
+              textDecoration: 'none',
+            }}
+            title="Sushi Rewards"
+          >
+            <span role="img" aria-label="Sushi icon" style={{ fontSize: '16px', lineHeight: 1 }}>
+              🍣
+            </span>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: '#f1d00f', whiteSpace: 'nowrap', minWidth: '36px', textAlign: 'center', display: 'inline-block' }}>
+              {rewardsLoading && pointsBalance === 0 ? '...' : `${pointsBalance} pts`}
+            </span>
+          </Link>
+        )}
         {!showAdminOrders && (
           <Link href="/cart" style={{ position: 'relative', display: 'inline-block' }}>
             <FaShoppingCart size={20} style={{ color: '#f1d00f' }} />
@@ -90,29 +113,6 @@ const Header = () => {
         )}
         {user ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            {!showAdminOrders && (
-              <Link
-                href="/profile"
-                style={{
-                  color: '#f1d00f',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '4px 8px',
-                  border: '1px solid rgba(241, 208, 15, 0.3)',
-                  borderRadius: '999px',
-                  textDecoration: 'none',
-                }}
-                title="Sushi points"
-              >
-                <span role="img" aria-label="Sushi icon" style={{ fontSize: '16px', lineHeight: 1 }}>
-                  🍣
-                </span>
-                <span style={{ fontSize: '12px', fontWeight: 700, color: '#f1d00f', whiteSpace: 'nowrap' }}>
-                  {rewardsLoading ? '...' : `${pointsBalance} pts`}
-                </span>
-              </Link>
-            )}
             <Link href="/profile" style={{ color: '#f1d00f', display: 'flex', alignItems: 'center' }} title="Profile">
               <FaUser size={18} style={{ color: '#f1d00f' }} />
             </Link>
