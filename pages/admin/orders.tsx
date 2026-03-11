@@ -29,6 +29,7 @@ interface Order {
   customerName?: string | null;
   customerEmail?: string | null;
   notes?: string | null;
+  readyForPickupAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -403,6 +404,17 @@ function OrderCard({
               Ordered: {new Date(order.createdAt).toLocaleString()}
             </span>
           </div>
+          {order.readyForPickupAt && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#81c784" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+              <span style={{ color: '#81c784', fontSize: '13px', fontWeight: 600 }}>
+                Ready for Pick Up: {new Date(order.readyForPickupAt).toLocaleString()}
+              </span>
+            </div>
+          )}
           {isOrderCompleted(order) && order.updatedAt && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={order.status === 'cancelled' ? '#ef5350' : '#69f0ae'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -793,9 +805,14 @@ export default function AdminOrdersPage() {
         if (!orderId || !status) return;
 
         setOrders((prev) =>
-          prev.map((o) =>
-            o.id === orderId ? { ...o, status, updatedAt: new Date().toISOString() } : o
-          )
+          prev.map((o) => {
+            if (o.id !== orderId) return o;
+            const updates: Partial<Order> = { status, updatedAt: new Date().toISOString() };
+            if (status === 'ready') {
+              updates.readyForPickupAt = new Date().toISOString();
+            }
+            return { ...o, ...updates };
+          })
         );
       })
       .subscribe();

@@ -698,6 +698,7 @@ class Database {
     actualPickupTime: Date;
     actualDropoffTime: Date;
     deliveryLastEvent: string;
+    readyForPickupAt: Date;
   }>) {
     return prisma.order.update({
       where: { id },
