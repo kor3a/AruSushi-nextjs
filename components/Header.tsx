@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
 import { useRewards } from '../contexts/RewardsContext';
 import { canManageOrders } from '../lib/auth/roles';
-import { FaShoppingCart, FaUser, FaSignOutAlt, FaSignInAlt } from 'react-icons/fa';
+import { FaShoppingCart, FaUser, FaSignOutAlt, FaSignInAlt, FaBars } from 'react-icons/fa';
 
 const Header = () => {
   const { user, signOut } = useAuth();
@@ -148,7 +148,7 @@ const Header = () => {
           }}
           aria-label="Toggle menu"
         >
-          <i className="fas fa-bars"></i>
+          <FaBars />
         </button>
       </div>
     </header>
