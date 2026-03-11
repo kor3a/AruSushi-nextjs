@@ -62,13 +62,10 @@ export default function Members() {
           {user && rankInfo && !loading && (
             <div style={{
               textAlign: 'center',
-              marginBottom: '32px',
               padding: '16px 24px',
               background: 'rgba(241, 208, 15, 0.08)',
               border: '1px solid rgba(241, 208, 15, 0.25)',
               borderRadius: '12px',
-              display: 'inline-block',
-              width: '100%',
               maxWidth: '500px',
               margin: '0 auto 32px',
             }}>
