@@ -16,7 +16,7 @@ interface UserProfile {
 
 export default function Profile() {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -439,6 +439,41 @@ export default function Profile() {
                     }}
                   >
                     Update
+                  </button>
+                </div>
+
+                {/* Sign Out Button */}
+                <div style={{ paddingTop: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await signOut();
+                      router.push('/');
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '14px 24px',
+                      background: 'transparent',
+                      color: '#ff4444',
+                      border: '1px solid rgba(255, 68, 68, 0.4)',
+                      borderRadius: '8px',
+                      fontSize: '16px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(255, 68, 68, 0.1)';
+                      e.currentTarget.style.borderColor = '#ff4444';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.borderColor = 'rgba(255, 68, 68, 0.4)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                  >
+                    Sign Out
                   </button>
                 </div>
               </div>
