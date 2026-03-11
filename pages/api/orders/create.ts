@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { createApiClient } from '../../../lib/supabase/server';
 import { db, isRewardsSchemaMissingError, isStoreSettingsMissingError } from '../../../lib/db';
 import {
@@ -10,6 +11,45 @@ import { restaurantInfo } from '../../../data/restaurantInfo';
 import { POINTS_PER_DOLLAR } from '../../../lib/rewards/catalog';
 import { calculateRewardDiscount } from '../../../lib/rewards/eligibility';
 import { isRanksSchemaMissingError } from '../../../lib/db';
+
+async function broadcastNewOrder(orderId: string, userId: string) {
+  const supabase = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
+  const channel = supabase.channel('order-updates', {
+    config: { broadcast: { ack: true } },
+  });
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        supabase.removeChannel(channel);
+        reject(new Error('Broadcast subscription timed out'));
+      }, 5000);
+
+      channel.subscribe(async (subStatus) => {
+        if (subStatus === 'SUBSCRIBED') {
+          try {
+            await channel.send({
+              type: 'broadcast',
+              event: 'new-order-created',
+              payload: { orderId, userId },
+            });
+            clearTimeout(timeout);
+            resolve();
+          } catch (sendErr) {
+            clearTimeout(timeout);
+            reject(sendErr);
+          }
+        }
+      });
+    });
+  } finally {
+    supabase.removeChannel(channel);
+  }
+}
 
 interface NormalizedOrderItem {
   name: string;
@@ -321,6 +361,11 @@ export default async function handler(
         pointsEarned = 0;
       }
     }
+
+    // Broadcast new order event for admin real-time updates
+    broadcastNewOrder(order.id, user.id).catch((err) =>
+      console.error('Failed to broadcast new order:', err)
+    );
 
     // Send email notifications (don't wait for them to complete)
     // Only send if payment is successful

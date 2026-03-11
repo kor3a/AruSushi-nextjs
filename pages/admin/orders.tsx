@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Header from '../../components/Header';
@@ -6,6 +6,7 @@ import Footer from '../../components/Footer';
 import { useAuth } from '../../contexts/AuthContext';
 import { canManageOrders } from '../../lib/auth/roles';
 import { getPickupStatusLabel } from '../../lib/orders/pickupStatus';
+import { createClient } from '../../lib/supabase/client';
 
 interface OrderItem {
   id: string;
@@ -608,6 +609,9 @@ export default function AdminOrdersPage() {
   const [completedCurrentPage, setCompletedCurrentPage] = useState(1);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
 
+  const [newOrderAlert, setNewOrderAlert] = useState<string | null>(null);
+  const alertTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   const [pauseState, setPauseState] = useState<PauseState>({
     ordersPaused: false,
     pauseReason: null,
@@ -723,6 +727,84 @@ export default function AdminOrdersPage() {
     }
   };
 
+  const playNotificationSound = useCallback(() => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const notes = [
+        { freq: 830, start: 0, dur: 0.12 },
+        { freq: 1050, start: 0.14, dur: 0.12 },
+        { freq: 1320, start: 0.28, dur: 0.2 },
+      ];
+      notes.forEach(({ freq, start, dur }) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.3, ctx.currentTime + start);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + start + dur);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(ctx.currentTime + start);
+        osc.stop(ctx.currentTime + start + dur);
+      });
+    } catch {
+      // Audio not available
+    }
+  }, []);
+
+  const showNewOrderAlert = useCallback((orderId: string) => {
+    if (alertTimeoutRef.current) clearTimeout(alertTimeoutRef.current);
+    setNewOrderAlert(orderId);
+    playNotificationSound();
+    alertTimeoutRef.current = setTimeout(() => setNewOrderAlert(null), 6000);
+  }, [playNotificationSound]);
+
+  const fetchSingleOrder = useCallback(async (orderId: string): Promise<Order | null> => {
+    try {
+      const response = await fetch(`/api/orders/${orderId}`);
+      if (!response.ok) return null;
+      const data = await response.json();
+      return data.order || null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!user || !canAccess) return;
+
+    const supabase = createClient();
+    const channel = supabase
+      .channel('order-updates')
+      .on('broadcast', { event: 'new-order-created' }, async (message) => {
+        const orderId = message.payload?.orderId;
+        if (!orderId) return;
+
+        const newOrder = await fetchSingleOrder(orderId);
+        if (newOrder) {
+          setOrders((prev) => {
+            if (prev.some((o) => o.id === newOrder.id)) return prev;
+            return [newOrder, ...prev];
+          });
+          showNewOrderAlert(newOrder.id);
+        }
+      })
+      .on('broadcast', { event: 'order-status-changed' }, (message) => {
+        const { orderId, status } = message.payload || {};
+        if (!orderId || !status) return;
+
+        setOrders((prev) =>
+          prev.map((o) =>
+            o.id === orderId ? { ...o, status, updatedAt: new Date().toISOString() } : o
+          )
+        );
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, canAccess, fetchSingleOrder, showNewOrderAlert]);
+
   const fetchOrders = useCallback(async (rangeStart: string, rangeEnd: string) => {
     try {
       setLoading(true);
@@ -752,6 +834,12 @@ export default function AdminOrdersPage() {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (alertTimeoutRef.current) clearTimeout(alertTimeoutRef.current);
+    };
   }, []);
 
   useEffect(() => {
@@ -866,6 +954,12 @@ export default function AdminOrdersPage() {
       <Head>
         <title>Orders - A-Ru Sushi</title>
         <meta name="description" content="Order management dashboard" />
+        <style>{`
+          @keyframes pulse-border {
+            0%, 100% { border-color: rgba(76, 175, 80, 0.6); box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+            50% { border-color: rgba(76, 175, 80, 1); box-shadow: 0 0 20px rgba(76, 175, 80, 0.3); }
+          }
+        `}</style>
       </Head>
       <Header />
 
@@ -895,6 +989,51 @@ export default function AdminOrdersPage() {
                 <span> &mdash; {activeOrders.length} active, {completedOrders.length} completed</span>
               )}
             </p>
+          )}
+
+          {/* New Order Alert Banner */}
+          {newOrderAlert && (
+            <div
+              style={{
+                marginBottom: '20px',
+                padding: '16px 20px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.2), rgba(34, 197, 94, 0.15))',
+                border: '2px solid rgba(76, 175, 80, 0.6)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                animation: 'pulse-border 1.5s ease-in-out infinite',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '24px' }}>🔔</span>
+                <div>
+                  <p style={{ color: '#4ade80', fontWeight: 700, fontSize: '16px', margin: 0 }}>
+                    New Order Received!
+                  </p>
+                  <p style={{ color: '#a3e635', fontSize: '13px', margin: '2px 0 0' }}>
+                    Order #{newOrderAlert.slice(0, 8)} just came in
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setNewOrderAlert(null)}
+                style={{
+                  background: 'rgba(255,255,255,0.1)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  borderRadius: '8px',
+                  color: '#ccc',
+                  padding: '6px 12px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                }}
+              >
+                Dismiss
+              </button>
+            </div>
           )}
 
           {/* Pause / Resume Orders Panel */}
