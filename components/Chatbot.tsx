@@ -40,13 +40,43 @@ const Chatbot: React.FC = () => {
   // Helper function to find menu item by name
   const findMenuItem = (itemName: string) => {
     const allMenus = [...lunchMenu, ...dinnerMenu];
+    const searchName = itemName.toLowerCase();
+
+    // Exact match
     for (const category of allMenus) {
       const item = category.items.find(
-        i => i.name.toLowerCase() === itemName.toLowerCase()
+        i => i.name.toLowerCase() === searchName
       );
       if (item) return item;
     }
-    return null;
+
+    // Substring match (either direction)
+    for (const category of allMenus) {
+      const item = category.items.find(i => {
+        const name = i.name.toLowerCase();
+        return name.includes(searchName) || searchName.includes(name);
+      });
+      if (item) return item;
+    }
+
+    // Word-based fallback: find item whose name words all appear in the query
+    const searchWords = searchName.split(/\s+/).filter(w => w.length > 1);
+    let bestMatch: typeof allMenus[0]['items'][0] | null = null;
+    let bestScore = 0;
+
+    for (const category of allMenus) {
+      for (const item of category.items) {
+        const nameWords = item.name.toLowerCase().split(/\s+/).filter(w => w.length > 1);
+        const matchCount = nameWords.filter(w => searchWords.includes(w)).length;
+        const score = nameWords.length > 0 ? matchCount / nameWords.length : 0;
+        if (score > bestScore && score >= 0.5) {
+          bestScore = score;
+          bestMatch = item;
+        }
+      }
+    }
+
+    return bestMatch;
   };
 
   const handleSend = async () => {

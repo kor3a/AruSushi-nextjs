@@ -13,6 +13,7 @@ const openai = new OpenAI({
 // Helper function to search menu items
 function searchMenuItems(query: string): MenuItemData[] {
   const searchTerm = query.toLowerCase();
+  const searchWords = searchTerm.split(/\s+/).filter(w => w.length > 1);
   const allMenus = [...lunchMenu, ...dinnerMenu];
   const results: MenuItemData[] = [];
 
@@ -20,8 +21,26 @@ function searchMenuItems(query: string): MenuItemData[] {
     category.items.forEach(item => {
       const itemName = item.name.toLowerCase();
       const itemDesc = item.description?.toLowerCase() || '';
+      const combined = `${itemName} ${itemDesc}`;
 
       if (itemName.includes(searchTerm) || itemDesc.includes(searchTerm)) {
+        results.push(item);
+        return;
+      }
+
+      // Word-based matching: match if all search words appear in the
+      // item name + description combined (handles queries like
+      // "california cut roll" matching "California Roll" whose
+      // description mentions "Cut")
+      if (searchWords.length > 1 && searchWords.every(w => combined.includes(w))) {
+        results.push(item);
+        return;
+      }
+
+      // Also match when all words of the item name appear in the query
+      // (e.g. query "california cut roll" contains all words from "California Roll")
+      const nameWords = itemName.split(/\s+/).filter(w => w.length > 1);
+      if (nameWords.length > 0 && nameWords.every(w => searchTerm.includes(w))) {
         results.push(item);
       }
     });
