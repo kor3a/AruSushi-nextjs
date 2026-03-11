@@ -394,9 +394,11 @@ export default function Profile() {
                           }}>
                             {rankInfo.label}
                           </p>
-                          <p style={{ color: '#888', fontSize: '11px', marginTop: '2px' }}>
-                            Expires {new Date(rankInfo.rankExpiresAt).toLocaleDateString()}
-                          </p>
+                          {rankInfo.rank !== 'silver' && (
+                            <p style={{ color: '#888', fontSize: '11px', marginTop: '2px' }}>
+                              Expires {new Date(rankInfo.rankExpiresAt).toLocaleDateString()}
+                            </p>
+                          )}
                         </div>
                         {rankInfo.discountPercent > 0 && (
                           <div style={{

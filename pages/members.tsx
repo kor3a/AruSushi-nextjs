@@ -85,9 +85,11 @@ export default function Members() {
                   }}>
                     {rankInfo.label}
                   </p>
-                  <p style={{ color: '#888', fontSize: '12px', marginTop: '4px' }}>
-                    Expires {new Date(rankInfo.rankExpiresAt).toLocaleDateString()}
-                  </p>
+                  {rankInfo.rank !== 'silver' && (
+                    <p style={{ color: '#888', fontSize: '12px', marginTop: '4px' }}>
+                      Expires {new Date(rankInfo.rankExpiresAt).toLocaleDateString()}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
