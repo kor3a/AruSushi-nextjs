@@ -9,6 +9,7 @@ import Footer from '../components/Footer';
 import { useCart } from '../contexts/CartContext';
 import { calculateRewardDiscount } from '../lib/rewards/eligibility';
 import type { RewardsSummary } from '../lib/rewards/types';
+import type { UserRankInfo } from '../lib/ranks/types';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
@@ -40,6 +41,7 @@ interface CheckoutFormProps {
   selectedRewardRedemptionId: string;
   onSelectRewardRedemption: (redemptionId: string) => void;
   rewardDiscount: number;
+  rankInfo: UserRankInfo | null;
   onOrderSubmitted: () => void;
 }
 
@@ -48,6 +50,7 @@ function CheckoutForm({
   selectedRewardRedemptionId,
   onSelectRewardRedemption,
   rewardDiscount,
+  rankInfo,
   onOrderSubmitted,
 }: CheckoutFormProps) {
   const router = useRouter();
@@ -179,12 +182,19 @@ function CheckoutForm({
     return now >= (expiresAt - bufferMs);
   };
 
-  // Calculate total with delivery fee
+  const rankDiscountPercent = rankInfo?.discountPercent ?? 0;
+
   const getOrderTotal = () => {
     const subtotal = getTotalPrice();
     const deliveryFee = orderType === 'delivery' && deliveryQuote ? deliveryQuote.fee : 0;
     const activeRewardDiscount = selectedRedemption ? rewardDiscount : 0;
-    return Math.max(subtotal + deliveryFee - activeRewardDiscount, 0);
+    const rankDiscountAmount = rankDiscountPercent > 0 ? subtotal * (rankDiscountPercent / 100) : 0;
+    return Math.max(subtotal + deliveryFee - activeRewardDiscount - rankDiscountAmount, 0);
+  };
+
+  const getRankDiscountAmount = () => {
+    if (rankDiscountPercent <= 0) return 0;
+    return getTotalPrice() * (rankDiscountPercent / 100);
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -266,10 +276,10 @@ function CheckoutForm({
         ? `${deliveryAddress}, ${deliveryCity}, ${deliveryState} ${deliveryZip}`
         : null;
 
-      // Calculate total with the current quote (might be refreshed)
       const finalDeliveryFee = orderType === 'delivery' && currentQuote ? currentQuote.fee : 0;
       const appliedRewardDiscount = selectedRedemption ? rewardDiscount : 0;
-      const finalTotal = getTotalPrice() + finalDeliveryFee - appliedRewardDiscount;
+      const rankDiscountAmount = getRankDiscountAmount();
+      const finalTotal = getTotalPrice() + finalDeliveryFee - appliedRewardDiscount - rankDiscountAmount;
 
       // Create order in database (this will accept the DoorDash quote)
       const orderResponse = await fetch('/api/orders/create', {
@@ -279,16 +289,18 @@ function CheckoutForm({
         },
         body: JSON.stringify({
           items,
-          total: finalTotal, // Include delivery fee in total
+          total: finalTotal,
           orderType,
           paymentIntentId: paymentIntent.id,
           paymentStatus: paymentIntent.status === 'succeeded' ? 'paid' : 'pending',
           deliveryAddress: fullDeliveryAddress,
           deliveryPhone: phone,
-          deliveryQuoteId: currentQuote?.id, // DoorDash quote ID to accept (possibly refreshed)
-          deliveryFee: currentQuote?.fee, // Delivery fee from quote
+          deliveryQuoteId: currentQuote?.id,
+          deliveryFee: currentQuote?.fee,
           rewardRedemptionId: selectedRedemption?.id,
           rewardDiscount: appliedRewardDiscount,
+          rankDiscountPercent: rankDiscountPercent > 0 ? rankDiscountPercent : undefined,
+          rankDiscountAmount: rankDiscountAmount > 0 ? rankDiscountAmount : undefined,
           notes,
         }),
       });
@@ -341,6 +353,12 @@ function CheckoutForm({
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#4ade80' }}>
               <span>{selectedRedemption.rewardLabel}:</span>
               <span>-${rewardDiscount.toFixed(2)}</span>
+            </div>
+          )}
+          {rankDiscountPercent > 0 && getRankDiscountAmount() > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#4ade80' }}>
+              <span>Member Discount ({rankDiscountPercent}%):</span>
+              <span>-${getRankDiscountAmount().toFixed(2)}</span>
             </div>
           )}
           <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '18px' }}>
@@ -766,6 +784,7 @@ export default function Checkout() {
   const orderSubmittedRef = useRef(false);
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const [rewardsSummary, setRewardsSummary] = useState<RewardsSummary | null>(null);
+  const [rankInfo, setRankInfo] = useState<UserRankInfo | null>(null);
   const [selectedRewardRedemptionId, setSelectedRewardRedemptionId] = useState('');
   const [clientSecret, setClientSecret] = useState('');
   const [loading, setLoading] = useState(true);
@@ -779,6 +798,8 @@ export default function Checkout() {
   const rewardDiscount = selectedRedemption
     ? calculateRewardDiscount(selectedRedemption.rewardType, items)
     : 0;
+  const rankDiscountPercent = rankInfo?.discountPercent ?? 0;
+  const rankDiscountAmount = rankDiscountPercent > 0 ? subtotal * (rankDiscountPercent / 100) : 0;
 
   useEffect(() => {
     const checkPauseStatus = async () => {
@@ -807,13 +828,21 @@ export default function Checkout() {
 
     const loadRewardsSummary = async () => {
       try {
-        const response = await fetch('/api/rewards');
-        const data = await response.json();
+        const [rewardsRes, rankRes] = await Promise.all([
+          fetch('/api/rewards'),
+          fetch('/api/ranks'),
+        ]);
+        const rewardsData = await rewardsRes.json();
 
-        if (response.ok) {
-          setRewardsSummary(parseRewardsSummary(data));
+        if (rewardsRes.ok) {
+          setRewardsSummary(parseRewardsSummary(rewardsData));
         } else {
-          console.error('Failed to load rewards summary:', data.message || data);
+          console.error('Failed to load rewards summary:', rewardsData.message || rewardsData);
+        }
+
+        if (rankRes.ok) {
+          const rankData = await rankRes.json();
+          setRankInfo(rankData);
         }
       } catch (loadRewardsError) {
         console.error('Failed to load rewards summary:', loadRewardsError);
@@ -842,7 +871,7 @@ export default function Checkout() {
         try {
           setLoading(true);
           setError('');
-          const amountToCharge = Math.max(Number((subtotal - rewardDiscount).toFixed(2)), 0.5);
+          const amountToCharge = Math.max(Number((subtotal - rewardDiscount - rankDiscountAmount).toFixed(2)), 0.5);
 
           const response = await fetch('/api/payment/create-intent', {
             method: 'POST',
@@ -881,6 +910,7 @@ export default function Checkout() {
     router,
     subtotal,
     rewardDiscount,
+    rankDiscountAmount,
     selectedRedemption?.id,
     selectedRedemption?.rewardType,
   ]);
@@ -999,6 +1029,7 @@ export default function Checkout() {
                   selectedRewardRedemptionId={selectedRewardRedemptionId}
                   onSelectRewardRedemption={setSelectedRewardRedemptionId}
                   rewardDiscount={rewardDiscount}
+                  rankInfo={rankInfo}
                   onOrderSubmitted={() => { orderSubmittedRef.current = true; }}
                 />
               </Elements>

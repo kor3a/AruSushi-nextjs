@@ -9,6 +9,7 @@ import { doordashClient } from '../../../lib/doordash/client';
 import { restaurantInfo } from '../../../data/restaurantInfo';
 import { POINTS_PER_DOLLAR } from '../../../lib/rewards/catalog';
 import { calculateRewardDiscount } from '../../../lib/rewards/eligibility';
+import { isRanksSchemaMissingError } from '../../../lib/db';
 
 interface NormalizedOrderItem {
   name: string;
@@ -60,10 +61,12 @@ export default async function handler(
       paymentStatus,
       deliveryAddress,
       deliveryPhone,
-      deliveryQuoteId, // DoorDash quote ID to accept
-      deliveryFee, // Delivery fee from quote
+      deliveryQuoteId,
+      deliveryFee,
       rewardRedemptionId,
       rewardDiscount,
+      rankDiscountPercent,
+      rankDiscountAmount,
       notes,
     } = req.body;
 
@@ -165,8 +168,25 @@ export default async function handler(
       appliedReward = rewardRedemption;
     }
 
+    let appliedRankDiscount = 0;
+    if (rankDiscountPercent && rankDiscountPercent > 0) {
+      try {
+        const userRank = await db.getUserRank(user.id);
+        const { getDiscountPercent } = await import('../../../lib/ranks/config');
+        const serverDiscountPercent = getDiscountPercent(userRank.rank);
+
+        if (serverDiscountPercent > 0 && Math.abs(serverDiscountPercent - Number(rankDiscountPercent)) < 0.01) {
+          appliedRankDiscount = Number((subtotal * (serverDiscountPercent / 100)).toFixed(2));
+        }
+      } catch (error) {
+        if (!isRanksSchemaMissingError(error)) {
+          throw error;
+        }
+      }
+    }
+
     const expectedTotal = Number(
-      (subtotal + normalizedDeliveryFee - appliedRewardDiscount).toFixed(2)
+      (subtotal + normalizedDeliveryFee - appliedRewardDiscount - appliedRankDiscount).toFixed(2)
     );
 
     if (expectedTotal <= 0) {
@@ -232,6 +252,11 @@ export default async function handler(
     }
     if (appliedReward) {
       orderNotes = `[REWARD APPLIED: ${appliedReward.rewardLabel} -$${appliedRewardDiscount.toFixed(
+        2
+      )}] ${orderNotes}`.trim();
+    }
+    if (appliedRankDiscount > 0) {
+      orderNotes = `[RANK DISCOUNT: ${rankDiscountPercent}% -$${appliedRankDiscount.toFixed(
         2
       )}] ${orderNotes}`.trim();
     }
