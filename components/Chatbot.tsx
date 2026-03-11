@@ -19,6 +19,7 @@ interface ConversationMessage {
 
 const Chatbot: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isBubbleHovered, setIsBubbleHovered] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       text: "Hi! I'm SushiBot, your personal ordering assistant. \n\nI can help you:\n* Explore our menu\n* Get recommendations\n* Add items to your cart\n* Answer questions about dishes\n\nWhat would you like today?",
@@ -200,31 +201,45 @@ const Chatbot: React.FC = () => {
       {!isOpen ? (
         <button
           onClick={() => setIsOpen(true)}
+          onMouseEnter={() => setIsBubbleHovered(true)}
+          onMouseLeave={() => setIsBubbleHovered(false)}
           style={{
             background: 'linear-gradient(135deg, #fc3678 0%, #f1d00f 100%)',
             color: '#fff',
-            padding: '16px 24px',
+            padding: isBubbleHovered ? '16px 24px' : '14px',
             borderRadius: '50px',
             border: 'none',
             cursor: 'pointer',
-            fontSize: '16px',
+            fontSize: isBubbleHovered ? '16px' : '20px',
             fontWeight: '600',
-            boxShadow: '0 8px 24px rgba(252, 54, 120, 0.4), 0 0 20px rgba(241, 208, 15, 0.3)',
+            boxShadow: isBubbleHovered
+              ? '0 12px 32px rgba(252, 54, 120, 0.5), 0 0 30px rgba(241, 208, 15, 0.4)'
+              : '0 6px 16px rgba(252, 54, 120, 0.3), 0 0 12px rgba(241, 208, 15, 0.2)',
             transition: 'all 0.3s ease',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'scale(1.05)';
-            e.currentTarget.style.boxShadow = '0 12px 32px rgba(252, 54, 120, 0.5), 0 0 30px rgba(241, 208, 15, 0.4)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'scale(1)';
-            e.currentTarget.style.boxShadow = '0 8px 24px rgba(252, 54, 120, 0.4), 0 0 20px rgba(241, 208, 15, 0.3)';
+            justifyContent: 'center',
+            gap: isBubbleHovered ? '8px' : '0px',
+            transform: isBubbleHovered ? 'scale(1.05)' : 'scale(1)',
+            width: isBubbleHovered ? 'auto' : '52px',
+            height: isBubbleHovered ? 'auto' : '52px',
+            overflow: 'hidden',
+            whiteSpace: 'nowrap',
           }}
         >
-          Chat with SushiBot
+          <span style={{ fontSize: '20px', flexShrink: 0 }}>🍣</span>
+          <span
+            style={{
+              maxWidth: isBubbleHovered ? '200px' : '0px',
+              opacity: isBubbleHovered ? 1 : 0,
+              transition: 'max-width 0.3s ease, opacity 0.25s ease',
+              overflow: 'hidden',
+              display: 'inline-block',
+              fontSize: '16px',
+            }}
+          >
+            Chat with SushiBot
+          </span>
         </button>
       ) : (
         <div style={{
