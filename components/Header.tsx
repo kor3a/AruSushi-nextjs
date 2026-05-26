@@ -4,10 +4,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
 import { useRewards } from '../contexts/RewardsContext';
 import { canManageOrders } from '../lib/auth/roles';
-import { FaShoppingCart, FaUser, FaSignInAlt, FaBars } from 'react-icons/fa';
+import { FaShoppingCart, FaUser, FaBars } from 'react-icons/fa';
 
 const Header = () => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { pointsBalance, loading: rewardsLoading } = useRewards();
   const { getTotalItems, items } = useCart();
   const [cartItemsCount, setCartItemsCount] = useState(0);
@@ -81,37 +81,85 @@ const Header = () => {
           </Link>
         )}
         {!showAdminOrders && (
-          <Link href="/cart" style={{ position: 'relative', display: 'inline-block' }}>
-            <FaShoppingCart size={20} style={{ color: '#f1d00f' }} />
-            {cartItemsCount > 0 && (
-              <span style={{
-                position: 'absolute',
-                top: '-8px',
-                right: '-8px',
-                background: '#fc3678',
-                color: 'white',
-                borderRadius: '50%',
-                width: '20px',
-                height: '20px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '12px',
-                fontWeight: 'bold'
-              }}>
-                {cartItemsCount}
-              </span>
-            )}
-          </Link>
+          <>
+            <Link href="/cart" className="cart-mobile" style={{ position: 'relative' }} title="Cart">
+              <FaShoppingCart size={20} style={{ color: '#f1d00f' }} />
+              {cartItemsCount > 0 && (
+                <span style={{
+                  position: 'absolute',
+                  top: '-8px',
+                  right: '-8px',
+                  background: '#fc3678',
+                  color: 'white',
+                  borderRadius: '50%',
+                  width: '20px',
+                  height: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '12px',
+                  fontWeight: 'bold'
+                }}>
+                  {cartItemsCount}
+                </span>
+              )}
+            </Link>
+            <Link href="/cart" className="cart-desktop" style={{ position: 'relative', color: '#f1d00f', textDecoration: 'none', fontSize: '1.7rem', fontWeight: 600 }}>
+              Cart
+              {cartItemsCount > 0 && (
+                <span style={{
+                  position: 'absolute',
+                  top: '-10px',
+                  right: '-14px',
+                  background: '#fc3678',
+                  color: 'white',
+                  borderRadius: '50%',
+                  width: '20px',
+                  height: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '12px',
+                  fontWeight: 'bold'
+                }}>
+                  {cartItemsCount}
+                </span>
+              )}
+            </Link>
+          </>
         )}
         {user ? (
-          <Link href="/profile" style={{ color: '#f1d00f', display: 'flex', alignItems: 'center' }} title="Profile">
-            <FaUser size={18} style={{ color: '#f1d00f' }} />
-          </Link>
+          <>
+            <Link href="/profile" className="auth-mobile" style={{ color: '#f1d00f', alignItems: 'center' }} title="Profile">
+              <FaUser size={18} style={{ color: '#f1d00f' }} />
+            </Link>
+            <button
+              type="button"
+              onClick={signOut}
+              className="auth-desktop"
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#f1d00f',
+                fontSize: '1.7rem',
+                fontWeight: 600,
+                padding: 0,
+                fontFamily: 'inherit',
+              }}
+            >
+              Sign Out
+            </button>
+          </>
         ) : (
-          <Link href="/auth/signin" style={{ color: '#f1d00f' }}>
-            <FaSignInAlt size={18} title="Sign in" style={{ color: '#f1d00f' }} />
-          </Link>
+          <>
+            <Link href="/auth/signin" className="auth-mobile" style={{ color: '#f1d00f' }} title="Sign in">
+              <FaUser size={18} style={{ color: '#f1d00f' }} />
+            </Link>
+            <Link href="/auth/signin" className="auth-desktop" style={{ color: '#f1d00f', textDecoration: 'none', fontSize: '1.7rem', fontWeight: 600 }}>
+              Sign In
+            </Link>
+          </>
         )}
         <button
           id="menu"
