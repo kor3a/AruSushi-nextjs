@@ -23,6 +23,10 @@ export interface UserPointsSummary {
   lifetimePointsRedeemed: number;
 }
 
+export interface UserPointsMeta {
+  updatedAt: Date | null;
+}
+
 export interface RewardRedemptionRecord {
   id: string;
   rewardType: RewardType;
@@ -38,6 +42,7 @@ type UserPointsRow = {
   points_balance: number;
   lifetime_points_earned: number;
   lifetime_points_redeemed: number;
+  updated_at?: Date;
 };
 
 type RewardRedemptionRow = {
@@ -247,6 +252,21 @@ class Database {
     `;
 
     return this.mapPointsRow(rows[0]);
+  }
+
+  async getUserPointsMeta(userId: string): Promise<UserPointsMeta> {
+    await this.ensureUserPointsAccount(userId);
+
+    const rows = await prisma.$queryRaw<UserPointsRow[]>`
+      SELECT updated_at
+      FROM user_points
+      WHERE user_id = ${userId}::uuid
+      LIMIT 1
+    `;
+
+    return {
+      updatedAt: rows[0]?.updated_at ?? null,
+    };
   }
 
   async addPointsToUser(userId: string, pointsToAdd: number): Promise<UserPointsSummary> {

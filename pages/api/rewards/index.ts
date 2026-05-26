@@ -31,10 +31,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (req.method === 'GET') {
       let pointsSummary;
+      let pointsMeta;
       let availableRedemptions;
       try {
-        [pointsSummary, availableRedemptions] = await Promise.all([
+        [pointsSummary, pointsMeta, availableRedemptions] = await Promise.all([
           db.getUserPointsSummary(user.id),
+          db.getUserPointsMeta(user.id),
           db.getAvailableRewardRedemptions(user.id),
         ]);
       } catch (error) {
@@ -58,6 +60,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         lifetimePointsEarned: pointsSummary.lifetimePointsEarned,
         lifetimePointsRedeemed: pointsSummary.lifetimePointsRedeemed,
         pointsPerDollar: POINTS_PER_DOLLAR,
+        pointsLastUpdatedAt: pointsMeta.updatedAt?.toISOString() ?? null,
         rewardsCatalog: REWARD_CATALOG,
         availableRedemptions: availableRedemptions.map((reward) => ({
           ...reward,
