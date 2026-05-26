@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { FaReceipt, FaChevronRight } from 'react-icons/fa';
 import { useAuth } from '../contexts/AuthContext';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -187,6 +189,55 @@ export default function Profile() {
       }}>
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
           <h1 style={{ fontSize: '36px', fontWeight: 'bold', color: '#f1d00f', marginBottom: '32px', textAlign: 'center' }}>My Profile</h1>
+
+          <Link
+            href="/my-orders"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '16px',
+              marginBottom: '24px',
+              padding: '20px 24px',
+              background: 'linear-gradient(135deg, rgba(252, 54, 120, 0.15) 0%, rgba(241, 208, 15, 0.08) 100%)',
+              border: '1px solid rgba(252, 54, 120, 0.3)',
+              borderRadius: '12px',
+              textDecoration: 'none',
+              color: '#fff',
+              transition: 'all 0.3s',
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.borderColor = '#fc3678';
+              e.currentTarget.style.boxShadow = '0 6px 20px rgba(252, 54, 120, 0.25)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.borderColor = 'rgba(252, 54, 120, 0.3)';
+              e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.2)';
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '48px',
+                height: '48px',
+                background: 'rgba(241, 208, 15, 0.15)',
+                borderRadius: '50%',
+                color: '#f1d00f',
+              }}>
+                <FaReceipt size={22} />
+              </div>
+              <div>
+                <div style={{ fontSize: '18px', fontWeight: 600, color: '#fff' }}>My Orders</div>
+                <div style={{ fontSize: '13px', color: '#ccc', marginTop: '2px' }}>View your order history and track current orders</div>
+              </div>
+            </div>
+            <FaChevronRight size={16} style={{ color: '#f1d00f' }} />
+          </Link>
 
           {error && (
             <div style={{

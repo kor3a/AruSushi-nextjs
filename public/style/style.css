@@ -129,6 +129,26 @@ header .icons i:hover {
 header .icons #menu {
     display: none;
 }
+
+header .icons .cart-mobile,
+header .icons .auth-mobile {
+    display: none;
+}
+
+header .icons .cart-desktop,
+header .icons .auth-desktop {
+    display: inline-flex;
+    align-items: center;
+}
+
+header .icons .auth-desktop {
+    margin-left: 1.5rem;
+}
+
+header .icons .cart-desktop:hover,
+header .icons .auth-desktop:hover {
+    color: #fff;
+}
 /* end of navbar */
 
 /* slider */
@@ -617,6 +637,17 @@ textarea.contact-form-text {
 
     header .icons #menu {
         display: inline-block;
+    }
+
+    header .icons .cart-mobile,
+    header .icons .auth-mobile {
+        display: inline-flex;
+        align-items: center;
+    }
+
+    header .icons .cart-desktop,
+    header .icons .auth-desktop {
+        display: none;
     }
 
     header .navbar {
