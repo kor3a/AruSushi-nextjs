@@ -41,18 +41,17 @@ const Header = () => {
         <img src="/img/aruLogo2.png" alt="A-Ru Sushi Logo" />
       </Link>
       <nav className={`navbar ${isMenuOpen ? 'active' : ''}`}>
-        <Link href="/" onClick={closeMenu}>Home</Link>
         {showAdminOrders ? (
           <>
+            <Link href="/" onClick={closeMenu}>Home</Link>
             <Link href="/admin/orders" onClick={closeMenu}>Orders</Link>
             <Link href="/admin/menu-prices" onClick={closeMenu}>Menu Prices</Link>
           </>
         ) : (
           <>
             <Link href="/menu" onClick={closeMenu}>Menu</Link>
-            {user && <Link href="/my-orders" onClick={closeMenu}>My Orders</Link>}
-            <Link href="/members" onClick={closeMenu}>Members</Link>
             <Link href="/contact" onClick={closeMenu}>Contact Us</Link>
+            <Link href="/rewards" onClick={closeMenu}>Rewards</Link>
             {user && <Link href="/profile" onClick={closeMenu}>Profile</Link>}
           </>
         )}
