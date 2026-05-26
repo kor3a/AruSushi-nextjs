@@ -141,6 +141,10 @@ header .icons .auth-desktop {
     align-items: center;
 }
 
+header .icons .auth-desktop {
+    margin-left: 1.5rem;
+}
+
 header .icons .cart-desktop:hover,
 header .icons .auth-desktop:hover {
     color: #fff;
