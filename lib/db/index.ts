@@ -186,12 +186,13 @@ class Database {
     return prisma.user.findUnique({ where: { id } });
   }
 
-  async createUser(userData: { id: string; email: string; name?: string | null }) {
+  async createUser(userData: { id: string; email: string; name?: string | null; birthday?: Date | null }) {
     const createdUser = await prisma.user.create({
       data: {
         id: userData.id,
         email: userData.email,
         name: userData.name,
+        birthday: userData.birthday ?? null,
       },
     });
 
@@ -207,18 +208,18 @@ class Database {
     return createdUser;
   }
 
-  async updateUser(id: string, updates: Partial<{ name: string; phone: string; address: string }>) {
+  async updateUser(id: string, updates: Partial<{ name: string; phone: string; address: string; birthday: Date | null }>) {
     return prisma.user.update({
       where: { id },
       data: updates,
     });
   }
 
-  async upsertUser(userData: { id: string; email: string; name?: string | null }) {
+  async upsertUser(userData: { id: string; email: string; name?: string | null; birthday?: Date | null }) {
     const user = await prisma.user.upsert({
       where: { id: userData.id },
-      update: { email: userData.email, name: userData.name },
-      create: { id: userData.id, email: userData.email, name: userData.name },
+      update: { email: userData.email, name: userData.name, birthday: userData.birthday ?? undefined },
+      create: { id: userData.id, email: userData.email, name: userData.name, birthday: userData.birthday ?? null },
     });
 
     try {
