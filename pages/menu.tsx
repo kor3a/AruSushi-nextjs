@@ -69,14 +69,15 @@ const MenuPage = () => {
         <section className="our-menu" id="menu">
           <div
             style={{
-              maxWidth: '1000px',
-              margin: '120px auto 24px',
+              maxWidth: '500px',
+              margin: '100px auto 20px',
               padding: '12px 16px',
               borderRadius: '8px',
               background: '#fff3cd',
               border: '1px solid #ffe69c',
               color: '#664d03',
               fontWeight: 700,
+              fontSize: '18px',
               textAlign: 'center'
             }}
           >
