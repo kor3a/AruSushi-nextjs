@@ -24,7 +24,7 @@ export const RANK_TIERS: Record<MemberRank, RankTier> = {
     benefits: [
       'Collect sushi points on every order',
       'Birthday rewards',
-      '2% off every order',
+      
     ],
   },
   platinum: {
@@ -32,13 +32,13 @@ export const RANK_TIERS: Record<MemberRank, RankTier> = {
     label: 'Platinum',
     color: '#B0C4DE',
     bgGradient: 'linear-gradient(135deg, #D6E4F0 0%, #B0C4DE 50%, #8FAABE 100%)',
-    upgradeCost: 1000,
+    upgradeCost: 1500,
     discountPercent: 5,
     benefits: [
       'Collect sushi points on every order',
       'Birthday rewards',
       'One-time free appetizer',
-      '5% off every order',
+      
     ],
   },
   diamond: {
@@ -46,14 +46,14 @@ export const RANK_TIERS: Record<MemberRank, RankTier> = {
     label: 'Diamond',
     color: '#B9F2FF',
     bgGradient: 'linear-gradient(135deg, #E0F7FA 0%, #B9F2FF 50%, #81D4FA 100%)',
-    upgradeCost: 1500,
+    upgradeCost: 4500,
     discountPercent: 10,
     benefits: [
       'Collect sushi points on every order',
       'Birthday rewards',
       'Free appetizer every month',
       'One-time free roll',
-      '10% off every order',
+      
     ],
   },
 };
