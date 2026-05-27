@@ -13,6 +13,7 @@ interface UserProfile {
   name: string | null;
   phone: string | null;
   address: string | null;
+  birthday: string | null;
   createdAt: string;
 }
 
@@ -371,6 +372,30 @@ export default function Profile() {
                     }}
                     placeholder="Your address"
                   />
+                </div>
+
+                {/* Birthday (read-only) */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#f1d00f', marginBottom: '8px' }}>
+                    Birthday
+                  </label>
+                  <input
+                    type="text"
+                    value={profile?.birthday ? new Date(profile.birthday).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : 'Not provided'}
+                    disabled
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      background: 'rgba(255, 255, 255, 0.03)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '8px',
+                      color: '#999',
+                      fontSize: '14px',
+                      outline: 'none',
+                      cursor: 'not-allowed'
+                    }}
+                  />
+                  <p style={{ marginTop: '4px', fontSize: '12px', color: '#888' }}>Birthday cannot be changed</p>
                 </div>
 
                 {/* Password Change Section */}
