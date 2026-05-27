@@ -26,6 +26,7 @@ function applyPriceOverrides(
 }
 
 const MenuPage = () => {
+  const orderingEnabled = false;
   const [priceOverrides, setPriceOverrides] = useState<Record<string, number>>({});
 
   useEffect(() => {
@@ -66,6 +67,9 @@ const MenuPage = () => {
 
       <main>
         <section className="our-menu" id="menu">
+          <div style={{ maxWidth: '1000px', margin: '120px auto 24px', padding: '12px 16px', borderRadius: '8px', background: '#fff3cd', border: '1px solid #ffe69c', color: '#664d03', fontWeight: 700, textAlign: 'center' }}>
+            Ordering Online is coming soon!
+          </div>
           <h1 className="heading">Lunch (11am - 3pm)</h1>
           <div className="menu-container">
             {resolvedLunch.map((category, idx) => (
@@ -83,6 +87,7 @@ const MenuPage = () => {
                       price={item.price}
                       description={item.description}
                       options={item.options}
+                      orderingEnabled={orderingEnabled}
                     />
                   ))}
                 </div>
@@ -107,6 +112,7 @@ const MenuPage = () => {
                       price={item.price}
                       description={item.description}
                       options={item.options}
+                      orderingEnabled={orderingEnabled}
                     />
                   ))}
                 </div>

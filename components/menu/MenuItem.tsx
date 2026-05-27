@@ -8,9 +8,10 @@ interface MenuItemProps {
   price: number;
   description?: string;
   options?: MenuItemOption[];
+  orderingEnabled?: boolean;
 }
 
-export default function MenuItem({ name, price, description, options }: MenuItemProps) {
+export default function MenuItem({ name, price, description, options, orderingEnabled = true }: MenuItemProps) {
   const { addItem } = useCart();
   const [added, setAdded] = useState(false);
   const [specialNotes, setSpecialNotes] = useState('');
@@ -228,14 +229,14 @@ export default function MenuItem({ name, price, description, options }: MenuItem
         <div style={{ display: 'flex', gap: '10px' }}>
           <button
             onClick={handleAddToCart}
-            disabled={added || (showOptions && options && !areRequiredOptionsSelected())}
+            disabled={!orderingEnabled || added || (showOptions && options && !areRequiredOptionsSelected())}
             style={{
-              background: added ? '#10b981' : (showOptions && options && !areRequiredOptionsSelected()) ? '#ccc' : '#fc3678',
+              background: !orderingEnabled ? '#d1d5db' : added ? '#10b981' : (showOptions && options && !areRequiredOptionsSelected()) ? '#ccc' : '#fc3678',
               color: 'white',
               border: 'none',
               padding: '8px 16px',
               borderRadius: '4px',
-              cursor: (added || (showOptions && options && !areRequiredOptionsSelected())) ? 'not-allowed' : 'pointer',
+              cursor: (!orderingEnabled || added || (showOptions && options && !areRequiredOptionsSelected())) ? 'not-allowed' : 'pointer',
               fontSize: '14px',
               fontWeight: 'bold',
               display: 'flex',
@@ -251,12 +252,12 @@ export default function MenuItem({ name, price, description, options }: MenuItem
               </>
             ) : (
               <>
-                <FaShoppingCart size={14} /> Add to Cart
+                <FaShoppingCart size={14} /> {orderingEnabled ? 'Add to Cart' : 'Online Ordering Paused'}
               </>
             )}
           </button>
 
-          {!showNotes && !added && (
+          {!showNotes && !added && orderingEnabled && (
             <button
               onClick={() => setShowNotes(true)}
               style={{
