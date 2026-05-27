@@ -1,31 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../contexts/AuthContext';
-import { useCart } from '../contexts/CartContext';
 import { useRewards } from '../contexts/RewardsContext';
 import { canManageOrders } from '../lib/auth/roles';
-import { FaShoppingCart, FaUser, FaBars } from 'react-icons/fa';
+import { FaUser, FaBars } from 'react-icons/fa';
 
 const Header = () => {
   const { user, signOut } = useAuth();
   const { pointsBalance, loading: rewardsLoading } = useRewards();
-  const { getTotalItems, items } = useCart();
-  const [cartItemsCount, setCartItemsCount] = useState(0);
-  const [mounted, setMounted] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const showAdminOrders = canManageOrders(user?.email);
-
-  // Only get cart count on client side to prevent hydration mismatch
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Update cart count when items change
-  useEffect(() => {
-    if (mounted) {
-      setCartItemsCount(getTotalItems());
-    }
-  }, [mounted, items, getTotalItems]);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -79,54 +63,6 @@ const Header = () => {
               {rewardsLoading && pointsBalance === 0 ? '...' : `${pointsBalance} pts`}
             </span>
           </Link>
-        )}
-        {!showAdminOrders && (
-          <>
-            <Link href="/cart" className="cart-mobile" style={{ position: 'relative' }} title="Cart">
-              <FaShoppingCart size={20} style={{ color: '#f1d00f' }} />
-              {cartItemsCount > 0 && (
-                <span style={{
-                  position: 'absolute',
-                  top: '-8px',
-                  right: '-8px',
-                  background: '#fc3678',
-                  color: 'white',
-                  borderRadius: '50%',
-                  width: '20px',
-                  height: '20px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '12px',
-                  fontWeight: 'bold'
-                }}>
-                  {cartItemsCount}
-                </span>
-              )}
-            </Link>
-            <Link href="/cart" className="cart-desktop" style={{ position: 'relative', color: '#f1d00f', textDecoration: 'none', fontSize: '1.7rem', fontWeight: 600 }}>
-              Cart
-              {cartItemsCount > 0 && (
-                <span style={{
-                  position: 'absolute',
-                  top: '-10px',
-                  right: '-14px',
-                  background: '#fc3678',
-                  color: 'white',
-                  borderRadius: '50%',
-                  width: '20px',
-                  height: '20px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '12px',
-                  fontWeight: 'bold'
-                }}>
-                  {cartItemsCount}
-                </span>
-              )}
-            </Link>
-          </>
         )}
         {user ? (
           <>

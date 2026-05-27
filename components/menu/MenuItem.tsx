@@ -8,9 +8,10 @@ interface MenuItemProps {
   price: number;
   description?: string;
   options?: MenuItemOption[];
+  orderingEnabled?: boolean;
 }
 
-export default function MenuItem({ name, price, description, options }: MenuItemProps) {
+export default function MenuItem({ name, price, description, options, orderingEnabled = true }: MenuItemProps) {
   const { addItem } = useCart();
   const [added, setAdded] = useState(false);
   const [specialNotes, setSpecialNotes] = useState('');
@@ -28,11 +29,8 @@ export default function MenuItem({ name, price, description, options }: MenuItem
   const handleMultiSelectChange = (optionName: string, choice: string, checked: boolean) => {
     setSelectedOptions(prev => {
       const current = prev[optionName] as string[] || [];
-      if (checked) {
-        return { ...prev, [optionName]: [...current, choice] };
-      } else {
-        return { ...prev, [optionName]: current.filter(c => c !== choice) };
-      }
+      if (checked) return { ...prev, [optionName]: [...current, choice] };
+      return { ...prev, [optionName]: current.filter(c => c !== choice) };
     });
   };
 
@@ -46,9 +44,7 @@ export default function MenuItem({ name, price, description, options }: MenuItem
     return options.every(option => {
       if (option.required) {
         const value = selectedOptions[option.name];
-        if (Array.isArray(value)) {
-          return value.length > 0;
-        }
+        if (Array.isArray(value)) return value.length > 0;
         return value && String(value).trim() !== '';
       }
       return true;
@@ -56,24 +52,20 @@ export default function MenuItem({ name, price, description, options }: MenuItem
   };
 
   const calculatePrice = (): number => {
-    if (!options || options.length === 0) {
-      return price;
-    }
+    if (!options || options.length === 0) return price;
 
     let calculatedPrice = price;
 
-    // Check for choicePrices (single select with price)
     for (const option of options) {
       if (option.choicePrices && selectedOptions[option.name]) {
         const selectedChoice = selectedOptions[option.name];
         if (typeof selectedChoice === 'string' && option.choicePrices[selectedChoice] !== undefined) {
           calculatedPrice = option.choicePrices[selectedChoice];
-          break; // Use the first matching price option
+          break;
         }
       }
     }
 
-    // Add add-on prices
     for (const option of options) {
       if (option.addonPrices && option.isMultiSelect) {
         const selectedAddons = selectedOptions[option.name] as string[] || [];
@@ -91,37 +83,28 @@ export default function MenuItem({ name, price, description, options }: MenuItem
   const currentPrice = calculatePrice();
 
   const handleAddToCart = () => {
-    // If item has options and they're not shown yet, show them instead of adding
     if (options && options.length > 0 && !showOptions) {
       setShowOptions(true);
       return;
     }
 
-    // If options are required but not all selected, don't add
     if (options && !areRequiredOptionsSelected()) {
       return;
     }
-    
-    // Convert arrays to comma-separated strings for storage
+
     const optionsForCart: { [key: string]: string } = {};
     if (options) {
       Object.entries(selectedOptions).forEach(([key, value]) => {
-        if (Array.isArray(value)) {
-          optionsForCart[key] = value.join(', ');
-        } else {
-          optionsForCart[key] = String(value);
-        }
+        optionsForCart[key] = Array.isArray(value) ? value.join(', ') : String(value);
       });
     }
-    
+
     addItem({ name, price: currentPrice }, 1, specialNotes, options ? optionsForCart : undefined);
     setAdded(true);
     setShowNotes(false);
     setShowOptions(false);
     setSpecialNotes('');
     setSelectedOptions({});
-
-    // Reset the "added" state after 2 seconds
     setTimeout(() => setAdded(false), 2000);
   };
 
@@ -228,14 +211,14 @@ export default function MenuItem({ name, price, description, options }: MenuItem
         <div style={{ display: 'flex', gap: '10px' }}>
           <button
             onClick={handleAddToCart}
-            disabled={added || (showOptions && options && !areRequiredOptionsSelected())}
+            disabled={!orderingEnabled || added || (showOptions && options && !areRequiredOptionsSelected())}
             style={{
-              background: added ? '#10b981' : (showOptions && options && !areRequiredOptionsSelected()) ? '#ccc' : '#fc3678',
+              background: !orderingEnabled ? '#d1d5db' : added ? '#10b981' : (showOptions && options && !areRequiredOptionsSelected()) ? '#ccc' : '#fc3678',
               color: 'white',
               border: 'none',
               padding: '8px 16px',
               borderRadius: '4px',
-              cursor: (added || (showOptions && options && !areRequiredOptionsSelected())) ? 'not-allowed' : 'pointer',
+              cursor: (!orderingEnabled || added || (showOptions && options && !areRequiredOptionsSelected())) ? 'not-allowed' : 'pointer',
               fontSize: '14px',
               fontWeight: 'bold',
               display: 'flex',
@@ -243,7 +226,6 @@ export default function MenuItem({ name, price, description, options }: MenuItem
               gap: '5px',
               transition: 'all 0.3s'
             }}
-            title={showOptions && options && !areRequiredOptionsSelected() ? 'Please select all required options' : ''}
           >
             {added ? (
               <>
@@ -251,12 +233,12 @@ export default function MenuItem({ name, price, description, options }: MenuItem
               </>
             ) : (
               <>
-                <FaShoppingCart size={14} /> Add to Cart
+                <FaShoppingCart size={14} /> {orderingEnabled ? 'Add to Cart' : 'Online Ordering Paused'}
               </>
             )}
           </button>
 
-          {!showNotes && !added && (
+          {!showNotes && !added && orderingEnabled && (
             <button
               onClick={() => setShowNotes(true)}
               style={{
