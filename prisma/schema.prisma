@@ -18,6 +18,7 @@ model User {
   name      String?
   phone     String?
   address   String?
+  birthday  DateTime? @db.Date
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
   orders    Order[]

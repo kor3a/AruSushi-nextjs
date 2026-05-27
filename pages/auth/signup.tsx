@@ -15,6 +15,7 @@ export default function SignUp() {
     confirmPassword: '',
     phone: '',
     address: '',
+    birthday: '',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -59,6 +60,7 @@ export default function SignUp() {
             name: formData.name,
             phone: formData.phone,
             address: formData.address,
+            birthday: formData.birthday,
           },
         },
       });
@@ -79,6 +81,7 @@ export default function SignUp() {
             name: formData.name,
             phone: formData.phone,
             address: formData.address,
+            birthday: formData.birthday || null,
           }),
         });
 
@@ -263,6 +266,30 @@ export default function SignUp() {
                     }}
                   />
                 </div>
+              </div>
+
+              <div>
+                <label htmlFor="birthday" style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#f1d00f', marginBottom: '6px' }}>
+                  Birthday
+                </label>
+                <input
+                  type="date"
+                  id="birthday"
+                  name="birthday"
+                  value={formData.birthday}
+                  onChange={handleChange}
+                  max={new Date().toISOString().split('T')[0]}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px',
+                    color: '#fff',
+                    fontSize: '15px',
+                    colorScheme: 'dark'
+                  }}
+                />
               </div>
 
               <div>

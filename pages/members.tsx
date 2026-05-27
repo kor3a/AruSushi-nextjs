@@ -180,29 +180,6 @@ export default function Members() {
                       </div>
                     )}
 
-                    {tier.discountPercent > 0 && (
-                      <div style={{
-                        textAlign: 'center',
-                        marginBottom: '16px',
-                        padding: '10px',
-                        background: 'rgba(252, 54, 120, 0.1)',
-                        borderRadius: '8px',
-                        border: '1px solid rgba(252, 54, 120, 0.2)',
-                      }}>
-                        <p style={{
-                          color: '#fc3678',
-                          fontSize: '20px',
-                          fontWeight: '700',
-                          margin: 0,
-                        }}>
-                          {tier.discountPercent}% OFF
-                        </p>
-                        <p style={{ color: '#ccc', fontSize: '12px', margin: '2px 0 0' }}>
-                          every order
-                        </p>
-                      </div>
-                    )}
-
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       {tier.benefits.map((benefit, bIdx) => (
                         <div key={bIdx} style={{

@@ -37,7 +37,7 @@ export const RANK_TIERS: Record<MemberRank, RankTier> = {
     benefits: [
       'Collect sushi points on every order',
       'Birthday rewards',
-      'One-time free appetizer',
+      'Free Appetizer every month',
       
     ],
   },
@@ -52,7 +52,7 @@ export const RANK_TIERS: Record<MemberRank, RankTier> = {
       'Collect sushi points on every order',
       'Birthday rewards',
       'Free appetizer every month',
-      'One-time free roll',
+      'Free House Special roll every month',
       
     ],
   },

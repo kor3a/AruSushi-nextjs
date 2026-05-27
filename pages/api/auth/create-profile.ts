@@ -10,10 +10,19 @@ export default async function handler(
   }
 
   try {
-    const { id, email, name, phone, address } = req.body;
+    const { id, email, name, phone, address, birthday } = req.body;
 
     if (!id || !email) {
       return res.status(400).json({ message: 'User ID and email are required' });
+    }
+
+    let birthdayDate: Date | null = null;
+    if (birthday) {
+      const parsed = new Date(birthday);
+      if (Number.isNaN(parsed.getTime())) {
+        return res.status(400).json({ message: 'Invalid birthday' });
+      }
+      birthdayDate = parsed;
     }
 
     // Create or update user profile in our database
@@ -21,6 +30,7 @@ export default async function handler(
       id,
       email,
       name: name || null,
+      birthday: birthdayDate,
     });
 
     // Update additional fields if provided
