@@ -35,7 +35,7 @@ const Header = () => {
           <>
             <Link href="/menu" onClick={closeMenu}>Menu</Link>
             <Link href="/contact" onClick={closeMenu}>Contact Us</Link>
-            <Link href="/rewards" onClick={closeMenu}>Rewards</Link>
+            <Link href={user ? '/rewards' : '/members'} onClick={closeMenu}>{user ? 'Rewards' : 'Members'}</Link>
             {user && <Link href="/profile" onClick={closeMenu}>Profile</Link>}
           </>
         )}

@@ -48,6 +48,7 @@ const MenuPage = () => {
   return (
     <>
       <Head>
+        {/* Google tag (gtag.js) */}
         <Script async src="https://www.googletagmanager.com/gtag/js?id=G-MXRBK3QFC4" strategy="afterInteractive" />
         <Script id="google-analytics" strategy="afterInteractive">
           {`
@@ -69,7 +70,7 @@ const MenuPage = () => {
           <div
             style={{
               maxWidth: '1000px',
-              margin: '0 auto 24px',
+              margin: '120px auto 24px',
               padding: '12px 16px',
               borderRadius: '8px',
               background: '#fff3cd',
@@ -130,6 +131,15 @@ const MenuPage = () => {
                 </div>
               </div>
             ))}
+          </div>
+
+          <div style={{ textAlign: 'center', marginTop: '40px', padding: '20px', background: '#f9f9f9', borderRadius: '8px' }}>
+            <p style={{ fontSize: '16px', color: '#666', marginBottom: '15px' }}>
+              <strong>Note:</strong> This is a simplified menu with the most popular items. The full menu is available in-store.
+            </p>
+            <p style={{ fontSize: '14px', color: '#888' }}>
+              All lunch items are served with miso soup and rice unless otherwise noted.
+            </p>
           </div>
         </section>
       </main>

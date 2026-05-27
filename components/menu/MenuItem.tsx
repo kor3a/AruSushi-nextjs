@@ -29,8 +29,11 @@ export default function MenuItem({ name, price, description, options, orderingEn
   const handleMultiSelectChange = (optionName: string, choice: string, checked: boolean) => {
     setSelectedOptions(prev => {
       const current = prev[optionName] as string[] || [];
-      if (checked) return { ...prev, [optionName]: [...current, choice] };
-      return { ...prev, [optionName]: current.filter(c => c !== choice) };
+      if (checked) {
+        return { ...prev, [optionName]: [...current, choice] };
+      } else {
+        return { ...prev, [optionName]: current.filter(c => c !== choice) };
+      }
     });
   };
 
@@ -44,7 +47,9 @@ export default function MenuItem({ name, price, description, options, orderingEn
     return options.every(option => {
       if (option.required) {
         const value = selectedOptions[option.name];
-        if (Array.isArray(value)) return value.length > 0;
+        if (Array.isArray(value)) {
+          return value.length > 0;
+        }
         return value && String(value).trim() !== '';
       }
       return true;
@@ -52,20 +57,24 @@ export default function MenuItem({ name, price, description, options, orderingEn
   };
 
   const calculatePrice = (): number => {
-    if (!options || options.length === 0) return price;
+    if (!options || options.length === 0) {
+      return price;
+    }
 
     let calculatedPrice = price;
 
+    // Check for choicePrices (single select with price)
     for (const option of options) {
       if (option.choicePrices && selectedOptions[option.name]) {
         const selectedChoice = selectedOptions[option.name];
         if (typeof selectedChoice === 'string' && option.choicePrices[selectedChoice] !== undefined) {
           calculatedPrice = option.choicePrices[selectedChoice];
-          break;
+          break; // Use the first matching price option
         }
       }
     }
 
+    // Add add-on prices
     for (const option of options) {
       if (option.addonPrices && option.isMultiSelect) {
         const selectedAddons = selectedOptions[option.name] as string[] || [];
@@ -83,28 +92,37 @@ export default function MenuItem({ name, price, description, options, orderingEn
   const currentPrice = calculatePrice();
 
   const handleAddToCart = () => {
+    // If item has options and they're not shown yet, show them instead of adding
     if (options && options.length > 0 && !showOptions) {
       setShowOptions(true);
       return;
     }
 
+    // If options are required but not all selected, don't add
     if (options && !areRequiredOptionsSelected()) {
       return;
     }
-
+    
+    // Convert arrays to comma-separated strings for storage
     const optionsForCart: { [key: string]: string } = {};
     if (options) {
       Object.entries(selectedOptions).forEach(([key, value]) => {
-        optionsForCart[key] = Array.isArray(value) ? value.join(', ') : String(value);
+        if (Array.isArray(value)) {
+          optionsForCart[key] = value.join(', ');
+        } else {
+          optionsForCart[key] = String(value);
+        }
       });
     }
-
+    
     addItem({ name, price: currentPrice }, 1, specialNotes, options ? optionsForCart : undefined);
     setAdded(true);
     setShowNotes(false);
     setShowOptions(false);
     setSpecialNotes('');
     setSelectedOptions({});
+
+    // Reset the "added" state after 2 seconds
     setTimeout(() => setAdded(false), 2000);
   };
 
@@ -226,6 +244,7 @@ export default function MenuItem({ name, price, description, options, orderingEn
               gap: '5px',
               transition: 'all 0.3s'
             }}
+            title={showOptions && options && !areRequiredOptionsSelected() ? 'Please select all required options' : ''}
           >
             {added ? (
               <>
