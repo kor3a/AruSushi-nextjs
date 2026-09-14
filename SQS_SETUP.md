@@ -128,3 +128,117 @@ Three things end up in there, and they want different handling:
 Redrive with `StartMessageMoveTask` or the console's redrive button. Don't
 redrive blindly — check which of the three you have first, or a permanently bad
 address just refills the DLQ.
+
+---
+
+# Delivery webhook ingestion (API Gateway → SQS)
+
+DoorDash posts delivery status events — Dasher assigned, picked up, dropped
+off. These used to go straight to `pages/api/webhooks/doordash.ts`, which meant
+a deploy, a container restart or an OOM lost whatever arrived during the gap. A
+lost `DASHER_PICKED_UP` leaves an order stuck on the customer's tracking page.
+
+## Flow
+
+```
+DoorDash
+  └─ POST → API Gateway (REST)
+        ├─ validates body against a JSON Schema model
+        ├─ throttles (20 rps, burst 40)
+        └─ AWS service integration → SQS      ← no Lambda, no container
+              ↓                                   returns 202 immediately
+  worker: delivery consumer
+        ├─ verifies the DoorDash shared secret
+        └─ processDeliveryEvent() → update order → realtime broadcast
+```
+
+The point is what is **not** in the ingest path. No Lambda, no container, no
+code of ours. The only things that must be up for an event to be accepted are
+API Gateway and SQS. If the worker is down, events wait in the queue.
+
+## Why REST API and not HTTP API
+
+HTTP APIs are cheaper and lower latency, but they have no request validators and
+no JSON Schema models. Validating the payload shape at the edge is half the
+reason for a gateway here — a body with no `event_name` can never be processed,
+so rejecting it at the edge keeps it off the queue entirely rather than spending
+five receives and a DLQ slot to reach the same conclusion.
+
+## Where authentication happens, and why it's not at the edge
+
+The gateway has no compute in it, so it cannot verify DoorDash's shared secret.
+That is the deliberate trade for an ingest path that can't be taken down by our
+container.
+
+The mapping template forwards the `Authorization` header into the message
+envelope, and `lib/doordash/webhookAuth.ts` verifies it in the consumer — with a
+constant-time compare — before anything touches the database. Someone who finds
+the endpoint can put garbage on the queue; they cannot change an order. Edge
+throttling bounds how much garbage.
+
+If that trade ever stops being acceptable, the upgrade is a Lambda authorizer or
+a REST API key, at the cost of putting compute back in the path.
+
+## The message envelope
+
+The mapping template wraps DoorDash's body:
+
+```json
+{
+  "headers": { "authorization": "Basic ..." },
+  "requestId": "...",
+  "receivedAt": "1789000000000",
+  "body": { "event_name": "DASHER_PICKED_UP", "delivery_id": "..." }
+}
+```
+
+`$input.json('$')` is inserted raw. Passing it through `$util.escapeJavaScript`
+— the obvious-looking thing to do — produces a string of escaped quotes in an
+object position, which is not valid JSON. The header value *is* escaped, because
+it lands inside a JSON string literal.
+
+`worker/__tests__/gatewayTemplate.test.ts` renders the template straight out of
+the `.tf` file and feeds the result through the real consumer, so that seam is
+covered by a test rather than by hope.
+
+## Idempotency
+
+Delivery events are naturally idempotent — setting a status to the value it
+already has is a no-op — with one exception. `DASHER_PICKED_UP` and
+`DASHER_DROPPED_OFF` fall back to `new Date()` when DoorDash omits a timestamp,
+so a redelivery would overwrite the real pickup time with whenever the retry
+ran. Both are now guarded to stamp only once.
+
+## Setup
+
+```bash
+cd infra
+terraform apply
+```
+
+Then point the DoorDash developer portal webhook at the `doordash_webhook_url`
+output, and set on the worker:
+
+```
+SQS_DELIVERY_EVENTS_QUEUE_URL=<delivery_events_queue_url output>
+DOORDASH_WEBHOOK_AUTH_HEADER=<the exact Authorization value DoorDash sends>
+```
+
+## Fallback
+
+`pages/api/webhooks/doordash.ts` still works and runs the same
+`processDeliveryEvent`, so the two paths can't drift. It's there for local
+development and as a way back if the gateway needs bypassing. It logs a warning
+if it receives traffic while the queue is configured, which usually means
+DoorDash is still pointed at the old URL.
+
+## Tests
+
+```bash
+npm run test:outbox     # 30 assertions — order pipeline
+npm run test:delivery   # 19 assertions — delivery consumer
+npm run test:gateway    # 14 assertions — mapping template contract
+```
+
+All three need a Postgres and the schema applied; SQS and SES are stubbed at the
+SDK client.

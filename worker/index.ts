@@ -14,15 +14,19 @@
 import { prisma } from '../lib/db';
 import { drainOutbox, recoverStalePublishing } from '../lib/outbox/publisher';
 import {
-  receiveMessages,
-  deleteMessage,
+  orderEventsQueue,
+  deliveryEventsQueue,
   isQueueConfigured,
-  ORDER_EVENTS_QUEUE_URL,
 } from '../lib/queue/sqs';
 import {
   handleOrderEvent,
   UnprocessableMessageError,
 } from '../lib/queue/orderEventConsumer';
+import {
+  handleDeliveryEvent,
+  UnprocessableDeliveryEventError,
+  type DeliveryEventEnvelope,
+} from '../lib/queue/deliveryEventConsumer';
 import type { OutboxMessage } from '../lib/outbox/types';
 
 const PUBLISH_INTERVAL_MS = Number(process.env.OUTBOX_PUBLISH_INTERVAL_MS || 2000);
@@ -65,10 +69,24 @@ async function publisherLoop(): Promise<void> {
   }
 }
 
-async function consumerLoop(): Promise<void> {
+/**
+ * One consumer loop, shared by both queues.
+ *
+ * `isUnprocessable` decides which errors are the message's own fault. Those get
+ * deleted rather than retried, so the DLQ only ever collects failures a person
+ * can actually do something about. Everything else is left on the queue to
+ * reappear after the visibility timeout and, after maxReceiveCount, land in the
+ * DLQ.
+ */
+async function consumerLoop<T>(
+  label: string,
+  queue: { receive: (n?: number) => Promise<any[]>; delete: (h: string) => Promise<void> },
+  handle: (message: T) => Promise<unknown>,
+  isUnprocessable: (error: unknown) => boolean
+): Promise<void> {
   while (!shuttingDown) {
     try {
-      const messages = await receiveMessages();
+      const messages = await queue.receive();
 
       for (const message of messages) {
         if (!message.Body || !message.ReceiptHandle) continue;
@@ -77,42 +95,38 @@ async function consumerLoop(): Promise<void> {
           message.Attributes?.ApproximateReceiveCount || 1
         );
 
-        let parsed: OutboxMessage;
+        let parsed: T;
         try {
-          parsed = JSON.parse(message.Body) as OutboxMessage;
+          parsed = JSON.parse(message.Body) as T;
         } catch {
           console.error(
-            `[consumer] message ${message.MessageId} is not valid JSON, deleting`
+            `[${label}] message ${message.MessageId} is not valid JSON, deleting`
           );
-          await deleteMessage(message.ReceiptHandle);
+          await queue.delete(message.ReceiptHandle);
           continue;
         }
 
         try {
-          await handleOrderEvent(parsed);
-          await deleteMessage(message.ReceiptHandle);
+          await handle(parsed);
+          await queue.delete(message.ReceiptHandle);
         } catch (error: any) {
-          if (error instanceof UnprocessableMessageError) {
-            // Nothing downstream can act on this. Deleting keeps the DLQ for
-            // failures a human can actually do something about.
+          if (isUnprocessable(error)) {
             console.error(
-              `[consumer] unprocessable message ${message.MessageId}: ${error.message}`
+              `[${label}] unprocessable message ${message.MessageId}: ${error.message}`
             );
-            await deleteMessage(message.ReceiptHandle);
+            await queue.delete(message.ReceiptHandle);
             continue;
           }
 
-          // Leave it on the queue. It reappears after the visibility timeout,
-          // and after maxReceiveCount it lands in the DLQ.
           console.error(
-            `[consumer] failed ${message.MessageId} (receive ${receiveCount}): ${
+            `[${label}] failed ${message.MessageId} (receive ${receiveCount}): ${
               error?.message || error
             }`
           );
         }
       }
     } catch (error: any) {
-      console.error('[consumer] loop error:', error?.message || error);
+      console.error(`[${label}] loop error:`, error?.message || error);
       await sleep(5000);
     }
   }
@@ -127,7 +141,7 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  console.log(`[worker] starting against ${ORDER_EVENTS_QUEUE_URL}`);
+  console.log(`[worker] order events: ${orderEventsQueue.queueUrl}`);
 
   const shutdown = (signal: string) => {
     console.log(`[worker] ${signal} received, finishing in-flight work`);
@@ -137,7 +151,36 @@ async function main(): Promise<void> {
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));
 
-  await Promise.all([publisherLoop(), consumerLoop()]);
+  const loops: Promise<void>[] = [
+    publisherLoop(),
+    consumerLoop<OutboxMessage>(
+      'order-consumer',
+      orderEventsQueue,
+      handleOrderEvent,
+      (error) => error instanceof UnprocessableMessageError
+    ),
+  ];
+
+  // The delivery queue is fed by API Gateway rather than by us, so it's
+  // configured independently — the worker runs with or without it.
+  if (deliveryEventsQueue.isConfigured()) {
+    console.log(`[worker] delivery events: ${deliveryEventsQueue.queueUrl}`);
+    loops.push(
+      consumerLoop<DeliveryEventEnvelope>(
+        'delivery-consumer',
+        deliveryEventsQueue,
+        handleDeliveryEvent,
+        (error) => error instanceof UnprocessableDeliveryEventError
+      )
+    );
+  } else {
+    console.log(
+      '[worker] delivery events queue not configured; DoorDash webhooks will ' +
+        'use the direct Next.js route'
+    );
+  }
+
+  await Promise.all(loops);
 
   await prisma.$disconnect();
   console.log('[worker] stopped');

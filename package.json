@@ -10,7 +10,9 @@
     "export": "next export",
     "worker": "tsx worker/index.ts",
     "worker:dev": "tsx watch worker/index.ts",
-    "test:outbox": "tsx worker/__tests__/outbox.integration.test.ts"
+    "test:outbox": "tsx worker/__tests__/outbox.integration.test.ts",
+    "test:delivery": "tsx worker/__tests__/deliveryEvents.integration.test.ts",
+    "test:gateway": "tsx worker/__tests__/gatewayTemplate.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-ses": "^3.782.0",
