@@ -7,6 +7,7 @@ import {
   sendOrderConfirmationToCustomer,
 } from '../../../lib/email/sendOrderNotification';
 import { doordashClient } from '../../../lib/doordash/client';
+import { isQueueConfigured } from '../../../lib/queue/sqs';
 import { restaurantInfo } from '../../../data/restaurantInfo';
 import { POINTS_PER_DOLLAR } from '../../../lib/rewards/catalog';
 import { calculateRewardDiscount } from '../../../lib/rewards/eligibility';
@@ -367,9 +368,16 @@ export default async function handler(
       console.error('Failed to broadcast new order:', err)
     );
 
-    // Send email notifications (don't wait for them to complete)
-    // Only send if payment is successful
-    if (paymentStatus === 'paid') {
+    // Notifications are not sent from this handler any more. createOrder wrote
+    // an 'order.created' row to the outbox inside the same transaction as the
+    // order, and the worker publishes it to SQS and does the sending. That
+    // keeps a slow or failing SES call off the customer's checkout path, and
+    // makes the send durable — a crash here no longer loses the email.
+    //
+    // The inline path below is the fallback for environments without a queue
+    // (local dev, or a deploy where SQS env vars aren't set). Same behaviour as
+    // before: dispatched without blocking, failures logged, order unaffected.
+    if (!isQueueConfigured() && paymentStatus === 'paid') {
       sendOrderNotificationToRestaurant(order).catch((error) =>
         console.error('Failed to send restaurant notification:', error)
       );
