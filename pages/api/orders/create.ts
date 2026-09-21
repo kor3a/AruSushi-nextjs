@@ -2,13 +2,16 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { createApiClient } from '../../../lib/supabase/server';
 import { db, isRewardsSchemaMissingError, isStoreSettingsMissingError } from '../../../lib/db';
-import {
-  sendOrderNotificationToRestaurant,
-  sendOrderConfirmationToCustomer,
-} from '../../../lib/email/sendOrderNotification';
+import { enqueueOrderNotifications } from '../../../lib/queue/orderNotifications';
+import { OrderNotificationType } from '../../../lib/queue/types';
 import { doordashClient } from '../../../lib/doordash/client';
 import { restaurantInfo } from '../../../data/restaurantInfo';
 import { POINTS_PER_DOLLAR } from '../../../lib/rewards/catalog';
+import { getMenuPriceOverrides } from '../../../lib/menu/priceOverrides';
+import {
+  validateSubmittedItems,
+  describePriceErrors,
+} from '../../../lib/menu/pricing';
 import { calculateRewardDiscount } from '../../../lib/rewards/eligibility';
 import { isRanksSchemaMissingError } from '../../../lib/db';
 
@@ -56,6 +59,7 @@ interface NormalizedOrderItem {
   price: number;
   quantity: number;
   specialNotes?: string;
+  options?: { [key: string]: string };
 }
 
 export default async function handler(
@@ -143,6 +147,7 @@ export default async function handler(
       price: Number(item.price),
       quantity: Number(item.quantity),
       specialNotes: item.specialNotes,
+      options: item.options,
     }));
 
     const hasInvalidItem = normalizedItems.some(
@@ -155,6 +160,21 @@ export default async function handler(
     );
     if (hasInvalidItem) {
       return res.status(400).json({ message: 'Order contains invalid item data' });
+    }
+
+    // Re-price the cart against the menu before trusting any of these numbers.
+    // Without this, the total check below only proves the cart is internally
+    // consistent - a cart of $0.01 items would pass.
+    const priceOverrides = await getMenuPriceOverrides();
+    const priceErrors = validateSubmittedItems(normalizedItems, priceOverrides);
+    if (priceErrors.length > 0) {
+      console.warn('Rejected order with forged cart prices:', {
+        userId: user.id,
+        errors: priceErrors,
+      });
+      return res.status(400).json({
+        message: `Cart prices do not match the menu: ${describePriceErrors(priceErrors)}`,
+      });
     }
 
     const subtotal = Number(
@@ -367,15 +387,27 @@ export default async function handler(
       console.error('Failed to broadcast new order:', err)
     );
 
-    // Send email notifications (don't wait for them to complete)
-    // Only send if payment is successful
+    // Hand notifications to SQS. This is awaited - it is a single fast enqueue,
+    // not an SES round-trip - so that a dinner-rush burst cannot drop an order
+    // notification the way the previous detached promises could. Delivery,
+    // retries and the dead-letter queue are the worker's job from here
+    // (worker/orderNotificationWorker.ts).
     if (paymentStatus === 'paid') {
-      sendOrderNotificationToRestaurant(order).catch((error) =>
-        console.error('Failed to send restaurant notification:', error)
-      );
-      sendOrderConfirmationToCustomer(order).catch((error) =>
-        console.error('Failed to send customer confirmation:', error)
-      );
+      const notificationTypes: OrderNotificationType[] = ['restaurant_new_order'];
+      if (order.customerEmail) {
+        notificationTypes.push('customer_confirmation');
+      }
+
+      try {
+        const enqueueResult = await enqueueOrderNotifications(order, notificationTypes);
+        if (enqueueResult.fellBack) {
+          console.warn('Order notifications did not go through the queue:', order.id);
+        }
+      } catch (error) {
+        // enqueueOrderNotifications already falls back to an inline send; this
+        // is the final guard so notification trouble never fails a paid order.
+        console.error('Order notification dispatch failed entirely:', error);
+      }
     }
 
     // Return response with delivery status info

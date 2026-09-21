@@ -1,6 +1,26 @@
 import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
 import { Order } from '../db';
 
+export interface SendOptions {
+  /**
+   * Rethrow transient SES failures instead of swallowing them.
+   *
+   * The API route swallows errors so order creation still succeeds. The queue
+   * worker sets this to true so a failed send leaves the message on the queue
+   * for SQS to retry and, after maxReceiveCount, move to the DLQ.
+   */
+  throwOnError?: boolean;
+}
+
+/**
+ * SES rejects mail to unverified addresses while the account is in sandbox
+ * mode. That will never succeed on retry, so it must not be treated as a
+ * transient failure or every message would grind through to the DLQ.
+ */
+export function isPermanentSesError(error: any): boolean {
+  return error?.name === 'MessageRejected';
+}
+
 const ses = new SESClient({
   region: process.env.AWS_REGION || 'us-east-1',
   credentials: {
@@ -9,7 +29,10 @@ const ses = new SESClient({
   },
 });
 
-export async function sendOrderNotificationToRestaurant(order: Order) {
+export async function sendOrderNotificationToRestaurant(
+  order: Order,
+  options: SendOptions = {}
+) {
   const itemsList = order.items
     .map(
       (item) =>
@@ -67,20 +90,28 @@ Please prepare this order as soon as possible.
     return result;
   } catch (error: any) {
     // Handle AWS SES errors
-    if (error.name === 'MessageRejected') {
+    if (isPermanentSesError(error)) {
       console.warn(
         `Could not send restaurant notification email: Email address not verified in AWS SES. ` +
         `This is normal in development/sandbox mode. Order was still created successfully.`
       );
-    } else {
-      console.error('Error sending restaurant notification email:', error.message || error);
+      // Permanent - retrying would not help, so never rethrow.
+      return null;
+    }
+
+    console.error('Error sending restaurant notification email:', error.message || error);
+    if (options.throwOnError) {
+      throw error;
     }
     // Don't throw error - order creation should succeed even if email fails
     return null;
   }
 }
 
-export async function sendOrderConfirmationToCustomer(order: Order) {
+export async function sendOrderConfirmationToCustomer(
+  order: Order,
+  options: SendOptions = {}
+) {
   if (!order.customerEmail) {
     console.log('No customer email provided, skipping confirmation email');
     return;
@@ -138,15 +169,20 @@ Thank you for choosing A-Ru Sushi!
     return result;
   } catch (error: any) {
     // Handle AWS SES errors gracefully
-    if (error.name === 'MessageRejected') {
+    if (isPermanentSesError(error)) {
       // Email address not verified in SES (common in sandbox mode)
       console.warn(
         `Could not send confirmation email to ${order.customerEmail}: Email address not verified in AWS SES. ` +
         `This is normal in development/sandbox mode. Order was still created successfully.`
       );
-    } else {
-      // Other email errors
-      console.error('Error sending confirmation email:', error.message || error);
+      // Permanent - retrying would not help, so never rethrow.
+      return null;
+    }
+
+    // Other email errors
+    console.error('Error sending confirmation email:', error.message || error);
+    if (options.throwOnError) {
+      throw error;
     }
     // Don't throw error - order creation should succeed even if email fails
     return null;

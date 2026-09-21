@@ -7,10 +7,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "export": "next export"
+    "export": "next export",
+    "worker": "tsx worker/orderNotificationWorker.ts",
+    "queues:setup": "tsx scripts/setup-queues.ts"
   },
   "dependencies": {
     "@aws-sdk/client-ses": "^3.782.0",
+    "@aws-sdk/client-sqs": "^3.1137.0",
     "@prisma/client": "^6.19.0",
     "@stripe/react-stripe-js": "^5.4.0",
     "@stripe/stripe-js": "^8.5.2",
@@ -36,6 +39,7 @@
     "autoprefixer": "^10.4.21",
     "postcss": "^8.5.3",
     "tailwindcss": "^4.0.14",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   }
 }

@@ -209,6 +209,82 @@ Edit `/lib/email/sendOrderNotification.ts` to customize:
 - Email content and formatting
 - Add HTML templates (currently uses plain text)
 
+## Order Notification Queue (SQS + DLQ)
+
+Order notification emails are not sent from the web request. `/api/orders/create`
+puts a message on an SQS queue and returns; a separate worker drains the queue
+and calls SES. A slow or failing SES during a dinner rush therefore retries
+instead of dropping the notification.
+
+```
+POST /api/orders/create
+        |
+        v
+  SQS: arusushi-order-notifications     (5 delivery attempts)
+        |                     \
+        v                      \-- exhausted --> arusushi-order-notifications-dlq
+  worker/orderNotificationWorker.ts
+        |
+        v
+      AWS SES
+```
+
+### One-time setup
+
+```bash
+npm run queues:setup    # creates both queues and the redrive policy
+```
+
+Copy the two printed URLs into `.env`:
+
+```
+SQS_ORDER_NOTIFICATIONS_URL="https://sqs.<region>.amazonaws.com/<account>/arusushi-order-notifications"
+SQS_ORDER_NOTIFICATIONS_DLQ_URL="https://sqs.<region>.amazonaws.com/<account>/arusushi-order-notifications-dlq"
+```
+
+### Running the worker
+
+```bash
+npm run worker                          # locally
+docker compose up worker                # with the rest of the stack
+docker compose up --scale worker=3      # more throughput during a rush
+```
+
+The web app and the worker are separate containers, so the worker can be scaled
+or restarted without touching the site.
+
+### How failures are handled
+
+| Situation | Behaviour |
+|---|---|
+| SES times out or throttles | Message stays on the queue, retried after the visibility timeout |
+| Still failing after 5 attempts | SQS moves it to the DLQ for inspection / redrive |
+| Recipient not verified in SES sandbox | Treated as permanent, message deleted (retrying cannot help) |
+| Malformed message or deleted order | Discarded, so it cannot clog the DLQ |
+| `SQS_ORDER_NOTIFICATIONS_URL` unset, or SQS unreachable | Falls back to sending inline, as before |
+
+The IAM user needs `sqs:SendMessage` (web) and `sqs:ReceiveMessage`,
+`sqs:DeleteMessage`, `sqs:ChangeMessageVisibility`, `sqs:GetQueueAttributes`
+(worker), plus `sqs:CreateQueue` / `sqs:SetQueueAttributes` to run the setup
+script.
+
+Tuning knobs: `SQS_VISIBILITY_TIMEOUT`, `SQS_WAIT_TIME_SECONDS`,
+`SQS_MAX_MESSAGES`. Set `AWS_SQS_ENDPOINT` to point at a local SQS
+(ElasticMQ / LocalStack) during development.
+
+## Cart Price Validation
+
+Item prices are never taken from the client. Both `/api/payment/create-intent`
+and `/api/orders/create` re-price the submitted cart against
+`data/menuData.ts` plus the admin overrides in the `menu_prices` table
+(`lib/menu/pricing.ts`), and reject anything that does not match. The
+PaymentIntent is created for the server-computed amount, not the amount in the
+request body.
+
+This means any client surface that adds to the cart must use override-aware
+prices - `pages/menu.tsx` and `components/Chatbot.tsx` both fetch
+`/api/menu/prices` for this reason.
+
 ### Styling
 
 - The site uses Tailwind CSS for styling

@@ -55,3 +55,32 @@ ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
 CMD ["node", "server.js"]
+
+# ---------------------------------------------------------------------------
+# Order notification worker
+#
+# Runs alongside the web container and drains the SQS order-notification queue
+# (see worker/orderNotificationWorker.ts). It needs the full node_modules and
+# the TypeScript sources, so it cannot reuse the standalone runner stage above.
+# ---------------------------------------------------------------------------
+FROM base AS worker
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+RUN apk add --no-cache libc6-compat
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY package.json tsconfig.json ./
+COPY prisma ./prisma/
+COPY lib ./lib/
+COPY data ./data/
+COPY worker ./worker/
+COPY scripts ./scripts/
+
+RUN addgroup --system --gid 1001 nodejs \
+  && adduser --system --uid 1001 nodejs-worker
+USER nodejs-worker
+
+CMD ["npm", "run", "worker"]
