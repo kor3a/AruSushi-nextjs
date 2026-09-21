@@ -10,6 +10,11 @@ import { doordashClient } from '../../../lib/doordash/client';
 import { isQueueConfigured } from '../../../lib/queue/sqs';
 import { restaurantInfo } from '../../../data/restaurantInfo';
 import { POINTS_PER_DOLLAR } from '../../../lib/rewards/catalog';
+import { getMenuPriceOverrides } from '../../../lib/menu/priceOverrides';
+import {
+  validateSubmittedItems,
+  describePriceErrors,
+} from '../../../lib/menu/pricing';
 import { calculateRewardDiscount } from '../../../lib/rewards/eligibility';
 import { isRanksSchemaMissingError } from '../../../lib/db';
 
@@ -57,6 +62,7 @@ interface NormalizedOrderItem {
   price: number;
   quantity: number;
   specialNotes?: string;
+  options?: { [key: string]: string };
 }
 
 export default async function handler(
@@ -144,6 +150,7 @@ export default async function handler(
       price: Number(item.price),
       quantity: Number(item.quantity),
       specialNotes: item.specialNotes,
+      options: item.options,
     }));
 
     const hasInvalidItem = normalizedItems.some(
@@ -156,6 +163,21 @@ export default async function handler(
     );
     if (hasInvalidItem) {
       return res.status(400).json({ message: 'Order contains invalid item data' });
+    }
+
+    // Re-price the cart against the menu before trusting any of these numbers.
+    // Without this, the total check below only proves the cart is internally
+    // consistent - a cart of $0.01 items would pass.
+    const priceOverrides = await getMenuPriceOverrides();
+    const priceErrors = validateSubmittedItems(normalizedItems, priceOverrides);
+    if (priceErrors.length > 0) {
+      console.warn('Rejected order with forged cart prices:', {
+        userId: user.id,
+        errors: priceErrors,
+      });
+      return res.status(400).json({
+        message: `Cart prices do not match the menu: ${describePriceErrors(priceErrors)}`,
+      });
     }
 
     const subtotal = Number(
