@@ -26,10 +26,16 @@ function applyPriceOverrides(
 }
 
 const MenuPage = () => {
-  const orderingEnabled = false;
   const [priceOverrides, setPriceOverrides] = useState<Record<string, number>>({});
+  const [pauseInfo, setPauseInfo] = useState<{ ordersPaused: boolean; pauseReason: string | null } | null>(null);
+  const orderingEnabled = !pauseInfo?.ordersPaused;
 
   useEffect(() => {
+    fetch('/api/store/settings')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => { if (data) setPauseInfo(data); })
+      .catch(() => {});
+
     fetch('/api/menu/prices')
       .then(res => res.ok ? res.json() : { priceOverrides: {} })
       .then(data => setPriceOverrides(data.priceOverrides || {}))
@@ -67,9 +73,14 @@ const MenuPage = () => {
 
       <main>
         <section className="our-menu" id="menu">
+          {!orderingEnabled && (
           <div style={{ maxWidth: '500px', margin: '100px auto 20px', padding: '12px 16px', borderRadius: '8px', background: '#fff3cd', border: '1px solid #ffe69c', color: '#664d03', fontWeight: 700, fontSize: '18px', textAlign: 'center' }}>
-            Ordering Online is coming soon!
+            Online ordering is temporarily paused.
+            {pauseInfo?.pauseReason && (
+              <div style={{ fontWeight: 400, fontSize: '15px', marginTop: '6px' }}>{pauseInfo.pauseReason}</div>
+            )}
           </div>
+          )}
           <h1 className="heading">Lunch (11am - 3pm)</h1>
           <div className="menu-container">
             {resolvedLunch.map((category, idx) => (
