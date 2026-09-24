@@ -2,6 +2,7 @@ import { PrismaClient, Prisma } from '@prisma/client';
 import type { RewardType } from '../rewards/types';
 import type { MemberRank } from '../ranks/types';
 import { getNextRank, getUpgradeCost, getDiscountPercent, RANK_TIERS } from '../ranks/config';
+import { ORDER_EVENT_VERSION } from '../outbox/types';
 
 // Prevent multiple instances of Prisma Client in development
 const globalForPrisma = globalThis as unknown as {
@@ -638,9 +639,39 @@ class Database {
   }
 
   // Order operations
+  //
+  // The order, its items, and the outbox event all commit together. That's the
+  // point of the outbox: enqueueing to SQS after the commit would leave a
+  // window where the order exists and the notification was never scheduled,
+  // and a crash in that window is invisible — the customer sees a confirmed
+  // order and the kitchen never hears about it.
   async createOrder(orderData: CreateOrderInput) {
-    return prisma.order.create({
-      data: {
+    return prisma.$transaction(async (tx) => {
+      const order = await tx.order.create({
+        data: this.buildOrderData(orderData),
+        include: { items: true },
+      });
+
+      await tx.$executeRaw`
+        INSERT INTO outbox_events (event_type, aggregate_id, payload)
+        VALUES (
+          'order.created',
+          ${order.id}::uuid,
+          ${JSON.stringify({
+            version: ORDER_EVENT_VERSION,
+            orderId: order.id,
+            userId: order.userId,
+            occurredAt: new Date().toISOString(),
+          })}::jsonb
+        )
+      `;
+
+      return order;
+    });
+  }
+
+  private buildOrderData(orderData: CreateOrderInput) {
+    return {
         userId: orderData.userId,
         total: new Prisma.Decimal(orderData.total),
         orderType: orderData.orderType || 'pickup',
@@ -664,9 +695,7 @@ class Database {
             specialNotes: item.specialNotes,
           })),
         },
-      },
-      include: { items: true },
-    });
+    };
   }
 
   async findOrderById(id: string) {

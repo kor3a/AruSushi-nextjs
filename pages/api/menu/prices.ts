@@ -2,24 +2,10 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { createApiClient } from '../../../lib/supabase/server';
 import { canManageOrders } from '../../../lib/auth/roles';
 import { prisma } from '../../../lib/db';
-
-interface MenuPriceRow {
-  id: number;
-  menu_type: string;
-  category: string;
-  item_name: string;
-  price: number;
-  updated_by: string | null;
-  updated_at: Date;
-}
-
-function isMenuPricesMissingError(error: unknown): boolean {
-  if (!error || typeof error !== 'object') return false;
-  const e = error as { code?: string; message?: string; meta?: { message?: string } };
-  if (e.code !== 'P2010') return false;
-  const msg = `${e.message || ''} ${e.meta?.message || ''}`.toLowerCase();
-  return msg.includes('relation "menu_prices" does not exist');
-}
+import {
+  getMenuPriceOverrides,
+  isMenuPricesMissingError,
+} from '../../../lib/menu/priceOverrides';
 
 export default async function handler(
   req: NextApiRequest,
@@ -36,23 +22,11 @@ export default async function handler(
 
 async function handleGet(_req: NextApiRequest, res: NextApiResponse) {
   try {
-    const rows = await prisma.$queryRaw<MenuPriceRow[]>`
-      SELECT id, menu_type, category, item_name, price, updated_by, updated_at
-      FROM menu_prices
-      ORDER BY menu_type, category, item_name
-    `;
-
-    const priceOverrides: Record<string, number> = {};
-    for (const row of rows) {
-      const key = `${row.menu_type}::${row.category}::${row.item_name}`;
-      priceOverrides[key] = Number(row.price);
-    }
-
+    // Shared with the server-side price validation in lib/menu/pricing.ts so
+    // the menu page and the order API can never disagree about prices.
+    const priceOverrides = await getMenuPriceOverrides();
     return res.status(200).json({ priceOverrides });
   } catch (error) {
-    if (isMenuPricesMissingError(error)) {
-      return res.status(200).json({ priceOverrides: {} });
-    }
     console.error('Failed to fetch menu prices:', error);
     return res.status(500).json({ message: 'Internal server error' });
   }

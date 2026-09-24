@@ -14,3 +14,18 @@ services:
     environment:
       - NODE_ENV=production
     restart: unless-stopped
+
+  # Drains the transactional outbox to SQS and consumes the queue. Runs as its
+  # own process so a slow SES call can't touch request latency on the web
+  # container, and so it can be scaled independently during service.
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    depends_on:
+      - web

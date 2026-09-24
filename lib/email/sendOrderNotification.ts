@@ -1,5 +1,6 @@
 import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
 import { Order } from '../db';
+import { classifySesError } from './errors';
 
 const ses = new SESClient({
   region: process.env.AWS_REGION || 'us-east-1',
@@ -66,17 +67,10 @@ Please prepare this order as soon as possible.
     console.log('Restaurant notification email sent successfully:', result.MessageId);
     return result;
   } catch (error: any) {
-    // Handle AWS SES errors
-    if (error.name === 'MessageRejected') {
-      console.warn(
-        `Could not send restaurant notification email: Email address not verified in AWS SES. ` +
-        `This is normal in development/sandbox mode. Order was still created successfully.`
-      );
-    } else {
-      console.error('Error sending restaurant notification email:', error.message || error);
-    }
-    // Don't throw error - order creation should succeed even if email fails
-    return null;
+    // Throws rather than swallowing: this runs in a queue consumer now, and the
+    // consumer needs to know whether to retry. Order creation is no longer in
+    // the blast radius, so failing loudly here is safe.
+    throw classifySesError(error);
   }
 }
 
@@ -137,18 +131,6 @@ Thank you for choosing A-Ru Sushi!
     console.log('Confirmation email sent successfully:', result.MessageId);
     return result;
   } catch (error: any) {
-    // Handle AWS SES errors gracefully
-    if (error.name === 'MessageRejected') {
-      // Email address not verified in SES (common in sandbox mode)
-      console.warn(
-        `Could not send confirmation email to ${order.customerEmail}: Email address not verified in AWS SES. ` +
-        `This is normal in development/sandbox mode. Order was still created successfully.`
-      );
-    } else {
-      // Other email errors
-      console.error('Error sending confirmation email:', error.message || error);
-    }
-    // Don't throw error - order creation should succeed even if email fails
-    return null;
+    throw classifySesError(error);
   }
 }

@@ -4,7 +4,8 @@ import { AiOutlineClose, AiOutlineSend, AiOutlineShoppingCart } from 'react-icon
 import axios from 'axios';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { lunchMenu, dinnerMenu } from '@/data/menuData';
+import { lunchMenu, dinnerMenu, MenuItemData } from '@/data/menuData';
+import { overrideKey } from '@/lib/menu/pricing';
 
 interface Message {
   text: string;
@@ -29,6 +30,8 @@ const Chatbot: React.FC = () => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
+  // Admin price overrides, same source the menu page uses.
+  const [priceOverrides, setPriceOverrides] = useState<Record<string, number>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { addItem } = useCart();
   const { user } = useAuth();
@@ -38,41 +41,60 @@ const Chatbot: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Helper function to find menu item by name
+  useEffect(() => {
+    fetch('/api/menu/prices')
+      .then(res => (res.ok ? res.json() : { priceOverrides: {} }))
+      .then(data => setPriceOverrides(data.priceOverrides || {}))
+      .catch(() => {});
+  }, []);
+
+  // Helper function to find menu item by name.
+  // Returns the menu type and category too, so the admin price override for
+  // this item can be applied - the order API validates cart prices against
+  // the overridden menu, so adding an item at the stale static price would be
+  // rejected at checkout.
   const findMenuItem = (itemName: string) => {
-    const allMenus = [...lunchMenu, ...dinnerMenu];
+    const allMenus = [
+      ...lunchMenu.map(category => ({ menuType: 'lunch' as const, category })),
+      ...dinnerMenu.map(category => ({ menuType: 'dinner' as const, category })),
+    ];
     const searchName = itemName.toLowerCase();
 
+    const withPrice = (menuType: 'lunch' | 'dinner', categoryName: string, item: MenuItemData) => ({
+      ...item,
+      price: priceOverrides[overrideKey(menuType, categoryName, item.name)] ?? item.price,
+    });
+
     // Exact match
-    for (const category of allMenus) {
+    for (const { menuType, category } of allMenus) {
       const item = category.items.find(
         i => i.name.toLowerCase() === searchName
       );
-      if (item) return item;
+      if (item) return withPrice(menuType, category.category, item);
     }
 
     // Substring match (either direction)
-    for (const category of allMenus) {
+    for (const { menuType, category } of allMenus) {
       const item = category.items.find(i => {
         const name = i.name.toLowerCase();
         return name.includes(searchName) || searchName.includes(name);
       });
-      if (item) return item;
+      if (item) return withPrice(menuType, category.category, item);
     }
 
     // Word-based fallback: find item whose name words all appear in the query
     const searchWords = searchName.split(/\s+/).filter(w => w.length > 1);
-    let bestMatch: typeof allMenus[0]['items'][0] | null = null;
+    let bestMatch: MenuItemData | null = null;
     let bestScore = 0;
 
-    for (const category of allMenus) {
+    for (const { menuType, category } of allMenus) {
       for (const item of category.items) {
         const nameWords = item.name.toLowerCase().split(/\s+/).filter(w => w.length > 1);
         const matchCount = nameWords.filter(w => searchWords.includes(w)).length;
         const score = nameWords.length > 0 ? matchCount / nameWords.length : 0;
         if (score > bestScore && score >= 0.5) {
           bestScore = score;
-          bestMatch = item;
+          bestMatch = withPrice(menuType, category.category, item);
         }
       }
     }

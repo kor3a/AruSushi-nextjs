@@ -202,6 +202,25 @@ Edit `/data/menuData.ts` to:
 - Change categories
 - Add descriptions
 
+## Cart Price Validation
+
+Item prices are never taken from the client. Both `/api/payment/create-intent`
+and `/api/orders/create` re-price the submitted cart against
+`data/menuData.ts` plus the admin overrides in the `menu_prices` table
+(`lib/menu/pricing.ts`), and reject anything that does not match. The
+PaymentIntent is created for the server-computed amount, not the amount in the
+request body, and the reward and rank discounts behind it are recomputed from
+the stored redemption and the user's actual rank.
+
+The validator mirrors `calculatePrice()` in `components/menu/MenuItem.tsx`,
+including that a priced choice replaces the base price rather than adding to
+it, so legitimate carts still pass.
+
+Any client surface that adds to the cart must therefore use override-aware
+prices - `pages/menu.tsx` and `components/Chatbot.tsx` both fetch
+`/api/menu/prices` for this reason. Adding an item at the stale static price
+would be rejected at checkout once an admin changes that price.
+
 ### Email Templates
 
 Edit `/lib/email/sendOrderNotification.ts` to customize:

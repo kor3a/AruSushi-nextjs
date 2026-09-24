@@ -7,8 +7,14 @@ import {
   sendOrderConfirmationToCustomer,
 } from '../../../lib/email/sendOrderNotification';
 import { doordashClient } from '../../../lib/doordash/client';
+import { isQueueConfigured } from '../../../lib/queue/sqs';
 import { restaurantInfo } from '../../../data/restaurantInfo';
 import { POINTS_PER_DOLLAR } from '../../../lib/rewards/catalog';
+import { getMenuPriceOverrides } from '../../../lib/menu/priceOverrides';
+import {
+  validateSubmittedItems,
+  describePriceErrors,
+} from '../../../lib/menu/pricing';
 import { calculateRewardDiscount } from '../../../lib/rewards/eligibility';
 import { isRanksSchemaMissingError } from '../../../lib/db';
 
@@ -56,6 +62,7 @@ interface NormalizedOrderItem {
   price: number;
   quantity: number;
   specialNotes?: string;
+  options?: { [key: string]: string };
 }
 
 export default async function handler(
@@ -143,6 +150,7 @@ export default async function handler(
       price: Number(item.price),
       quantity: Number(item.quantity),
       specialNotes: item.specialNotes,
+      options: item.options,
     }));
 
     const hasInvalidItem = normalizedItems.some(
@@ -155,6 +163,21 @@ export default async function handler(
     );
     if (hasInvalidItem) {
       return res.status(400).json({ message: 'Order contains invalid item data' });
+    }
+
+    // Re-price the cart against the menu before trusting any of these numbers.
+    // Without this, the total check below only proves the cart is internally
+    // consistent - a cart of $0.01 items would pass.
+    const priceOverrides = await getMenuPriceOverrides();
+    const priceErrors = validateSubmittedItems(normalizedItems, priceOverrides);
+    if (priceErrors.length > 0) {
+      console.warn('Rejected order with forged cart prices:', {
+        userId: user.id,
+        errors: priceErrors,
+      });
+      return res.status(400).json({
+        message: `Cart prices do not match the menu: ${describePriceErrors(priceErrors)}`,
+      });
     }
 
     const subtotal = Number(
@@ -367,9 +390,16 @@ export default async function handler(
       console.error('Failed to broadcast new order:', err)
     );
 
-    // Send email notifications (don't wait for them to complete)
-    // Only send if payment is successful
-    if (paymentStatus === 'paid') {
+    // Notifications are not sent from this handler any more. createOrder wrote
+    // an 'order.created' row to the outbox inside the same transaction as the
+    // order, and the worker publishes it to SQS and does the sending. That
+    // keeps a slow or failing SES call off the customer's checkout path, and
+    // makes the send durable — a crash here no longer loses the email.
+    //
+    // The inline path below is the fallback for environments without a queue
+    // (local dev, or a deploy where SQS env vars aren't set). Same behaviour as
+    // before: dispatched without blocking, failures logged, order unaffected.
+    if (!isQueueConfigured() && paymentStatus === 'paid') {
       sendOrderNotificationToRestaurant(order).catch((error) =>
         console.error('Failed to send restaurant notification:', error)
       );

@@ -13,50 +13,50 @@ datasource db {
 
 // User profile - linked to Supabase auth.users via id
 model User {
-  id        String   @id @db.Uuid // References Supabase auth.users.id
-  email     String   @unique
+  id        String    @id @db.Uuid // References Supabase auth.users.id
+  email     String    @unique
   name      String?
   phone     String?
   address   String?
   birthday  DateTime? @db.Date
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
   orders    Order[]
 
   @@map("users")
 }
 
 model Order {
-  id              String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId          String      @map("user_id") @db.Uuid
-  user            User        @relation(fields: [userId], references: [id])
-  items           OrderItem[]
-  total           Decimal     @db.Decimal(10, 2)
-  orderType       String      @default("pickup") @map("order_type") // pickup, delivery
-  status          String      @default("pending") // pending, confirmed, preparing, ready, delivered, cancelled
-  paymentIntentId String?     @unique @map("payment_intent_id")
-  paymentStatus   String      @default("pending") @map("payment_status") // pending, paid, failed
-  deliveryAddress String?     @map("delivery_address")
-  deliveryPhone   String?     @map("delivery_phone")
-  deliveryFee         Decimal?  @map("delivery_fee") @db.Decimal(10, 2) // Delivery fee
-  doordashDeliveryId String?  @map("doordash_delivery_id")
-  doordashDeliveryStatus String? @map("doordash_delivery_status")
-  doordashTrackingUrl String? @map("doordash_tracking_url")
-  dasherName          String?  @map("dasher_name")
-  dasherPhone         String?  @map("dasher_phone")
-  dasherLatitude      Float?   @map("dasher_latitude")
-  dasherLongitude     Float?   @map("dasher_longitude")
-  estimatedPickupTime DateTime? @map("estimated_pickup_time")
-  estimatedDropoffTime DateTime? @map("estimated_dropoff_time")
-  actualPickupTime    DateTime? @map("actual_pickup_time")
-  actualDropoffTime   DateTime? @map("actual_dropoff_time")
-  deliveryLastEvent   String?  @map("delivery_last_event")
-  customerName    String?     @map("customer_name")
-  customerEmail   String?     @map("customer_email")
-  notes           String?
-  readyForPickupAt DateTime? @map("ready_for_pickup_at")
-  createdAt       DateTime    @default(now()) @map("created_at")
-  updatedAt       DateTime    @updatedAt @map("updated_at")
+  id                     String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId                 String      @map("user_id") @db.Uuid
+  user                   User        @relation(fields: [userId], references: [id])
+  items                  OrderItem[]
+  total                  Decimal     @db.Decimal(10, 2)
+  orderType              String      @default("pickup") @map("order_type") // pickup, delivery
+  status                 String      @default("pending") // pending, confirmed, preparing, ready, delivered, cancelled
+  paymentIntentId        String?     @unique @map("payment_intent_id")
+  paymentStatus          String      @default("pending") @map("payment_status") // pending, paid, failed
+  deliveryAddress        String?     @map("delivery_address")
+  deliveryPhone          String?     @map("delivery_phone")
+  deliveryFee            Decimal?    @map("delivery_fee") @db.Decimal(10, 2) // Delivery fee
+  doordashDeliveryId     String?     @map("doordash_delivery_id")
+  doordashDeliveryStatus String?     @map("doordash_delivery_status")
+  doordashTrackingUrl    String?     @map("doordash_tracking_url")
+  dasherName             String?     @map("dasher_name")
+  dasherPhone            String?     @map("dasher_phone")
+  dasherLatitude         Float?      @map("dasher_latitude")
+  dasherLongitude        Float?      @map("dasher_longitude")
+  estimatedPickupTime    DateTime?   @map("estimated_pickup_time")
+  estimatedDropoffTime   DateTime?   @map("estimated_dropoff_time")
+  actualPickupTime       DateTime?   @map("actual_pickup_time")
+  actualDropoffTime      DateTime?   @map("actual_dropoff_time")
+  deliveryLastEvent      String?     @map("delivery_last_event")
+  customerName           String?     @map("customer_name")
+  customerEmail          String?     @map("customer_email")
+  notes                  String?
+  readyForPickupAt       DateTime?   @map("ready_for_pickup_at")
+  createdAt              DateTime    @default(now()) @map("created_at")
+  updatedAt              DateTime    @updatedAt @map("updated_at")
 
   @@map("orders")
 }
@@ -71,4 +71,40 @@ model OrderItem {
   specialNotes String? @map("special_notes")
 
   @@map("order_items")
+}
+
+// Transactional outbox — written in the same transaction as the order it
+// describes, so an order and its "this happened" event commit atomically.
+// A separate publisher drains this table to SQS.
+model OutboxEvent {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventType   String    @map("event_type")
+  aggregateId String    @map("aggregate_id") @db.Uuid // the order id
+  payload     Json
+  status      String    @default("pending") // pending, published, failed
+  attempts    Int       @default(0)
+  lastError   String?   @map("last_error")
+  publishedAt DateTime? @map("published_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  // Needs a database-level default, not just @updatedAt: this table is written
+  // by raw SQL from the order transaction and the publisher, which bypasses
+  // Prisma's client-side timestamp handling.
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  @@index([status, createdAt])
+  @@map("outbox_events")
+}
+
+// Consumer-side idempotency. SQS is at-least-once, so the same message can
+// arrive twice; the unique constraint makes a duplicate delivery a no-op
+// instead of a second email.
+model NotificationDelivery {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId   String   @map("order_id") @db.Uuid
+  channel   String // restaurant_notification, customer_confirmation
+  messageId String?  @map("message_id") // SES message id, for tracing
+  sentAt    DateTime @default(now()) @map("sent_at")
+
+  @@unique([orderId, channel])
+  @@map("notification_deliveries")
 }
