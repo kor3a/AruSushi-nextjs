@@ -38,3 +38,10 @@ CREATE TABLE IF NOT EXISTS notification_deliveries (
 
 CREATE UNIQUE INDEX IF NOT EXISTS notification_deliveries_order_channel_idx
   ON notification_deliveries (order_id, channel);
+
+-- Neither table is meant to be reachable through Supabase's public REST API
+-- (outbox payloads reference customer orders). The app and worker connect as
+-- the table owner via Prisma, which bypasses RLS, so enabling it with no
+-- policies locks out anon/authenticated access without affecting them.
+ALTER TABLE outbox_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notification_deliveries ENABLE ROW LEVEL SECURITY;

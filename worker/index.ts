@@ -11,6 +11,7 @@
  * Both are safe to run in multiple copies: the publisher claims rows with
  * SKIP LOCKED, and the consumer is idempotent per order per channel.
  */
+import './loadEnv';
 import { prisma } from '../lib/db';
 import { drainOutbox, recoverStalePublishing } from '../lib/outbox/publisher';
 import {
