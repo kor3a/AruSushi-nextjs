@@ -71,11 +71,22 @@ minutes on the main queue (age, not depth — a deep queue draining fast is fine
 
 ## Setup
 
+Terraform state lives in S3 (`infra/backend.tf`) so any machine can run
+`terraform output` / `apply` against the same resources. Create the bucket
+once, then pass its name at init:
+
 ```bash
+aws s3api create-bucket --bucket <your-state-bucket> --region us-east-1
+aws s3api put-bucket-versioning --bucket <your-state-bucket> \
+  --versioning-configuration Status=Enabled
+
 cd infra
-terraform init
+terraform init -backend-config="bucket=<your-state-bucket>"
 terraform apply
 ```
+
+Never run `terraform apply` from a machine that has not been initialised
+against the shared bucket: with no state it tries to recreate everything.
 
 Then set in `.env` for both the web and worker containers:
 
