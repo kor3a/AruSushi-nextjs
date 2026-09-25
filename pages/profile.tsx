@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { FaReceipt, FaChevronRight } from 'react-icons/fa';
+import { FaGift, FaChevronRight } from 'react-icons/fa';
 import { useAuth } from '../contexts/AuthContext';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -192,7 +192,7 @@ export default function Profile() {
           <h1 style={{ fontSize: '36px', fontWeight: 'bold', color: '#f1d00f', marginBottom: '32px', textAlign: 'center' }}>My Profile</h1>
 
           <Link
-            href="/my-orders"
+            href="/rewards"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -230,11 +230,11 @@ export default function Profile() {
                 borderRadius: '50%',
                 color: '#f1d00f',
               }}>
-                <FaReceipt size={22} />
+                <FaGift size={22} />
               </div>
               <div>
-                <div style={{ fontSize: '18px', fontWeight: 600, color: '#fff' }}>My Orders</div>
-                <div style={{ fontSize: '13px', color: '#ccc', marginTop: '2px' }}>View your order history and track current orders</div>
+                <div style={{ fontSize: '18px', fontWeight: 600, color: '#fff' }}>Rewards</div>
+                <div style={{ fontSize: '13px', color: '#ccc', marginTop: '2px' }}>Check your points and redeem rewards</div>
               </div>
             </div>
             <FaChevronRight size={16} style={{ color: '#f1d00f' }} />

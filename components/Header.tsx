@@ -50,9 +50,18 @@ const Header = () => {
         ) : (
           <>
             <Link href="/menu" onClick={closeMenu}>Menu</Link>
-            <Link href="/contact" onClick={closeMenu}>Contact Us</Link>
-            <Link href={user ? '/rewards' : '/members'} onClick={closeMenu}>{user ? 'Rewards' : 'Members'}</Link>
-            {user && <Link href="/profile" onClick={closeMenu}>Profile</Link>}
+            {user ? (
+              <>
+                <Link href="/my-orders" onClick={closeMenu}>Orders</Link>
+                <Link href="/profile" onClick={closeMenu}>Profile</Link>
+                <Link href="/contact" onClick={closeMenu}>Contact Us</Link>
+              </>
+            ) : (
+              <>
+                <Link href="/contact" onClick={closeMenu}>Contact Us</Link>
+                <Link href="/members" onClick={closeMenu}>Members</Link>
+              </>
+            )}
           </>
         )}
       </nav>
