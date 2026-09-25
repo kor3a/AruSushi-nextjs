@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Head from 'next/head';
 import Script from 'next/script';
 import Image from 'next/image';
+import Link from 'next/link';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import CherryBlossom from '@/components/CherryBlossom';
@@ -44,8 +45,7 @@ const HomePage = () => {
 
                             <h3>A-Ru Sushi</h3>
                             <h1>Hungry?</h1>
-                            <p>Scroll below to make reservations or order now online!</p>
-                            <a href="https://www.doordash.com/en-CA/store/a-ru-japanese-restaurant-buellton-632339/" target="_blank" className="btn">Order Now</a>
+                            <Link href="/menu" className="btn">Order Now</Link>
                         </div>
                     </div>
                 </div>
