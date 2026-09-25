@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
+import AdminOnly from '../../components/AdminOnly';
 import { useAuth } from '../../contexts/AuthContext';
 import { canManageOrders } from '../../lib/auth/roles';
 import { lunchMenu, dinnerMenu, MenuCategory } from '../../data/menuData';
@@ -153,6 +154,10 @@ export default function AdminMenuPricesPage() {
 
   const currentMenu = activeTab === 'lunch' ? lunchMenu : dinnerMenu;
   const filteredMenu = filterItems(currentMenu, activeTab);
+
+  if (!authLoading && user && !canAccess) {
+    return <AdminOnly />;
+  }
 
   return (
     <>

@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { canManageOrders } from '@/lib/auth/roles';
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -45,6 +46,30 @@ export async function updateSession(request: NextRequest) {
     url.pathname = '/auth/signin';
     url.searchParams.set('callbackUrl', request.nextUrl.pathname);
     return NextResponse.redirect(url);
+  }
+
+  // Admin pages: require sign-in, and show the admin-only page to everyone else
+  const isAdminRoute =
+    request.nextUrl.pathname === '/admin' ||
+    request.nextUrl.pathname.startsWith('/admin/');
+
+  if (isAdminRoute) {
+    if (!user) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/auth/signin';
+      url.search = '';
+      url.searchParams.set('returnUrl', request.nextUrl.pathname);
+      return NextResponse.redirect(url);
+    }
+
+    if (!canManageOrders(user.email)) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/admin-only';
+      url.search = '';
+      const response = NextResponse.rewrite(url, { status: 403 });
+      supabaseResponse.cookies.getAll().forEach((cookie) => response.cookies.set(cookie));
+      return response;
+    }
   }
 
   // Redirect authenticated users away from auth pages
