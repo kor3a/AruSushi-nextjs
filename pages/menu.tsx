@@ -6,6 +6,15 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import MenuItem from '../components/menu/MenuItem';
 import { lunchMenu, dinnerMenu, MenuCategory } from '../data/menuData';
+import { useAuth } from '../contexts/AuthContext';
+import { canManageOrders } from '../lib/auth/roles';
+
+// Lunch is served Monday - Friday, 11am - 3pm, based on the viewer's local time.
+function isLunchTime(now: Date): boolean {
+  const day = now.getDay();
+  const hour = now.getHours();
+  return day >= 1 && day <= 5 && hour >= 11 && hour < 15;
+}
 
 function applyPriceOverrides(
   menu: MenuCategory[],
@@ -26,6 +35,10 @@ function applyPriceOverrides(
 }
 
 const MenuPage = () => {
+  const { user } = useAuth();
+  const isAdmin = canManageOrders(user?.email);
+  const [lunchHours, setLunchHours] = useState(false);
+  const [lunchExpanded, setLunchExpanded] = useState(false);
   const [priceOverrides, setPriceOverrides] = useState<Record<string, number>>({});
   const [pauseInfo, setPauseInfo] = useState<{ ordersPaused: boolean; pauseReason: string | null } | null>(null);
   const orderingEnabled = !pauseInfo?.ordersPaused;
@@ -41,6 +54,17 @@ const MenuPage = () => {
       .then(data => setPriceOverrides(data.priceOverrides || {}))
       .catch(() => {});
   }, []);
+
+  // Checked on the client only (server time may differ from the viewer's),
+  // and re-checked every minute so the page flips if left open.
+  useEffect(() => {
+    const update = () => setLunchHours(isLunchTime(new Date()));
+    update();
+    const timer = setInterval(update, 60_000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const showLunch = isAdmin || lunchHours || lunchExpanded;
 
   const resolvedLunch = useMemo(
     () => applyPriceOverrides(lunchMenu, 'lunch', priceOverrides),
@@ -81,7 +105,33 @@ const MenuPage = () => {
             )}
           </div>
           )}
+          {!showLunch && (
+            <button
+              type="button"
+              onClick={() => setLunchExpanded(true)}
+              aria-expanded={false}
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', textAlign: 'left', width: 'calc(100% - 6rem)', maxWidth: '900px', margin: `${orderingEnabled ? '100px' : '0'} auto 0`, padding: '14px 20px', borderRadius: '8px', background: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255, 255, 255, 0.3)', color: '#fff', fontSize: '18px', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '1px' }}
+            >
+              <span>Lunch (11am - 3pm) <span style={{ fontSize: '14px', opacity: 0.75, textTransform: 'none', letterSpacing: 0 }}>· Mon - Fri</span></span>
+              <span aria-hidden="true" style={{ fontSize: '22px' }}>▾</span>
+            </button>
+          )}
+
+          {showLunch && (
+          <>
           <h1 className="heading">Lunch (11am - 3pm)</h1>
+          {lunchExpanded && !lunchHours && !isAdmin && (
+            <div style={{ textAlign: 'center', marginTop: '-30px', marginBottom: '30px' }}>
+              <button
+                type="button"
+                onClick={() => setLunchExpanded(false)}
+                aria-expanded={true}
+                style={{ background: 'none', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '6px', color: '#fff', fontSize: '15px', padding: '6px 14px', cursor: 'pointer' }}
+              >
+                Hide lunch menu ▴
+              </button>
+            </div>
+          )}
           <div className="menu-container">
             {resolvedLunch.map((category, idx) => (
               <div className="item" key={idx}>
@@ -105,8 +155,10 @@ const MenuPage = () => {
               </div>
             ))}
           </div>
+          </>
+          )}
 
-          <h1 className="heading" style={{ marginTop: '60px' }}>Dinner (3pm - 9pm)</h1>
+          <h1 className="heading" style={{ marginTop: showLunch ? '60px' : '0' }}>Dinner (Weekends All Day &amp; Daily 3pm - 9pm)</h1>
           <div className="menu-container">
             {resolvedDinner.map((category, idx) => (
               <div className="item" key={idx}>
