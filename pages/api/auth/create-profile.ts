@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { db } from '../../../lib/db';
+import { parseBirthday } from '../../../lib/perks/birthday';
 
 export default async function handler(
   req: NextApiRequest,
@@ -18,11 +19,10 @@ export default async function handler(
 
     let birthdayDate: Date | null = null;
     if (birthday) {
-      const parsed = new Date(birthday);
-      if (Number.isNaN(parsed.getTime())) {
+      birthdayDate = parseBirthday(birthday);
+      if (!birthdayDate) {
         return res.status(400).json({ message: 'Invalid birthday' });
       }
-      birthdayDate = parsed;
     }
 
     // Create or update user profile in our database

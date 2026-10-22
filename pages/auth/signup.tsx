@@ -290,6 +290,9 @@ export default function SignUp() {
                     colorScheme: 'dark'
                   }}
                 />
+                <p style={{ marginTop: '4px', fontSize: '12px', color: '#888' }}>
+                  Unlocks a free birthday treat every year. Can&apos;t be changed after sign up.
+                </p>
               </div>
 
               <div>

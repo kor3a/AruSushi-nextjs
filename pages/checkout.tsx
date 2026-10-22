@@ -10,6 +10,8 @@ import { useCart } from '../contexts/CartContext';
 import { calculateRewardDiscount } from '../lib/rewards/eligibility';
 import type { RewardsSummary } from '../lib/rewards/types';
 import type { UserRankInfo } from '../lib/ranks/types';
+import { calculateOrderDiscounts, type OrderDiscounts } from '../lib/perks/discounts';
+import type { PerkType } from '../lib/perks/types';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
@@ -40,8 +42,10 @@ interface CheckoutFormProps {
   rewardsSummary: RewardsSummary | null;
   selectedRewardRedemptionId: string;
   onSelectRewardRedemption: (redemptionId: string) => void;
-  rewardDiscount: number;
+  discounts: OrderDiscounts;
   rankInfo: UserRankInfo | null;
+  selectedPerks: PerkType[];
+  onSetSelectedPerks: (perks: PerkType[]) => void;
   onOrderSubmitted: () => void;
 }
 
@@ -49,10 +53,14 @@ function CheckoutForm({
   rewardsSummary,
   selectedRewardRedemptionId,
   onSelectRewardRedemption,
-  rewardDiscount,
+  discounts,
   rankInfo,
+  selectedPerks,
+  onSetSelectedPerks,
   onOrderSubmitted,
 }: CheckoutFormProps) {
+  const rewardDiscount = discounts.rewardDiscount;
+  const memberPerks = rankInfo?.perks ?? [];
   const router = useRouter();
   const stripe = useStripe();
   const elements = useElements();
@@ -93,11 +101,14 @@ function CheckoutForm({
         if (data.selectedRewardRedemptionId) {
           onSelectRewardRedemption(data.selectedRewardRedemptionId);
         }
+        if (Array.isArray(data.selectedPerks)) {
+          onSetSelectedPerks(data.selectedPerks);
+        }
       } catch (e) {
         console.error('Failed to restore checkout data:', e);
       }
     }
-  }, [onSelectRewardRedemption]);
+  }, [onSelectRewardRedemption, onSetSelectedPerks]);
 
   // Save checkout data to sessionStorage whenever it changes
   useEffect(() => {
@@ -111,9 +122,10 @@ function CheckoutForm({
       notes,
       deliveryQuote,
       selectedRewardRedemptionId,
+      selectedPerks,
     };
     sessionStorage.setItem('checkoutData', JSON.stringify(data));
-  }, [orderType, phone, deliveryAddress, deliveryCity, deliveryState, deliveryZip, notes, deliveryQuote, selectedRewardRedemptionId]);
+  }, [orderType, phone, deliveryAddress, deliveryCity, deliveryState, deliveryZip, notes, deliveryQuote, selectedRewardRedemptionId, selectedPerks]);
 
   // Fetch delivery quote when address is complete
   const fetchDeliveryQuote = async (silent: boolean = false): Promise<DeliveryQuote | null> => {
@@ -182,19 +194,16 @@ function CheckoutForm({
     return now >= (expiresAt - bufferMs);
   };
 
-  const rankDiscountPercent = rankInfo?.discountPercent ?? 0;
-
   const getOrderTotal = () => {
     const subtotal = getTotalPrice();
     const deliveryFee = orderType === 'delivery' && deliveryQuote ? deliveryQuote.fee : 0;
-    const activeRewardDiscount = selectedRedemption ? rewardDiscount : 0;
-    const rankDiscountAmount = rankDiscountPercent > 0 ? subtotal * (rankDiscountPercent / 100) : 0;
-    return Math.max(subtotal + deliveryFee - activeRewardDiscount - rankDiscountAmount, 0);
+    return Math.max(subtotal + deliveryFee - discounts.totalDiscount, 0);
   };
 
-  const getRankDiscountAmount = () => {
-    if (rankDiscountPercent <= 0) return 0;
-    return getTotalPrice() * (rankDiscountPercent / 100);
+  const togglePerk = (perk: PerkType) => {
+    onSetSelectedPerks(
+      selectedPerks.includes(perk) ? selectedPerks.filter((p) => p !== perk) : [...selectedPerks, perk]
+    );
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -212,6 +221,13 @@ function CheckoutForm({
 
     if (selectedRedemption && rewardDiscount <= 0) {
       setError('Add an eligible item to use the selected reward.');
+      return;
+    }
+
+    const unusablePerk = selectedPerks.find((perk) => !((discounts.perkDiscounts[perk] ?? 0) > 0));
+    if (unusablePerk) {
+      const label = memberPerks.find((perk) => perk.type === unusablePerk)?.label ?? 'the selected perk';
+      setError(`Add an eligible item to use ${label}.`);
       return;
     }
 
@@ -278,8 +294,7 @@ function CheckoutForm({
 
       const finalDeliveryFee = orderType === 'delivery' && currentQuote ? currentQuote.fee : 0;
       const appliedRewardDiscount = selectedRedemption ? rewardDiscount : 0;
-      const rankDiscountAmount = getRankDiscountAmount();
-      const finalTotal = getTotalPrice() + finalDeliveryFee - appliedRewardDiscount - rankDiscountAmount;
+      const finalTotal = getTotalPrice() + finalDeliveryFee - discounts.totalDiscount;
 
       // Create order in database (this will accept the DoorDash quote)
       const orderResponse = await fetch('/api/orders/create', {
@@ -299,8 +314,7 @@ function CheckoutForm({
           deliveryFee: currentQuote?.fee,
           rewardRedemptionId: selectedRedemption?.id,
           rewardDiscount: appliedRewardDiscount,
-          rankDiscountPercent: rankDiscountPercent > 0 ? rankDiscountPercent : undefined,
-          rankDiscountAmount: rankDiscountAmount > 0 ? rankDiscountAmount : undefined,
+          perks: selectedPerks,
           notes,
         }),
       });
@@ -355,12 +369,16 @@ function CheckoutForm({
               <span>-${rewardDiscount.toFixed(2)}</span>
             </div>
           )}
-          {rankDiscountPercent > 0 && getRankDiscountAmount() > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#4ade80' }}>
-              <span>Member Discount ({rankDiscountPercent}%):</span>
-              <span>-${getRankDiscountAmount().toFixed(2)}</span>
-            </div>
-          )}
+          {selectedPerks.map((perk) => {
+            const amount = discounts.perkDiscounts[perk] ?? 0;
+            if (amount <= 0) return null;
+            return (
+              <div key={perk} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#4ade80' }}>
+                <span>{memberPerks.find((p) => p.type === perk)?.label ?? 'Member perk'}:</span>
+                <span>-${amount.toFixed(2)}</span>
+              </div>
+            );
+          })}
           <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '18px' }}>
             <span style={{ color: '#fff' }}>Total:</span>
             <span style={{ color: '#fc3678' }}>${getOrderTotal().toFixed(2)}</span>
@@ -431,6 +449,60 @@ function CheckoutForm({
                         Add an eligible item to use this reward
                       </p>
                     )}
+                  </div>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {memberPerks.length > 0 && (
+        <div>
+          <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '4px', color: '#f1d00f' }}>
+            {rankInfo?.label} Member Perks
+          </h3>
+          <p style={{ fontSize: '12px', color: '#888', marginBottom: '12px' }}>
+            Monthly perks reset on the 1st. Unused perks don&apos;t carry over.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {memberPerks.map((perk) => {
+              const checked = selectedPerks.includes(perk.type);
+              const amount = discounts.perkDiscounts[perk.type] ?? 0;
+
+              return (
+                <label
+                  key={perk.type}
+                  style={{
+                    display: 'flex',
+                    gap: '10px',
+                    alignItems: 'flex-start',
+                    color: '#ccc',
+                    fontSize: '14px',
+                    padding: '10px',
+                    borderRadius: '8px',
+                    border: `1px solid ${checked ? 'rgba(76, 175, 80, 0.45)' : 'rgba(255, 255, 255, 0.15)'}`,
+                    background: checked ? 'rgba(76, 175, 80, 0.08)' : 'transparent',
+                    opacity: perk.available ? 1 : 0.55,
+                    cursor: perk.available ? 'pointer' : 'not-allowed',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    disabled={!perk.available}
+                    onChange={() => togglePerk(perk.type)}
+                  />
+                  <div>
+                    <p style={{ color: '#fff', fontWeight: 600, marginBottom: '2px' }}>{perk.label}</p>
+                    <p style={{ fontSize: '12px', color: '#aaa' }}>{perk.description}</p>
+                    {!perk.available ? (
+                      <p style={{ color: '#f59e0b', fontSize: '12px', marginTop: '2px' }}>{perk.unavailableReason}</p>
+                    ) : checked && amount <= 0 ? (
+                      <p style={{ color: '#f59e0b', fontSize: '12px', marginTop: '2px' }}>Add an eligible item to use this perk</p>
+                    ) : checked ? (
+                      <p style={{ color: '#4ade80', fontSize: '12px', marginTop: '2px' }}>Applied • -${amount.toFixed(2)}</p>
+                    ) : null}
                   </div>
                 </label>
               );
@@ -786,6 +858,7 @@ export default function Checkout() {
   const [rewardsSummary, setRewardsSummary] = useState<RewardsSummary | null>(null);
   const [rankInfo, setRankInfo] = useState<UserRankInfo | null>(null);
   const [selectedRewardRedemptionId, setSelectedRewardRedemptionId] = useState('');
+  const [selectedPerks, setSelectedPerks] = useState<PerkType[]>([]);
   const [clientSecret, setClientSecret] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -795,11 +868,14 @@ export default function Checkout() {
     rewardsSummary?.availableRedemptions.find(
       (redemption) => redemption.id === selectedRewardRedemptionId
     ) ?? null;
-  const rewardDiscount = selectedRedemption
-    ? calculateRewardDiscount(selectedRedemption.rewardType, items)
-    : 0;
-  const rankDiscountPercent = rankInfo?.discountPercent ?? 0;
-  const rankDiscountAmount = rankDiscountPercent > 0 ? subtotal * (rankDiscountPercent / 100) : 0;
+  // Only perks the server says are available this period can be applied;
+  // anything else (e.g. restored from a previous session) is dropped.
+  const applicablePerks = selectedPerks.filter((perk) =>
+    rankInfo?.perks?.some((status) => status.type === perk && status.available)
+  );
+  const discounts = calculateOrderDiscounts(items, selectedRedemption?.rewardType, applicablePerks);
+  const rewardDiscount = discounts.rewardDiscount;
+  const perksKey = applicablePerks.join(',');
 
   useEffect(() => {
     const checkPauseStatus = async () => {
@@ -871,7 +947,7 @@ export default function Checkout() {
         try {
           setLoading(true);
           setError('');
-          const amountToCharge = Math.max(Number((subtotal - rewardDiscount - rankDiscountAmount).toFixed(2)), 0.5);
+          const amountToCharge = Math.max(Number((subtotal - discounts.totalDiscount).toFixed(2)), 0.5);
 
           const response = await fetch('/api/payment/create-intent', {
             method: 'POST',
@@ -884,6 +960,7 @@ export default function Checkout() {
               rewardRedemptionId: selectedRedemption?.id,
               rewardType: selectedRedemption?.rewardType,
               rewardDiscount,
+              perks: applicablePerks,
             }),
           });
 
@@ -910,7 +987,8 @@ export default function Checkout() {
     router,
     subtotal,
     rewardDiscount,
-    rankDiscountAmount,
+    discounts.totalDiscount,
+    perksKey,
     selectedRedemption?.id,
     selectedRedemption?.rewardType,
   ]);
@@ -1028,8 +1106,10 @@ export default function Checkout() {
                   rewardsSummary={rewardsSummary}
                   selectedRewardRedemptionId={selectedRewardRedemptionId}
                   onSelectRewardRedemption={setSelectedRewardRedemptionId}
-                  rewardDiscount={rewardDiscount}
+                  discounts={discounts}
                   rankInfo={rankInfo}
+                  selectedPerks={applicablePerks}
+                  onSetSelectedPerks={setSelectedPerks}
                   onOrderSubmitted={() => { orderSubmittedRef.current = true; }}
                 />
               </Elements>

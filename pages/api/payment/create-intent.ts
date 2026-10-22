@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createApiClient } from '../../../lib/supabase/server';
 import Stripe from 'stripe';
-import { db, isRewardsSchemaMissingError, isRanksSchemaMissingError } from '../../../lib/db';
+import { db, isRewardsSchemaMissingError } from '../../../lib/db';
 import { getMenuPriceOverrides } from '../../../lib/menu/priceOverrides';
 import {
   validateSubmittedItems,
@@ -9,8 +9,10 @@ import {
   describePriceErrors,
   SubmittedItem,
 } from '../../../lib/menu/pricing';
-import { calculateRewardDiscount } from '../../../lib/rewards/eligibility';
-import { getDiscountPercent } from '../../../lib/ranks/config';
+import { calculateOrderDiscounts } from '../../../lib/perks/discounts';
+import { findUnusablePerk, resolveRequestedPerks } from '../../../lib/perks/validate';
+import { PERK_DEFINITIONS } from '../../../lib/perks/config';
+import type { RewardType } from '../../../lib/rewards/types';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-11-17.clover',
@@ -43,7 +45,7 @@ export default async function handler(
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    const { amount, items, deliveryAddress, deliveryPhone, notes, rewardRedemptionId, rewardType, rewardDiscount } = req.body;
+    const { amount, items, deliveryAddress, deliveryPhone, notes, rewardRedemptionId, rewardType, rewardDiscount, perks } = req.body;
 
     // Validation
     if (!amount || amount <= 0) {
@@ -89,7 +91,7 @@ export default async function handler(
     const subtotal = trustedSubtotal(normalizedItems, overrides);
 
     // Recompute the reward discount from the stored redemption, not the body.
-    let serverRewardDiscount = 0;
+    let redeemedRewardType: RewardType | null = null;
     if (rewardRedemptionId) {
       try {
         const redemption = await db.getRewardRedemptionById(
@@ -99,7 +101,7 @@ export default async function handler(
         if (!redemption || redemption.status !== 'available') {
           return res.status(400).json({ message: 'Selected reward is no longer available' });
         }
-        serverRewardDiscount = calculateRewardDiscount(redemption.rewardType, normalizedItems);
+        redeemedRewardType = redemption.rewardType;
       } catch (error) {
         if (!isRewardsSchemaMissingError(error)) {
           throw error;
@@ -107,25 +109,26 @@ export default async function handler(
       }
     }
 
-    // Recompute the rank discount from the user's actual rank.
-    let serverRankDiscount = 0;
-    try {
-      const userRank = await db.getUserRank(user.id);
-      const discountPercent = getDiscountPercent(userRank.rank);
-      if (discountPercent > 0) {
-        serverRankDiscount = Number((subtotal * (discountPercent / 100)).toFixed(2));
-      }
-    } catch (error) {
-      if (!isRanksSchemaMissingError(error)) {
-        throw error;
-      }
+    // Only perks the member is entitled to and hasn't used this period.
+    const dbUser = await db.findUserById(user.id);
+    const resolvedPerks = await resolveRequestedPerks(user.id, dbUser?.birthday ?? null, perks);
+    if (!resolvedPerks.ok) {
+      return res.status(resolvedPerks.status).json({ message: resolvedPerks.message });
+    }
+
+    const discounts = calculateOrderDiscounts(normalizedItems, redeemedRewardType, resolvedPerks.perks);
+    const unusablePerk = findUnusablePerk(resolvedPerks.perks, discounts);
+    if (unusablePerk) {
+      return res.status(400).json({
+        message: `Add an eligible item to use ${PERK_DEFINITIONS[unusablePerk].label}`,
+      });
     }
 
     // Mirrors the client's amountToCharge in pages/checkout.tsx, including the
     // $0.50 Stripe minimum. Note the delivery fee is intentionally not part of
     // this figure, matching existing checkout behaviour.
     const expectedAmount = Math.max(
-      Number((subtotal - serverRewardDiscount - serverRankDiscount).toFixed(2)),
+      Number((subtotal - discounts.totalDiscount).toFixed(2)),
       0.5
     );
 
@@ -161,6 +164,7 @@ export default async function handler(
         rewardRedemptionId: toMetadataValue(rewardRedemptionId || ''),
         rewardType: toMetadataValue(rewardType || ''),
         rewardDiscount: toMetadataValue(rewardDiscount ? String(rewardDiscount) : ''),
+        memberPerks: toMetadataValue(resolvedPerks.perks.join(',')),
       },
       automatic_payment_methods: {
         enabled: true,

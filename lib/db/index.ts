@@ -1,7 +1,9 @@
 import { PrismaClient, Prisma } from '@prisma/client';
 import type { RewardType } from '../rewards/types';
 import type { MemberRank } from '../ranks/types';
-import { getNextRank, getUpgradeCost, getDiscountPercent, RANK_TIERS } from '../ranks/config';
+import { getNextRank, getUpgradeCost } from '../ranks/config';
+import type { PerkStatus, PerkType } from '../perks/types';
+import { PERK_DEFINITIONS, RANK_PERKS, getPerkPeriodKey, isBirthdayMonth } from '../perks/config';
 import { ORDER_EVENT_VERSION } from '../outbox/types';
 
 // Prevent multiple instances of Prisma Client in development
@@ -107,6 +109,26 @@ export function isRanksSchemaMissingError(error: unknown): boolean {
   return msg.includes('relation "member_ranks" does not exist');
 }
 
+export function isPerksSchemaMissingError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const e = error as { code?: string; message?: string; meta?: { message?: string } };
+  if (e.code !== 'P2010') return false;
+  const msg = `${e.message || ''} ${e.meta?.message || ''}`.toLowerCase();
+  return msg.includes('relation "member_perk_uses" does not exist');
+}
+
+export interface PerkUseInput {
+  perkType: PerkType;
+  periodKey: string;
+  discountAmount: number;
+}
+
+type PerkUseRow = {
+  perk_type: string;
+  period_key: string;
+  used_at: Date;
+};
+
 export function isRewardsSchemaMissingError(error: unknown): boolean {
   if (!error || typeof error !== 'object') {
     return false;
@@ -153,6 +175,7 @@ export type CreateOrderInput = {
   customerName?: string;
   customerEmail?: string;
   notes?: string;
+  perkUses?: PerkUseInput[];
 };
 
 // Database operations class for backward compatibility
@@ -217,9 +240,16 @@ class Database {
   }
 
   async upsertUser(userData: { id: string; email: string; name?: string | null; birthday?: Date | null }) {
+    // A birthday is locked once set (only admins can change it), so an upsert
+    // may fill it in but never overwrite it.
+    const existing = await prisma.user.findUnique({ where: { id: userData.id }, select: { birthday: true } });
     const user = await prisma.user.upsert({
       where: { id: userData.id },
-      update: { email: userData.email, name: userData.name, birthday: userData.birthday ?? undefined },
+      update: {
+        email: userData.email,
+        name: userData.name,
+        birthday: existing?.birthday ? undefined : userData.birthday ?? undefined,
+      },
       create: { id: userData.id, email: userData.email, name: userData.name, birthday: userData.birthday ?? null },
     });
 
@@ -556,6 +586,51 @@ class Database {
     });
   }
 
+  // Member perk operations
+  async getMemberPerks(
+    userId: string,
+    rank: MemberRank,
+    birthday: Date | null,
+    now: Date = new Date()
+  ): Promise<PerkStatus[]> {
+    const entitled = RANK_PERKS[rank];
+    const periodKeys = Array.from(new Set(entitled.map((perk) => getPerkPeriodKey(perk, now))));
+
+    const rows = await prisma.$queryRaw<PerkUseRow[]>`
+      SELECT perk_type, period_key, used_at
+      FROM member_perk_uses
+      WHERE user_id = ${userId}::uuid AND period_key = ANY(${periodKeys}::text[])
+    `;
+
+    return entitled.map((perkType) => {
+      const definition = PERK_DEFINITIONS[perkType];
+      const periodKey = getPerkPeriodKey(perkType, now);
+      const use = rows.find((row) => row.perk_type === perkType && row.period_key === periodKey);
+
+      let unavailableReason: string | null = null;
+      if (use) {
+        unavailableReason =
+          definition.cadence === 'birthday' ? 'Used this year' : 'Used this month';
+      } else if (definition.cadence === 'birthday') {
+        if (!birthday) {
+          unavailableReason = 'Add your birthday in your profile';
+        } else if (!isBirthdayMonth(birthday, now)) {
+          unavailableReason = 'Available during your birthday month';
+        }
+      }
+
+      return {
+        type: perkType,
+        label: definition.label,
+        description: definition.description,
+        cadence: definition.cadence,
+        available: unavailableReason === null,
+        unavailableReason,
+        usedAt: use?.used_at.toISOString() ?? null,
+      };
+    });
+  }
+
   // Store settings operations
   private mapStoreSettingsRow(row: StoreSettingsRow): StoreSettings {
     return {
@@ -651,6 +726,17 @@ class Database {
         data: this.buildOrderData(orderData),
         include: { items: true },
       });
+
+      // ON CONFLICT: the payment has already been taken by the time an order
+      // is created, so a perk that got used in a parallel checkout shouldn't
+      // fail this one. Availability is checked before payment.
+      for (const use of orderData.perkUses ?? []) {
+        await tx.$executeRaw`
+          INSERT INTO member_perk_uses (user_id, perk_type, period_key, order_id, discount_amount)
+          VALUES (${order.userId}::uuid, ${use.perkType}, ${use.periodKey}, ${order.id}::uuid, ${use.discountAmount})
+          ON CONFLICT (user_id, perk_type, period_key) DO NOTHING
+        `;
+      }
 
       await tx.$executeRaw`
         INSERT INTO outbox_events (event_type, aggregate_id, payload)

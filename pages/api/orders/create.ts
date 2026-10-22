@@ -15,8 +15,9 @@ import {
   validateSubmittedItems,
   describePriceErrors,
 } from '../../../lib/menu/pricing';
-import { calculateRewardDiscount } from '../../../lib/rewards/eligibility';
-import { isRanksSchemaMissingError } from '../../../lib/db';
+import { calculateOrderDiscounts } from '../../../lib/perks/discounts';
+import { describePerkUses, findUnusablePerk, resolveRequestedPerks } from '../../../lib/perks/validate';
+import { PERK_DEFINITIONS } from '../../../lib/perks/config';
 
 async function broadcastNewOrder(orderId: string, userId: string) {
   const supabase = createSupabaseClient(
@@ -112,8 +113,7 @@ export default async function handler(
       deliveryFee,
       rewardRedemptionId,
       rewardDiscount,
-      rankDiscountPercent,
-      rankDiscountAmount,
+      perks,
       notes,
     } = req.body;
 
@@ -210,10 +210,11 @@ export default async function handler(
         return res.status(400).json({ message: 'Selected reward is no longer available' });
       }
 
-      appliedRewardDiscount = calculateRewardDiscount(
+      appliedRewardDiscount = calculateOrderDiscounts(
+        normalizedItems,
         rewardRedemption.rewardType,
-        normalizedItems
-      );
+        []
+      ).rewardDiscount;
 
       if (appliedRewardDiscount <= 0) {
         return res.status(400).json({
@@ -231,25 +232,26 @@ export default async function handler(
       appliedReward = rewardRedemption;
     }
 
-    let appliedRankDiscount = 0;
-    if (rankDiscountPercent && rankDiscountPercent > 0) {
-      try {
-        const userRank = await db.getUserRank(user.id);
-        const { getDiscountPercent } = await import('../../../lib/ranks/config');
-        const serverDiscountPercent = getDiscountPercent(userRank.rank);
-
-        if (serverDiscountPercent > 0 && Math.abs(serverDiscountPercent - Number(rankDiscountPercent)) < 0.01) {
-          appliedRankDiscount = Number((subtotal * (serverDiscountPercent / 100)).toFixed(2));
-        }
-      } catch (error) {
-        if (!isRanksSchemaMissingError(error)) {
-          throw error;
-        }
-      }
+    const resolvedPerks = await resolveRequestedPerks(user.id, dbUser.birthday, perks);
+    if (!resolvedPerks.ok) {
+      return res.status(resolvedPerks.status).json({ message: resolvedPerks.message });
     }
 
+    const discounts = calculateOrderDiscounts(
+      normalizedItems,
+      appliedReward?.rewardType,
+      resolvedPerks.perks
+    );
+    const unusablePerk = findUnusablePerk(resolvedPerks.perks, discounts);
+    if (unusablePerk) {
+      return res.status(400).json({
+        message: `Add an eligible item to use ${PERK_DEFINITIONS[unusablePerk].label}`,
+      });
+    }
+    const perkUses = describePerkUses(resolvedPerks.perks, discounts);
+
     const expectedTotal = Number(
-      (subtotal + normalizedDeliveryFee - appliedRewardDiscount - appliedRankDiscount).toFixed(2)
+      (subtotal + normalizedDeliveryFee - discounts.totalDiscount).toFixed(2)
     );
 
     if (expectedTotal <= 0) {
@@ -318,8 +320,8 @@ export default async function handler(
         2
       )}] ${orderNotes}`.trim();
     }
-    if (appliedRankDiscount > 0) {
-      orderNotes = `[RANK DISCOUNT: ${rankDiscountPercent}% -$${appliedRankDiscount.toFixed(
+    for (const use of perkUses) {
+      orderNotes = `[MEMBER PERK: ${PERK_DEFINITIONS[use.perkType].label} -$${use.discountAmount.toFixed(
         2
       )}] ${orderNotes}`.trim();
     }
@@ -344,6 +346,7 @@ export default async function handler(
       customerName: user.user_metadata?.name || dbUser.name || undefined,
       customerEmail: user.email,
       notes: orderNotes,
+      perkUses,
     });
 
     let pointsEarned = 0;

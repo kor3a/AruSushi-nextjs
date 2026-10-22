@@ -267,20 +267,47 @@ export default function Rewards() {
                       </p>
                     )}
                   </div>
-                  {rankInfo.discountPercent > 0 && (
-                    <div style={{
-                      background: 'rgba(252, 54, 120, 0.15)',
-                      padding: '8px 14px',
-                      borderRadius: '8px',
-                      textAlign: 'center',
-                    }}>
-                      <p style={{ color: '#fc3678', fontSize: '18px', fontWeight: '700', margin: 0 }}>
-                        {rankInfo.discountPercent}% OFF
-                      </p>
-                      <p style={{ color: '#ccc', fontSize: '11px', margin: '2px 0 0' }}>every order</p>
-                    </div>
-                  )}
                 </div>
+
+                {(rankInfo.perks?.length ?? 0) > 0 && (
+                  <div style={{ marginBottom: rankInfo.nextUpgrade ? '14px' : '0' }}>
+                    <p style={{ color: '#ccc', fontSize: '12px', marginBottom: '8px' }}>
+                      Your perks · apply them at checkout. Monthly perks reset on the 1st.
+                    </p>
+                    <div style={{ display: 'grid', gap: '8px' }}>
+                      {rankInfo.perks.map((perk) => (
+                        <div
+                          key={perk.type}
+                          style={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: '8px',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            padding: '10px 12px',
+                            borderRadius: '8px',
+                            background: perk.available ? 'rgba(76, 175, 80, 0.1)' : 'rgba(255, 255, 255, 0.04)',
+                            border: `1px solid ${perk.available ? 'rgba(76, 175, 80, 0.3)' : 'rgba(255, 255, 255, 0.08)'}`,
+                          }}
+                        >
+                          <div>
+                            <p style={{ color: '#fff', fontSize: '14px', fontWeight: '600', margin: 0 }}>{perk.label}</p>
+                            <p style={{ color: '#aaa', fontSize: '12px', margin: '2px 0 0' }}>{perk.description}</p>
+                          </div>
+                          {perk.available ? (
+                            <span style={{ color: '#4ade80', fontSize: '12px', fontWeight: '600' }}>Available</span>
+                          ) : perk.cadence === 'birthday' && !rankInfo.hasBirthday ? (
+                            <Link href="/profile" style={{ color: '#f1d00f', fontSize: '12px', fontWeight: '600', textDecoration: 'underline' }}>
+                              {perk.unavailableReason}
+                            </Link>
+                          ) : (
+                            <span style={{ color: '#888', fontSize: '12px' }}>{perk.unavailableReason}</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {rankInfo.nextUpgrade && (
                   <div style={{

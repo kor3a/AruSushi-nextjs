@@ -1,11 +1,31 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createApiClient } from '../../../lib/supabase/server';
-import { db, isRanksSchemaMissingError, isRewardsSchemaMissingError } from '../../../lib/db';
+import {
+  db,
+  isPerksSchemaMissingError,
+  isRanksSchemaMissingError,
+  isRewardsSchemaMissingError,
+} from '../../../lib/db';
 import { getNextRank, getRankTier, RANK_TIERS } from '../../../lib/ranks/config';
-import type { UserRankInfo } from '../../../lib/ranks/types';
+import type { MemberRank, UserRankInfo } from '../../../lib/ranks/types';
+import type { PerkStatus } from '../../../lib/perks/types';
+
+async function loadPerks(userId: string, rank: MemberRank, birthday: Date | null): Promise<PerkStatus[]> {
+  try {
+    return await db.getMemberPerks(userId, rank, birthday);
+  } catch (error) {
+    if (isPerksSchemaMissingError(error)) {
+      // Without the table we can't tell what's been used, so offer nothing.
+      return [];
+    }
+    throw error;
+  }
+}
 
 function buildRankInfo(
-  rankRecord: Awaited<ReturnType<typeof db.getUserRank>>
+  rankRecord: Awaited<ReturnType<typeof db.getUserRank>>,
+  perks: PerkStatus[],
+  birthday: Date | null
 ): UserRankInfo {
   const tier = getRankTier(rankRecord.rank);
   const next = getNextRank(rankRecord.rank);
@@ -15,7 +35,8 @@ function buildRankInfo(
     label: tier.label,
     rankStartedAt: rankRecord.rankStartedAt.toISOString(),
     rankExpiresAt: rankRecord.rankExpiresAt.toISOString(),
-    discountPercent: tier.discountPercent,
+    perks,
+    hasBirthday: Boolean(birthday),
     freeAppetizerClaimed: rankRecord.freeAppetizerClaimed,
     freeRollClaimed: rankRecord.freeRollClaimed,
     lastMonthlyAppetizerAt: rankRecord.lastMonthlyAppetizerAt?.toISOString() ?? null,
@@ -45,19 +66,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    const existingUser = await db.findUserById(user.id);
-    if (!existingUser) {
-      await db.createUser({
+    const dbUser =
+      (await db.findUserById(user.id)) ??
+      (await db.createUser({
         id: user.id,
         email: user.email!,
         name: user.user_metadata?.name || null,
-      });
-    }
+      }));
+    const birthday = dbUser.birthday;
 
     if (req.method === 'GET') {
       try {
         const rankRecord = await db.getUserRank(user.id);
-        return res.status(200).json(buildRankInfo(rankRecord));
+        const perks = await loadPerks(user.id, rankRecord.rank, birthday);
+        return res.status(200).json(buildRankInfo(rankRecord, perks, birthday));
       } catch (error) {
         if (isRanksSchemaMissingError(error)) {
           return res.status(200).json({
@@ -65,7 +87,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             label: 'Silver',
             rankStartedAt: new Date().toISOString(),
             rankExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-            discountPercent: 0,
+            perks: await loadPerks(user.id, 'silver', birthday),
+            hasBirthday: Boolean(birthday),
             freeAppetizerClaimed: false,
             freeRollClaimed: false,
             lastMonthlyAppetizerAt: null,
@@ -83,9 +106,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // POST: upgrade rank
     try {
       const { rankRecord, pointsSummary } = await db.upgradeRank(user.id);
+      const perks = await loadPerks(user.id, rankRecord.rank, birthday);
       return res.status(200).json({
         message: `Congratulations! You are now a ${getRankTier(rankRecord.rank).label} member!`,
-        rankInfo: buildRankInfo(rankRecord),
+        rankInfo: buildRankInfo(rankRecord, perks, birthday),
         pointsBalance: pointsSummary.pointsBalance,
       });
     } catch (error: any) {

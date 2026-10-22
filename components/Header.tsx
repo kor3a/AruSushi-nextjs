@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
 import { useRewards } from '../contexts/RewardsContext';
-import { canManageOrders } from '../lib/auth/roles';
+import { canManageOrders, getUserRoleByEmail } from '../lib/auth/roles';
 import { FaShoppingCart, FaUser, FaBars } from 'react-icons/fa';
 
 const Header = () => {
@@ -14,6 +14,7 @@ const Header = () => {
   const [mounted, setMounted] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const showAdminOrders = canManageOrders(user?.email);
+  const isAdmin = getUserRoleByEmail(user?.email) === 'admin';
 
   // Only get cart count on client side to prevent hydration mismatch
   useEffect(() => {
@@ -46,6 +47,7 @@ const Header = () => {
             <Link href="/" onClick={closeMenu}>Home</Link>
             <Link href="/admin/orders" onClick={closeMenu}>Orders</Link>
             <Link href="/admin/menu-prices" onClick={closeMenu}>Menu Prices</Link>
+            {isAdmin && <Link href="/admin/members" onClick={closeMenu}>Members</Link>}
           </>
         ) : (
           <>
