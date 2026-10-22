@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import CherryBlossom from '@/components/CherryBlossom';
+import HomeMembership from '@/components/HomeMembership';
 import { AiOutlineClose } from 'react-icons/ai';
 
 const HomePage = () => {
@@ -51,6 +52,7 @@ const HomePage = () => {
                 </div>
             </div>
         </div>
+        <HomeMembership />
         <section className="parallex">
             <div className="parallex-wrapper" style={{ position: 'relative', zIndex: 1 }}>
                 <Image
