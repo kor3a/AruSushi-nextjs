@@ -316,6 +316,37 @@
   display: inline-block;
 }
 
+/* The signed-in member's current rank */
+.current .cardTilt {
+  border-color: var(--tier);
+  box-shadow: 0 0 0 2px var(--tier), 0 2.4rem 5rem -2.4rem rgba(0, 0, 0, 0.7);
+}
+
+.yourRank {
+  position: relative;
+  z-index: 1;
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 1.1rem 0.4rem;
+  border-radius: 99rem;
+  background: #1d1a16;
+  color: var(--paper);
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.yourRank::before {
+  content: '';
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  background: var(--tier);
+}
+
 /* Ticket stub under the face */
 .stub {
   position: relative;
