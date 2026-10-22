@@ -7,6 +7,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useGSAP } from '@gsap/react';
 import { animate, createSpring, splitText, stagger, svg, utils } from 'animejs';
 import { useAuth } from '../contexts/AuthContext';
+import { useRewards } from '../contexts/RewardsContext';
 import { RANK_ORDER, RANK_TIERS } from '../lib/ranks/config';
 import type { MemberRank } from '../lib/ranks/types';
 import styles from './HomeMembership.module.css';
@@ -42,6 +43,8 @@ const TIERS = RANK_ORDER.map((rank, idx) => {
 
 export default function HomeMembership() {
   const { user } = useAuth();
+  const { rankInfo } = useRewards();
+  const currentRank = user ? rankInfo?.rank : undefined;
   const root = useRef<HTMLElement>(null);
 
   useGSAP(() => {
@@ -244,7 +247,7 @@ export default function HomeMembership() {
               </Link>
               <p className={styles.stampNote}>
                 {user ? (
-                  <>You&apos;re a member.<br />Check your points and rank.</>
+                  <>You&apos;re a member.<br />Check your points and rank up.</>
                 ) : (
                   <>Silver is free.<br />Use points to upgrade.</>
                 )}
@@ -254,11 +257,14 @@ export default function HomeMembership() {
         </div>
 
         <ol className={styles.cards}>
-          {TIERS.map((tier, idx) => (
+          {TIERS.map((tier, idx) => {
+            const isCurrent = tier.rank === currentRank;
+            return (
             <li
               key={tier.rank}
-              className={styles.card}
+              className={`${styles.card} ${isCurrent ? styles.current : ''}`}
               style={{ '--tier': tier.color, '--tier-grad': tier.bgGradient } as CSSProperties}
+              aria-current={isCurrent ? 'true' : undefined}
             >
               <div className={styles.cardTilt}>
                 <div className={styles.face}>
@@ -267,6 +273,7 @@ export default function HomeMembership() {
                     <span>A-Ru Members</span>
                     <span>No. {String(idx + 1).padStart(2, '0')}</span>
                   </div>
+                  {isCurrent && <span className={styles.yourRank}>Your rank</span>}
                   <span className={styles.faceKanji} aria-hidden="true">{tier.kanji}</span>
                   <h3 className={styles.name}>
                     <span className={styles.nameText}>{tier.label}</span>
@@ -286,7 +293,8 @@ export default function HomeMembership() {
                 </div>
               </div>
             </li>
-          ))}
+            );
+          })}
         </ol>
 
         <p className={styles.footnote}>

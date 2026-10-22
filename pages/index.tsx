@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Script from 'next/script';
 import Image from 'next/image';
@@ -7,10 +7,34 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import CherryBlossom from '@/components/CherryBlossom';
 import HomeMembership from '@/components/HomeMembership';
+import { useAuth } from '@/contexts/AuthContext';
 import { AiOutlineClose } from 'react-icons/ai';
+import { SiDoordash, SiUbereats, SiYelp } from 'react-icons/si';
+import { FcGoogle } from 'react-icons/fc';
 
 const HomePage = () => {
   const [showReviewCard, setShowReviewCard] = useState(true);
+  const { user } = useAuth();
+  const [profileName, setProfileName] = useState<string | null>(null);
+
+  // Profile edits only update the database, so prefer that name over the one saved at sign-up
+  useEffect(() => {
+    setProfileName(null);
+    if (!user) return;
+    let cancelled = false;
+    fetch('/api/user/profile')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.user?.name) setProfileName(data.user.name);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  const firstName = user ? (profileName || user.user_metadata?.name || '').trim().split(/\s+/)[0] : '';
+  const heroName = firstName ? `${firstName},` : 'A-Ru Sushi';
 
   return (
   <>
@@ -44,9 +68,29 @@ const HomePage = () => {
                         <div className="content">
                             <Image src="/img/homeLogo.png" alt="Logo" width={150} height={100}/>
 
-                            <h3>A-Ru Sushi</h3>
+                            <h3>{heroName}</h3>
                             <h1>Hungry?</h1>
-                            <Link href="/menu" className="btn">Order Now</Link>
+                            <Link href="/menu" className="btn">Order via Website</Link>
+                            <div className="delivery-btns">
+                                <a
+                                    href="https://www.doordash.com/en-CA/store/a-ru-japanese-restaurant-buellton-632339/"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="btn btn-delivery"
+                                >
+                                    <SiDoordash className="delivery-icon doordash" />
+                                    DoorDash
+                                </a>
+                                <a
+                                    href="https://www.ubereats.com/store/a-ru-japanese-restaurant/nUpVGrmYX2irFGscBORAOA"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="btn btn-delivery"
+                                >
+                                    <SiUbereats className="delivery-icon ubereats" />
+                                    Uber Eats
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -84,15 +128,11 @@ const HomePage = () => {
                 {/* Content container */}
                 {showReviewCard && (
                 <div style={{
-                    position: 'absolute',
-                    left: '50%',
-                    top: '50%',
-                    transform: 'translate(-50%, -50%)',
+                    position: 'relative',
                     zIndex: 10,
                     textAlign: 'center',
                     width: '90%',
                     maxWidth: '800px',
-                    padding: '40px',
                     pointerEvents: 'auto'
                 }}>
                     {/* Glassmorphism card */}
@@ -102,7 +142,7 @@ const HomePage = () => {
                         borderRadius: '24px',
                         border: '2px solid rgba(252, 54, 120, 0.3)',
                         boxShadow: '0 16px 48px rgba(0, 0, 0, 0.5), 0 0 40px rgba(241, 208, 15, 0.2)',
-                        padding: '48px 32px',
+                        padding: 'clamp(32px, 7vw, 48px) clamp(20px, 5vw, 32px)',
                         position: 'relative',
                         pointerEvents: 'auto'
                     }}>
@@ -221,7 +261,7 @@ const HomePage = () => {
                                     e.currentTarget.style.boxShadow = '0 8px 24px rgba(252, 54, 120, 0.4)';
                                 }}
                             >
-                                <span style={{ fontSize: '20px' }}>⭐</span>
+                                <span className="review-icon"><SiYelp color="#d32323" /></span>
                                 Review on Yelp
                             </a>
 
@@ -254,7 +294,7 @@ const HomePage = () => {
                                     e.currentTarget.style.boxShadow = '0 8px 24px rgba(241, 208, 15, 0.4)';
                                 }}
                             >
-                                <span style={{ fontSize: '20px' }}>⭐</span>
+                                <span className="review-icon"><FcGoogle /></span>
                                 Review on Google
                             </a>
                         </div>
