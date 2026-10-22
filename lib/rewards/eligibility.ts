@@ -7,13 +7,13 @@ export interface RewardEligibleItem {
   quantity: number;
 }
 
-const appetizerItemNames = new Set(
+export const appetizerItemNames = new Set(
   dinnerMenu
     .find((category) => category.category === 'Appetizers')
     ?.items.map((item) => item.name.toLowerCase()) ?? []
 );
 
-const houseSpecialRollItemNames = new Set(
+export const houseSpecialRollItemNames = new Set(
   dinnerMenu
     .find((category) => category.category === 'House Special Rolls')
     ?.items.map((item) => item.name.toLowerCase()) ?? []

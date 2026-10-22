@@ -9,9 +9,9 @@ export const RANK_TIERS: Record<MemberRank, RankTier> = {
     color: '#C0C0C0',
     bgGradient: 'linear-gradient(135deg, #C0C0C0 0%, #A8A8A8 50%, #808080 100%)',
     upgradeCost: null,
-    discountPercent: 0,
     benefits: [
       'Collect sushi points on every order',
+      'Birthday rewards',
     ],
   },
   rose_gold: {
@@ -20,11 +20,10 @@ export const RANK_TIERS: Record<MemberRank, RankTier> = {
     color: '#E8A87C',
     bgGradient: 'linear-gradient(135deg, #F4C4A0 0%, #E8A87C 50%, #C48B65 100%)',
     upgradeCost: 500,
-    discountPercent: 2,
     benefits: [
       'Collect sushi points on every order',
       'Birthday rewards',
-      
+      '10% off one order every month (up to $20)',
     ],
   },
   platinum: {
@@ -33,12 +32,11 @@ export const RANK_TIERS: Record<MemberRank, RankTier> = {
     color: '#B0C4DE',
     bgGradient: 'linear-gradient(135deg, #D6E4F0 0%, #B0C4DE 50%, #8FAABE 100%)',
     upgradeCost: 1500,
-    discountPercent: 5,
     benefits: [
       'Collect sushi points on every order',
       'Birthday rewards',
-      'Free Appetizer every month',
-      
+      '10% off one order every month (up to $20)',
+      'Free appetizer every month',
     ],
   },
   diamond: {
@@ -47,13 +45,12 @@ export const RANK_TIERS: Record<MemberRank, RankTier> = {
     color: '#B9F2FF',
     bgGradient: 'linear-gradient(135deg, #E0F7FA 0%, #B9F2FF 50%, #81D4FA 100%)',
     upgradeCost: 4500,
-    discountPercent: 10,
     benefits: [
       'Collect sushi points on every order',
       'Birthday rewards',
+      '10% off one order every month (up to $20)',
       'Free appetizer every month',
       'Free House Special roll every month',
-      
     ],
   },
 };
@@ -70,10 +67,6 @@ export function getNextRank(currentRank: MemberRank): MemberRank | null {
 
 export function getUpgradeCost(targetRank: MemberRank): number | null {
   return RANK_TIERS[targetRank].upgradeCost;
-}
-
-export function getDiscountPercent(rank: MemberRank): number {
-  return RANK_TIERS[rank].discountPercent;
 }
 
 export function isValidRank(value: string): value is MemberRank {

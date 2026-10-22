@@ -1,3 +1,5 @@
+import type { PerkStatus } from '../perks/types';
+
 export type MemberRank = 'silver' | 'rose_gold' | 'platinum' | 'diamond';
 
 export interface RankTier {
@@ -6,7 +8,6 @@ export interface RankTier {
   color: string;
   bgGradient: string;
   upgradeCost: number | null;
-  discountPercent: number;
   benefits: string[];
 }
 
@@ -15,7 +16,9 @@ export interface UserRankInfo {
   label: string;
   rankStartedAt: string;
   rankExpiresAt: string;
-  discountPercent: number;
+  // Monthly and birthday perks for the member's rank, with this period's availability.
+  perks: PerkStatus[];
+  hasBirthday: boolean;
   freeAppetizerClaimed: boolean;
   freeRollClaimed: boolean;
   lastMonthlyAppetizerAt: string | null;

@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { createApiClient } from '../../../lib/supabase/server';
 import { db } from '../../../lib/db';
 import { getUserRoleByEmail } from '../../../lib/auth/roles';
+import { parseBirthday } from '../../../lib/perks/birthday';
 
 export default async function handler(
   req: NextApiRequest,
@@ -49,7 +50,7 @@ export default async function handler(
 
   if (req.method === 'PUT') {
     try {
-      const { name, phone, address } = req.body;
+      const { name, phone, address, birthday } = req.body;
 
       // Ensure user exists in our database
       let dbUser = await db.findUserById(user.id);
@@ -61,11 +62,27 @@ export default async function handler(
         });
       }
 
+      // A birthday can be added once; after that only an admin can change it.
+      let birthdayDate: Date | undefined;
+      if (birthday) {
+        if (dbUser.birthday) {
+          return res.status(400).json({
+            message: 'Your birthday is already set. Please contact the restaurant to change it.',
+          });
+        }
+        const parsed = parseBirthday(birthday);
+        if (!parsed) {
+          return res.status(400).json({ message: 'Please enter a valid birthday' });
+        }
+        birthdayDate = parsed;
+      }
+
       // Update profile
       await db.updateUser(user.id, {
         name: name || undefined,
         phone: phone || undefined,
         address: address || undefined,
+        birthday: birthdayDate,
       });
 
       const updatedUser = await db.findUserById(user.id);

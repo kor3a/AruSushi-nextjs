@@ -6,6 +6,7 @@ import { FaGift, FaChevronRight } from 'react-icons/fa';
 import { useAuth } from '../contexts/AuthContext';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import { formatBirthday } from '../lib/perks/birthday';
 
 interface UserProfile {
   id: string;
@@ -28,6 +29,7 @@ export default function Profile() {
     name: '',
     phone: '',
     address: '',
+    birthday: '',
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
@@ -40,9 +42,10 @@ export default function Profile() {
     const nameChanged = formData.name !== (profile.name || '');
     const phoneChanged = formData.phone !== (profile.phone || '');
     const addressChanged = formData.address !== (profile.address || '');
+    const birthdayAdded = !profile.birthday && Boolean(formData.birthday);
     const passwordChanged = formData.currentPassword || formData.newPassword || formData.confirmPassword;
 
-    return nameChanged || phoneChanged || addressChanged || passwordChanged;
+    return nameChanged || phoneChanged || addressChanged || birthdayAdded || passwordChanged;
   };
 
   useEffect(() => {
@@ -70,6 +73,7 @@ export default function Profile() {
         name: profileData.user.name || '',
         phone: profileData.user.phone || '',
         address: profileData.user.address || '',
+        birthday: '',
         currentPassword: '',
         newPassword: '',
         confirmPassword: '',
@@ -113,6 +117,13 @@ export default function Profile() {
       }
     }
 
+    if (formData.birthday && !profile?.birthday) {
+      const confirmed = window.confirm(
+        `Save ${formatBirthday(formData.birthday)} as your birthday? It can't be changed later.`
+      );
+      if (!confirmed) return;
+    }
+
     try {
       const response = await fetch('/api/user/profile', {
         method: 'PUT',
@@ -123,6 +134,7 @@ export default function Profile() {
           name: formData.name,
           phone: formData.phone,
           address: formData.address,
+          birthday: !profile?.birthday && formData.birthday ? formData.birthday : undefined,
           currentPassword: formData.currentPassword || undefined,
           newPassword: formData.newPassword || undefined,
         }),
@@ -141,6 +153,7 @@ export default function Profile() {
         name: data.user.name || '',
         phone: data.user.phone || '',
         address: data.user.address || '',
+        birthday: '',
         currentPassword: '',
         newPassword: '',
         confirmPassword: '',
@@ -374,28 +387,60 @@ export default function Profile() {
                   />
                 </div>
 
-                {/* Birthday (read-only) */}
+                {/* Birthday: can be added once, then read-only (admins can correct it) */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#f1d00f', marginBottom: '8px' }}>
+                  <label htmlFor="birthday" style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: profile?.birthday ? '#f1d00f' : '#ccc', marginBottom: '8px' }}>
                     Birthday
                   </label>
-                  <input
-                    type="text"
-                    value={profile?.birthday ? new Date(profile.birthday).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : 'Not provided'}
-                    disabled
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      background: 'rgba(255, 255, 255, 0.03)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      borderRadius: '8px',
-                      color: '#999',
-                      fontSize: '14px',
-                      outline: 'none',
-                      cursor: 'not-allowed'
-                    }}
-                  />
-                  <p style={{ marginTop: '4px', fontSize: '12px', color: '#888' }}>Birthday cannot be changed</p>
+                  {profile?.birthday ? (
+                    <>
+                      <input
+                        id="birthday"
+                        type="text"
+                        value={formatBirthday(profile.birthday)}
+                        disabled
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          background: 'rgba(255, 255, 255, 0.03)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '8px',
+                          color: '#999',
+                          fontSize: '14px',
+                          outline: 'none',
+                          cursor: 'not-allowed'
+                        }}
+                      />
+                      <p style={{ marginTop: '4px', fontSize: '12px', color: '#888' }}>
+                        Birthday cannot be changed. Contact the restaurant if it&apos;s wrong.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <input
+                        id="birthday"
+                        type="date"
+                        name="birthday"
+                        value={formData.birthday}
+                        onChange={handleInputChange}
+                        max={new Date().toISOString().split('T')[0]}
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          background: 'rgba(255, 255, 255, 0.08)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '8px',
+                          color: '#fff',
+                          fontSize: '14px',
+                          outline: 'none',
+                          colorScheme: 'dark'
+                        }}
+                      />
+                      <p style={{ marginTop: '4px', fontSize: '12px', color: '#f1d00f' }}>
+                        Add your birthday to get a free birthday treat every year. It can&apos;t be changed once saved.
+                      </p>
+                    </>
+                  )}
                 </div>
 
                 {/* Password Change Section */}
