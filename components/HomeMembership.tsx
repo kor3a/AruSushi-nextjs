@@ -8,8 +8,7 @@ import { useGSAP } from '@gsap/react';
 import { animate, createSpring, splitText, stagger, svg, utils } from 'animejs';
 import { useAuth } from '../contexts/AuthContext';
 import { useRewards } from '../contexts/RewardsContext';
-import { RANK_ORDER, RANK_TIERS } from '../lib/ranks/config';
-import type { MemberRank } from '../lib/ranks/types';
+import { RANK_KANJI, RANK_ORDER, RANK_TIERS } from '../lib/ranks/config';
 import styles from './HomeMembership.module.css';
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
@@ -21,13 +20,6 @@ const display = Fraunces({
   variable: '--font-display',
 });
 
-const KANJI: Record<MemberRank, string> = {
-  silver: '銀',
-  rose_gold: '桜',
-  platinum: '白金',
-  diamond: '金剛',
-};
-
 // Each tier only lists what it adds on top of the one below it
 const TIERS = RANK_ORDER.map((rank, idx) => {
   const tier = RANK_TIERS[rank];
@@ -35,7 +27,7 @@ const TIERS = RANK_ORDER.map((rank, idx) => {
   const prevPerks = new Set(prev?.benefits.map((b) => b.toLowerCase()) ?? []);
   return {
     ...tier,
-    kanji: KANJI[rank],
+    kanji: RANK_KANJI[rank],
     prevLabel: prev?.label ?? null,
     newPerks: tier.benefits.filter((b) => !prevPerks.has(b.toLowerCase())),
   };
