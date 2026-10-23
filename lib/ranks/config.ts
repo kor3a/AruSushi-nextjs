@@ -55,6 +55,14 @@ export const RANK_TIERS: Record<MemberRank, RankTier> = {
   },
 };
 
+// Kanji pressed into each rank's member card
+export const RANK_KANJI: Record<MemberRank, string> = {
+  silver: '銀',
+  rose_gold: '桜',
+  platinum: '白金',
+  diamond: '金剛',
+};
+
 export function getRankTier(rank: MemberRank): RankTier {
   return RANK_TIERS[rank];
 }

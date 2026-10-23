@@ -1,0 +1,710 @@
+/* Rewards page. 1rem = 10px here (html is 62.5% in public/style/style.css) */
+
+.root {
+  --ink: #13110f;
+  --paper: #f3ece0;
+  --paper-ink: #1d1a16;
+  --muted: #9d958a;
+  --line: rgba(243, 236, 224, 0.14);
+  --gold: #f1d00f;
+  --vermilion: #e0412f;
+  --mincho: 'Hiragino Mincho ProN', 'Yu Mincho', 'YuMincho', 'Noto Serif JP', serif;
+
+  position: relative;
+  overflow: hidden;
+  min-height: 100vh;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: 'Josefin Sans', sans-serif;
+}
+
+/* The site stylesheet puts `transition: all`, a font and `outline: none` on every element */
+.root * {
+  transition: none;
+  font-family: inherit;
+}
+
+.root :focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 3px;
+}
+
+/* Paper grain */
+.root::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.07;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.inner {
+  position: relative;
+  max-width: 124rem;
+  margin: 0 auto;
+  padding: 15rem 2.4rem 14rem;
+}
+
+/* ---------- Loading ---------- */
+
+.loadingScreen {
+  display: grid;
+  place-items: center;
+}
+
+.loadingText {
+  font-family: var(--font-display), Georgia, serif;
+  font-style: italic;
+  font-size: 2.2rem;
+  color: var(--muted);
+  animation: breathe 1.6s ease-in-out infinite alternate;
+}
+
+@keyframes breathe {
+  from { opacity: 0.35; }
+  to { opacity: 1; }
+}
+
+/* ---------- Buttons ---------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  padding: 1.3rem 2.4rem 1.1rem;
+  border-radius: 99rem;
+  background: var(--gold);
+  color: var(--ink);
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.root .btn {
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--paper);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}
+
+.btnInk {
+  background: var(--paper-ink);
+  color: var(--paper);
+}
+
+.btnInk:hover:not(:disabled) {
+  background: var(--vermilion);
+  color: #fff4ea;
+}
+
+/* ---------- Balance and rank ---------- */
+
+/* --rule draws the hairline in on load; --bar (0 to 1) is how far the row has shrunk into the docked bar */
+.summary {
+  --rule: 1;
+  --bar: 0;
+
+  position: relative;
+  z-index: 50;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 2rem 4rem;
+  padding-bottom: 3.2rem;
+}
+
+/* Bar background, edge to edge across the window, fading in as the row shrinks */
+.summary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  z-index: -1;
+  width: 100vw;
+  margin-left: -50vw;
+  background: rgba(19, 17, 15, 0.9);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 1.2rem 2.4rem -1.6rem rgba(0, 0, 0, 0.8);
+  opacity: var(--bar);
+  pointer-events: none;
+}
+
+/* Hairline under the row, drawn in from the left on load and handed over to the bar's edge */
+.summary::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--line);
+  transform: scaleX(var(--rule));
+  transform-origin: left center;
+  opacity: calc(1 - var(--bar));
+}
+
+.summaryLabel {
+  font-size: 1.2rem;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--muted);
+}
+
+.balanceNum {
+  display: flex;
+  align-items: baseline;
+  gap: 1.2rem;
+  margin-top: 1.2rem;
+  font-family: var(--font-numerals), 'Josefin Sans', sans-serif;
+  font-weight: 600;
+  font-size: clamp(7.2rem, 11vw, 14rem);
+  line-height: 0.85;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  color: var(--gold);
+}
+
+.balanceUnit {
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 400;
+  font-style: italic;
+  font-size: 0.24em;
+  letter-spacing: 0;
+  color: var(--paper);
+}
+
+.rankItem {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  min-width: 0;
+  text-align: right;
+}
+
+.rankName {
+  margin-top: 1.2rem;
+  overflow: hidden;
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 400;
+  font-size: clamp(4rem, 5.6vw, 7.2rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  font-variation-settings: 'SOFT' 100, 'opsz' 144;
+}
+
+.rankNameText {
+  display: inline-block;
+}
+
+.rankFoot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 1.2rem 2.4rem;
+  margin-top: 1.6rem;
+  font-size: 1.4rem;
+  color: var(--muted);
+}
+
+.rankLink {
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid rgba(241, 208, 15, 0.35);
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.rankLink:hover {
+  border-bottom-color: var(--gold);
+}
+
+.block.firstBlock {
+  margin-top: 9rem;
+}
+
+/* Pinned under the nav with its full height locked, so it lets clicks through to the page below */
+.summarySlot {
+  position: relative;
+  z-index: 50;
+  pointer-events: none;
+}
+
+.summarySlot .summary {
+  pointer-events: auto;
+}
+
+.rankFold {
+  overflow: hidden;
+}
+
+/* ---------- Sections ---------- */
+
+.block {
+  /* overrides the global `section` padding */
+  padding: 0;
+  margin-top: 11rem;
+}
+
+
+.blockHead {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.6rem;
+  margin-bottom: 4.8rem;
+  text-align: center;
+}
+
+.kicker {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 1.2rem;
+  font-size: 1.2rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.kickerKanji {
+  font-family: var(--mincho);
+  font-size: 1.6rem;
+  letter-spacing: 0.12em;
+  color: var(--vermilion);
+}
+
+.blockTitle {
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 380;
+  font-size: clamp(3.4rem, 4.4vw, 5.6rem);
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  font-variation-settings: 'SOFT' 50, 'WONK' 1, 'opsz' 144;
+  color: var(--paper);
+  text-transform: none;
+}
+
+.blockNote {
+  max-width: 44rem;
+  font-size: 1.6rem;
+  font-weight: 300;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* ---------- Meal tickets ---------- */
+
+.tickets {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3.2rem;
+}
+
+.ticket {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 14rem;
+  border-radius: 0.6rem;
+  background: var(--paper);
+  color: var(--paper-ink);
+  box-shadow: 0 2.4rem 4.8rem -2.4rem rgba(0, 0, 0, 0.9);
+  will-change: transform;
+}
+
+/* Fibres in the ticket stock */
+.ticket::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0.35;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.45 0 0 0 0 0.38 0 0 0 0 0.3 0 0 0 0.5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.ticketBody {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  padding: 2.8rem 3rem 3rem;
+}
+
+.ticketNo {
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: #84796b;
+}
+
+.ticketName {
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 420;
+  font-size: 3.2rem;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  font-variation-settings: 'SOFT' 100, 'opsz' 144;
+  color: var(--paper-ink);
+  text-transform: none;
+}
+
+.ticketDesc {
+  flex: 1;
+  margin-bottom: 1.2rem;
+  font-size: 1.6rem;
+  font-weight: 300;
+  line-height: 1.5;
+  color: #5b5248;
+}
+
+/* Tear-off stub with the price, perforated from the body */
+.ticketStub {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  border-left: 2px dashed rgba(29, 26, 22, 0.25);
+  color: var(--vermilion);
+}
+
+.ticketStub::before,
+.ticketStub::after {
+  content: '';
+  position: absolute;
+  left: -1.1rem;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--ink);
+}
+
+.ticketStub::before {
+  top: -1rem;
+}
+
+.ticketStub::after {
+  bottom: -1rem;
+}
+
+.ticketCost {
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 460;
+  font-size: 4.8rem;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.ticketUnit {
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+}
+
+/* Not enough points yet */
+.locked {
+  background: #d8d0c3;
+}
+
+.locked .ticketStub {
+  color: #84796b;
+}
+
+.shortBy {
+  display: grid;
+  gap: 1rem;
+  font-size: 1.4rem;
+  color: #5b5248;
+}
+
+.shortBar {
+  position: relative;
+  display: block;
+  height: 0.4rem;
+  border-radius: 99rem;
+  overflow: hidden;
+  background: rgba(29, 26, 22, 0.12);
+}
+
+.shortBar span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: var(--paper-ink);
+}
+
+.claimStamp {
+  position: absolute;
+  top: 50%;
+  right: 16rem;
+  z-index: 2;
+  width: 9.6rem;
+  height: 9.6rem;
+  margin-top: -4.8rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 0.4rem solid var(--vermilion);
+  box-shadow: inset 0 0 0 0.3rem var(--paper), inset 0 0 0 0.5rem var(--vermilion);
+  color: var(--vermilion);
+  font-family: var(--mincho);
+  font-size: 4.4rem;
+  font-weight: 700;
+  line-height: 1;
+  opacity: 0;
+  transform: rotate(-12deg);
+  mix-blend-mode: multiply;
+  filter: url(#rewards-ink);
+  pointer-events: none;
+}
+
+/* ---------- Perk ledger ---------- */
+
+.ledger {
+  list-style: none;
+  max-width: 88rem;
+  margin: 0 auto;
+  border-top: 1px solid var(--line);
+}
+
+.ledgerRow {
+  padding: 2.4rem 0 2.2rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.ledgerMain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.8rem 1.6rem;
+}
+
+.ledgerName {
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 400;
+  font-size: 2.6rem;
+  line-height: 1.15;
+  color: var(--paper);
+}
+
+.leader {
+  flex: 1;
+  min-width: 4rem;
+  border-bottom: 2px dotted rgba(243, 236, 224, 0.28);
+  transform-origin: left center;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.8rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.statusReady {
+  color: var(--gold);
+}
+
+.statusReady::before {
+  content: '';
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 0 0.4rem rgba(241, 208, 15, 0.18);
+}
+
+.ledgerDesc {
+  margin-top: 0.8rem;
+  font-size: 1.5rem;
+  font-weight: 300;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* ---------- Wallet ---------- */
+
+.wallet {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2.4rem;
+}
+
+/* Gold stub with its torn edge on the right */
+.stub {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 24rem;
+  padding: 2.2rem 3.2rem 2.2rem 2.4rem;
+  border-radius: 0.6rem 0 0 0.6rem;
+  background: var(--gold);
+  color: var(--paper-ink);
+  -webkit-mask: radial-gradient(circle at right, transparent 0.6rem, #000 0.65rem) right / 100% 1.6rem repeat-y;
+  mask: radial-gradient(circle at right, transparent 0.6rem, #000 0.65rem) right / 100% 1.6rem repeat-y;
+}
+
+.stubLabel {
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 460;
+  font-size: 2.2rem;
+  line-height: 1.1;
+}
+
+.stubMeta {
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  opacity: 0.65;
+}
+
+.emptyWallet {
+  max-width: 88rem;
+  margin: 0 auto;
+  padding: 3.2rem;
+  text-align: center;
+  border: 1px dashed rgba(243, 236, 224, 0.22);
+  border-radius: 1.2rem;
+  font-family: var(--font-display), Georgia, serif;
+  font-style: italic;
+  font-size: 2rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+/* ---------- Toast ---------- */
+
+.toast {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 3.2rem;
+  z-index: 60;
+  width: max-content;
+  max-width: calc(100% - 3.2rem);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 1.6rem;
+  padding: 1.4rem 1.4rem 1.2rem 2.4rem;
+  border-radius: 99rem;
+  background: var(--paper);
+  color: var(--paper-ink);
+  font-size: 1.5rem;
+  box-shadow: 0 1.6rem 4rem -1rem rgba(0, 0, 0, 0.6);
+}
+
+.toastError {
+  background: var(--vermilion);
+  color: #fff4ea;
+}
+
+.toastClose {
+  flex: none;
+  width: 2.8rem;
+  height: 2.8rem;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  font-size: 2rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.6;
+}
+
+.toastClose:hover {
+  opacity: 1;
+}
+
+/* ---------- Smaller screens ---------- */
+
+@media (max-width: 960px) {
+  .tickets {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .inner {
+    padding: 14rem 1.6rem 10rem;
+  }
+
+  .block {
+    margin-top: 10rem;
+  }
+
+  .ticket {
+    grid-template-columns: minmax(0, 1fr) 9.6rem;
+  }
+
+  .ticketBody {
+    padding: 2.4rem 2rem 2.4rem;
+  }
+
+  .ticketCost {
+    font-size: 3.4rem;
+  }
+
+  .claimStamp {
+    right: 11rem;
+    width: 8rem;
+    height: 8rem;
+    margin-top: -4rem;
+    font-size: 3.6rem;
+  }
+
+  .summary {
+    gap: 2rem;
+  }
+
+  .balanceNum {
+    font-size: 5.6rem;
+  }
+
+  .rankName {
+    font-size: 2.8rem;
+  }
+
+  .stub {
+    width: 100%;
+  }
+}

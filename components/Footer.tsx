@@ -1,3 +1,6 @@
+import { FaFacebook, FaInstagram, FaYelp } from 'react-icons/fa';
+
+// Icons come from react-icons so the footer doesn't depend on a page loading Font Awesome
 const Footer = () => (
     <section className="footer">
       <img src="/img/aruLogo2.png" className="logo" alt="A-Ru Sushi Logo" />
@@ -6,9 +9,9 @@ const Footer = () => (
           <h3>ABOUT US</h3>
           <span>A-Ru Sushi, your destination for authentic Japanese flavors</span>
           <ul>
-            <li><a href="https://www.facebook.com/arujapaneserestaurant" target="_blank" className="fa-brands fa-facebook"></a></li>
-            <li><a href="https://www.instagram.com/arusushi_/" target="_blank" className="fa-brands fa-instagram"></a></li>
-            <li><a href="https://www.yelp.com/biz/a-ru-sushi-buellton-2" target="_blank" className="fa-brands fa-yelp"></a></li>
+            <li><a href="https://www.facebook.com/arujapaneserestaurant" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><FaFacebook /></a></li>
+            <li><a href="https://www.instagram.com/arusushi_/" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><FaInstagram /></a></li>
+            <li><a href="https://www.yelp.com/biz/a-ru-sushi-buellton-2" target="_blank" rel="noopener noreferrer" aria-label="Yelp"><FaYelp /></a></li>
           </ul>
         </div>
         <div>

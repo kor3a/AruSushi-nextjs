@@ -611,9 +611,14 @@ textarea.contact-form-text {
 }
 
 .footer .container ul li a {
+    display: inline-flex;
     color: #b2b2b2;
     margin-left: 10px;
     font-size: 24px;
+}
+
+.footer .container ul li a:hover {
+    color: var(--light-color);
 }
 
 .footer .container span {
