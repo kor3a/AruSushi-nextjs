@@ -5,6 +5,7 @@ import { useCart } from '../contexts/CartContext';
 import { useRewards } from '../contexts/RewardsContext';
 import { canManageOrders, getUserRoleByEmail } from '../lib/auth/roles';
 import { FaShoppingCart, FaUser, FaBars } from 'react-icons/fa';
+import { BsPersonFill } from 'react-icons/bs';
 
 const Header = () => {
   const { user, signOut } = useAuth();
@@ -54,8 +55,7 @@ const Header = () => {
             <Link href="/menu" onClick={closeMenu}>Menu</Link>
             {user ? (
               <>
-                <Link href="/my-orders" onClick={closeMenu}>Orders</Link>
-                <Link href="/profile" onClick={closeMenu}>Profile</Link>
+                <Link href="/my-orders" onClick={closeMenu}>My Orders</Link>
                 <Link href="/contact" onClick={closeMenu}>Contact Us</Link>
               </>
             ) : (
@@ -93,7 +93,13 @@ const Header = () => {
         )}
         {!showAdminOrders && (
           <>
-            <Link href="/cart" className="cart-mobile" style={{ position: 'relative' }} title="Cart">
+            {/* Signed-in customers get the icon at every width; guests see text on desktop */}
+            <Link
+              href="/cart"
+              className={user ? undefined : 'cart-mobile'}
+              style={user ? { position: 'relative', display: 'inline-flex', alignItems: 'center' } : { position: 'relative' }}
+              title="Cart"
+            >
               <FaShoppingCart size={20} style={{ color: '#f1d00f' }} />
               {cartItemsCount > 0 && (
                 <span style={{
@@ -115,6 +121,7 @@ const Header = () => {
                 </span>
               )}
             </Link>
+            {!user && (
             <Link href="/cart" className="cart-desktop" style={{ position: 'relative', color: '#f1d00f', textDecoration: 'none', fontSize: '1.7rem', fontWeight: 600 }}>
               Cart
               {cartItemsCount > 0 && (
@@ -137,9 +144,15 @@ const Header = () => {
                 </span>
               )}
             </Link>
+            )}
           </>
         )}
-        {user ? (
+        {user && !showAdminOrders ? (
+          // Customers sign out from the profile page
+          <Link href="/profile" style={{ color: '#f1d00f', display: 'inline-flex', alignItems: 'center' }} title="Profile">
+            <BsPersonFill size={22} style={{ color: '#f1d00f' }} />
+          </Link>
+        ) : user ? (
           <>
             <Link href="/profile" className="auth-mobile" style={{ color: '#f1d00f', alignItems: 'center' }} title="Profile">
               <FaUser size={18} style={{ color: '#f1d00f' }} />
