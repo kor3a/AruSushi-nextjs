@@ -5,8 +5,8 @@ import { useRouter } from 'next/router';
 import { useAuth } from '../contexts/AuthContext';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
-import PickupOrderProgress from '../components/PickupOrderProgress';
 import DeliveryOrderProgress from '../components/DeliveryOrderProgress';
+import ActiveOrdersProgress, { isOrderActive } from '../components/ActiveOrdersProgress';
 import { getDeliveryEventLabel } from '../lib/orders/deliveryStatus';
 import { createClient } from '../lib/supabase/client';
 
@@ -129,6 +129,9 @@ export default function MyOrders() {
     return status.charAt(0).toUpperCase() + status.slice(1);
   };
 
+  const activeOrders = orders.filter(isOrderActive);
+  const pastOrders = orders.filter((order) => !isOrderActive(order));
+
   // Show loading state while auth is loading or while fetching orders
   if (authLoading || loading || !user) {
     return (
@@ -216,8 +219,17 @@ export default function MyOrders() {
               </a>
             </div>
           ) : (
+            <>
+            <ActiveOrdersProgress orders={activeOrders} />
+
+            {activeOrders.length > 0 && pastOrders.length > 0 && (
+              <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#fff', marginBottom: '16px' }}>
+                Past Orders
+              </h2>
+            )}
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              {orders.map((order) => (
+              {pastOrders.map((order) => (
                 <div
                   key={order.id}
                   style={{
@@ -270,18 +282,6 @@ export default function MyOrders() {
                       </span>
                     </div>
                   </div>
-
-                  {order.orderType === 'pickup' && (
-                    <div
-                      style={{
-                        borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-                        marginTop: '16px',
-                        paddingTop: '16px',
-                      }}
-                    >
-                      <PickupOrderProgress status={order.status} />
-                    </div>
-                  )}
 
                   {/* Order Items */}
                   <div style={{
@@ -449,6 +449,7 @@ export default function MyOrders() {
                 </div>
               ))}
             </div>
+            </>
           )}
         </div>
       </div>
