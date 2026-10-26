@@ -5,6 +5,7 @@ import { getNextRank, getUpgradeCost } from '../ranks/config';
 import type { PerkStatus, PerkType } from '../perks/types';
 import { PERK_DEFINITIONS, RANK_PERKS, getPerkPeriodKey, isBirthdayMonth } from '../perks/config';
 import { ORDER_EVENT_VERSION } from '../outbox/types';
+import { COMPLETED_STATUSES } from '../orders/orderDisplay';
 
 // Prevent multiple instances of Prisma Client in development
 const globalForPrisma = globalThis as unknown as {
@@ -817,6 +818,28 @@ class Database {
       include: { items: true },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  // Every order still in progress, however old
+  async findActiveOrders() {
+    return prisma.order.findMany({
+      where: { status: { notIn: Array.from(COMPLETED_STATUSES) } },
+      include: { items: true },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async findOrdersPage(page: number, pageSize: number) {
+    const [orders, total] = await prisma.$transaction([
+      prisma.order.findMany({
+        include: { items: true },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.order.count(),
+    ]);
+    return { orders, total };
   }
 
   async updateOrder(id: string, updates: Partial<{

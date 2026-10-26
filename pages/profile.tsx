@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { formatBirthday } from '../lib/perks/birthday';
+import { canManageOrders } from '../lib/auth/roles';
 
 interface UserProfile {
   id: string;
@@ -204,6 +205,8 @@ export default function Profile() {
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
           <h1 style={{ fontSize: '36px', fontWeight: 'bold', color: '#f1d00f', marginBottom: '32px', textAlign: 'center' }}>My Profile</h1>
 
+          {/* Staff have no rewards; /rewards redirects them to the admin Orders page */}
+          {!canManageOrders(user?.email) && (
           <Link
             href="/rewards"
             style={{
@@ -252,6 +255,7 @@ export default function Profile() {
             </div>
             <FaChevronRight size={16} style={{ color: '#f1d00f' }} />
           </Link>
+          )}
 
           {error && (
             <div style={{

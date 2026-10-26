@@ -1,0 +1,528 @@
+/* 1rem = 10px here (html is 62.5% in public/style/style.css) */
+
+.root {
+  --ink: #13110f;
+  --ink-2: #1c1916;
+  --paper: #f3ece0;
+  --muted: #9d958a;
+  --line: rgba(243, 236, 224, 0.12);
+  --gold: #f1d00f;
+  --pink: #fc3678;
+  --mincho: 'Hiragino Mincho ProN', 'Yu Mincho', 'YuMincho', 'Noto Serif JP', serif;
+
+  position: relative;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: 'Josefin Sans', sans-serif;
+  /* overrides the global `section` padding */
+  padding: 8rem 0;
+}
+
+.feedRoot {
+  background: var(--ink-2);
+  border-top: 1px solid var(--line);
+}
+
+/* The site stylesheet puts `transition: all` and a font on every element */
+.root * {
+  transition: none;
+  font-family: inherit;
+}
+
+.inner {
+  max-width: 124rem;
+  margin: 0 auto;
+  padding: 0 2.4rem;
+}
+
+/* ---------- Section header ---------- */
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 2rem;
+  margin-bottom: 3.2rem;
+}
+
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 0 0 1rem;
+  color: var(--gold);
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.eyebrowKanji {
+  font-family: var(--mincho);
+  letter-spacing: 0.1em;
+  opacity: 0.7;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  margin: 0;
+  color: var(--paper);
+  font-size: clamp(2.8rem, 5vw, 4rem);
+  font-weight: 700;
+  line-height: 1.1;
+  text-transform: none;
+}
+
+.count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.4rem;
+  height: 3.4rem;
+  padding: 0 1rem;
+  border-radius: 999px;
+  background: var(--gold);
+  color: var(--ink);
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.headActions {
+  display: flex;
+  align-items: center;
+  gap: 1.6rem;
+}
+
+.textLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--gold);
+  font-size: 1.5rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.textLink:hover {
+  color: #fff;
+}
+
+.arrows {
+  display: flex;
+  gap: 0.8rem;
+}
+
+.arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 4.4rem;
+  height: 4.4rem;
+  border-radius: 50%;
+  border: 1px solid rgba(241, 208, 15, 0.45);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--gold);
+  font-size: 1.6rem;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, opacity 0.2s;
+}
+
+.arrow:hover:not(:disabled) {
+  background: rgba(241, 208, 15, 0.12);
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.arrow:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+/* ---------- Carousel ---------- */
+
+.track {
+  display: flex;
+  gap: 2rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: 2.4rem;
+  padding: 0.4rem 2.4rem 2rem;
+  margin: 0 -2.4rem;
+  scrollbar-width: none;
+  cursor: grab;
+  overscroll-behavior-x: contain;
+}
+
+.track::-webkit-scrollbar {
+  display: none;
+}
+
+/* Snapping fights the pointer while dragging */
+.dragging {
+  scroll-snap-type: none;
+  cursor: grabbing;
+  user-select: none;
+}
+
+.dragging .card {
+  pointer-events: none;
+}
+
+.card {
+  flex: 0 0 min(32rem, 82vw);
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  border-radius: 1.6rem;
+  border: 1px solid var(--status-border);
+  background: rgba(255, 255, 255, 0.035);
+  color: inherit;
+  text-decoration: none;
+  overflow: hidden;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.45);
+}
+
+.cardStatus {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.1rem 1.6rem;
+  background: var(--status-bg);
+  border-bottom: 1px solid var(--status-border);
+}
+
+.statusLabel {
+  color: var(--status-text);
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.typeChip {
+  padding: 0.3rem 0.8rem;
+  border-radius: 0.6rem;
+  background: rgba(0, 0, 0, 0.3);
+  color: #aaa;
+  font-size: 1.15rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.cardBody {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.8rem;
+  padding: 1.6rem;
+}
+
+.cardTop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.orderId {
+  color: var(--gold);
+  font-size: 1.7rem;
+  font-weight: 700;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 1.3rem;
+}
+
+.customer {
+  margin: 0;
+  color: var(--paper);
+  font-size: 1.6rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.items {
+  margin: 0;
+  color: #bbb;
+  font-size: 1.35rem;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cardFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: 1.2rem;
+  border-top: 1px dashed var(--line);
+}
+
+.total {
+  color: #fff;
+  font-size: 1.9rem;
+  font-weight: 700;
+}
+
+.empty {
+  padding: 4rem 2.4rem;
+  border: 1px dashed var(--line);
+  border-radius: 1.6rem;
+  color: var(--muted);
+  font-size: 1.5rem;
+  text-align: center;
+}
+
+.error {
+  padding: 1.4rem 1.6rem;
+  border-radius: 0.8rem;
+  border: 1px solid rgba(255, 68, 68, 0.3);
+  background: rgba(255, 68, 68, 0.1);
+  color: #ff7a7a;
+  font-size: 1.4rem;
+}
+
+/* ---------- Live feed ---------- */
+
+.live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.5rem 1.2rem;
+  border-radius: 999px;
+  border: 1px solid rgba(105, 240, 174, 0.35);
+  background: rgba(105, 240, 174, 0.08);
+  color: #69f0ae;
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.liveDot {
+  position: relative;
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius: 50%;
+  background: #69f0ae;
+}
+
+.liveDot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: #69f0ae;
+  animation: ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes ping {
+  75%,
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 1.6rem;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.table {
+  width: 100%;
+  min-width: 62rem;
+  border-collapse: collapse;
+  font-size: 1.45rem;
+}
+
+.table th {
+  padding: 1.4rem 1.8rem;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 1.4rem 1.8rem;
+  border-bottom: 1px solid rgba(243, 236, 224, 0.06);
+  color: #ddd;
+  white-space: nowrap;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table tbody tr:hover td {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.idCell {
+  color: var(--gold);
+  font-weight: 700;
+}
+
+.customerCell {
+  max-width: 22rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pill {
+  display: inline-block;
+  padding: 0.4rem 1rem;
+  border-radius: 999px;
+  border: 1px solid var(--status-border);
+  background: var(--status-bg);
+  color: var(--status-text);
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.timeSub {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--muted);
+  font-size: 1.2rem;
+}
+
+/* A row that just arrived or just changed status glows briefly */
+.flash td {
+  animation: flash 2.4s ease-out;
+}
+
+@keyframes flash {
+  0% {
+    background: rgba(241, 208, 15, 0.22);
+  }
+  100% {
+    background: transparent;
+  }
+}
+
+.feedFoot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.6rem;
+  margin-top: 1.6rem;
+}
+
+/* Keeps the link on the right when there's only one page */
+.feedFoot > a {
+  margin-left: auto;
+}
+
+.busy {
+  opacity: 0.55;
+}
+
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.pageBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.6rem;
+  height: 3.6rem;
+  padding: 0 1rem;
+  border-radius: 0.8rem;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  color: #bbb;
+  font-size: 1.4rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pageBtn:hover:not(:disabled) {
+  border-color: rgba(241, 208, 15, 0.45);
+  color: var(--gold);
+}
+
+.pageBtn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.pageCurrent {
+  border: 2px solid var(--pink);
+  background: rgba(252, 54, 120, 0.15);
+  color: var(--pink);
+}
+
+.pageGap {
+  padding: 0 0.4rem;
+  color: var(--muted);
+  font-size: 1.4rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .liveDot::after,
+  .flash td {
+    animation: none;
+  }
+
+  .card:hover {
+    transform: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .root {
+    padding: 6rem 0;
+  }
+
+  .inner,
+  .track {
+    padding-inline: 1.6rem;
+  }
+
+  .track {
+    margin: 0 -1.6rem;
+    scroll-padding-inline: 1.6rem;
+  }
+
+  .head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .headActions {
+    width: 100%;
+    justify-content: space-between;
+  }
+}

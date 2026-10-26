@@ -50,6 +50,20 @@ export default async function handler(
     }
 
     const role = getUserRoleByEmail(user.email);
+
+    // The staff homepage: active orders regardless of date, and the order feed a page at a time
+    if (req.query.view === 'active') {
+      const orders = await db.findActiveOrders();
+      return res.status(200).json({ role, orders });
+    }
+
+    if (req.query.view === 'recent') {
+      const page = Math.max(1, parseInt(String(req.query.page ?? '1'), 10) || 1);
+      const pageSize = Math.min(50, Math.max(1, parseInt(String(req.query.pageSize ?? '10'), 10) || 10));
+      const { orders, total } = await db.findOrdersPage(page, pageSize);
+      return res.status(200).json({ role, orders, page, pageSize, total });
+    }
+
     const startDate = parseStartDate(req.query.startDate);
     const endDate = parseEndDate(req.query.endDate);
 
@@ -57,7 +71,15 @@ export default async function handler(
       return res.status(400).json({ message: 'startDate must be before endDate' });
     }
 
-    const orders = await db.findAllOrdersByDateRange(startDate, endDate);
+    // The date range only narrows completed orders: anything still in progress always shows
+    const [rangeOrders, activeOrders] = await Promise.all([
+      db.findAllOrdersByDateRange(startDate, endDate),
+      db.findActiveOrders(),
+    ]);
+    const inRange = new Set(rangeOrders.map((o) => o.id));
+    const orders = rangeOrders
+      .concat(activeOrders.filter((o) => !inRange.has(o.id)))
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
     return res.status(200).json({
       role,
