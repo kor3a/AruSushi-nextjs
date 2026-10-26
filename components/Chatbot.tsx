@@ -6,6 +6,7 @@ import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { lunchMenu, dinnerMenu, MenuItemData } from '@/data/menuData';
 import { overrideKey } from '@/lib/menu/pricing';
+import SushiBotMascot from './SushiBotMascot';
 
 interface Message {
   text: string;
@@ -218,38 +219,41 @@ const Chatbot: React.FC = () => {
     'What are your hours?',
   ];
 
+  // 16px from the screen edge on phones, 24px on larger screens
+  const edgeGap = 'clamp(16px, 4vw, 24px)';
+
   return (
-    <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 9999 }}>
+    <div style={{ position: 'fixed', bottom: edgeGap, right: edgeGap, zIndex: 9999 }}>
       {!isOpen ? (
         <button
           onClick={() => setIsOpen(true)}
           onMouseEnter={() => setIsBubbleHovered(true)}
           onMouseLeave={() => setIsBubbleHovered(false)}
           style={{
-            background: 'linear-gradient(135deg, #fc3678 0%, #f1d00f 100%)',
-            color: '#fff',
-            padding: isBubbleHovered ? '16px 24px' : '14px',
+            background: '#2d2d2d',
+            color: '#f1d00f',
+            padding: isBubbleHovered ? '6px 22px 6px 8px' : '4px',
             borderRadius: '50px',
-            border: 'none',
+            border: '2px solid #f1d00f',
             cursor: 'pointer',
-            fontSize: isBubbleHovered ? '16px' : '20px',
+            fontSize: '16px',
             fontWeight: '600',
             boxShadow: isBubbleHovered
-              ? '0 12px 32px rgba(252, 54, 120, 0.5), 0 0 30px rgba(241, 208, 15, 0.4)'
-              : '0 6px 16px rgba(252, 54, 120, 0.3), 0 0 12px rgba(241, 208, 15, 0.2)',
+              ? '0 12px 32px rgba(0, 0, 0, 0.5), 0 0 24px rgba(241, 208, 15, 0.35)'
+              : '0 6px 16px rgba(0, 0, 0, 0.4), 0 0 12px rgba(241, 208, 15, 0.2)',
             transition: 'all 0.3s ease',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             gap: isBubbleHovered ? '8px' : '0px',
             transform: isBubbleHovered ? 'scale(1.05)' : 'scale(1)',
-            width: isBubbleHovered ? 'auto' : '52px',
-            height: isBubbleHovered ? 'auto' : '52px',
+            width: isBubbleHovered ? 'auto' : '56px',
+            height: isBubbleHovered ? 'auto' : '56px',
             overflow: 'hidden',
             whiteSpace: 'nowrap',
           }}
         >
-          <span style={{ fontSize: '20px', flexShrink: 0 }}>🍣</span>
+          <SushiBotMascot size={44} />
           <span
             style={{
               maxWidth: isBubbleHovered ? '200px' : '0px',
@@ -267,8 +271,8 @@ const Chatbot: React.FC = () => {
         <div style={{
           background: 'rgba(26, 26, 26, 0.95)',
           backdropFilter: 'blur(20px)',
-          width: '420px',
-          height: '600px',
+          width: `min(420px, calc(100vw - 2 * ${edgeGap}))`,
+          height: `min(600px, calc(100dvh - 2 * ${edgeGap}))`,
           borderRadius: '16px',
           border: '2px solid rgba(252, 54, 120, 0.3)',
           boxShadow: '0 16px 48px rgba(0, 0, 0, 0.5), 0 0 30px rgba(241, 208, 15, 0.2)',
@@ -278,7 +282,7 @@ const Chatbot: React.FC = () => {
         }}>
           {/* Header */}
           <div style={{
-            background: 'linear-gradient(135deg, #fc3678 0%, #f1d00f 100%)',
+            background: '#fc3678',
             color: '#fff',
             padding: '16px',
             display: 'flex',
@@ -416,12 +420,14 @@ const Chatbot: React.FC = () => {
               onKeyPress={(e) => e.key === 'Enter' && handleSend()}
               style={{
                 flex: 1,
+                minWidth: 0,
                 padding: '12px',
                 background: 'rgba(255, 255, 255, 0.08)',
                 border: '1px solid rgba(255, 255, 255, 0.2)',
                 borderRadius: '8px',
                 color: '#fff',
-                fontSize: '14px',
+                // 16px keeps iOS Safari from zooming the page when the input is focused
+                fontSize: '16px',
                 outline: 'none'
               }}
               placeholder="Ask about menu, order food..."
