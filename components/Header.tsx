@@ -4,11 +4,11 @@ import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
 import { useRewards } from '../contexts/RewardsContext';
 import { canManageOrders, getUserRoleByEmail } from '../lib/auth/roles';
-import { FaShoppingCart, FaUser, FaBars } from 'react-icons/fa';
+import { FaShoppingCart, FaBars } from 'react-icons/fa';
 import { BsPersonFill } from 'react-icons/bs';
 
 const Header = () => {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const { pointsBalance, loading: rewardsLoading } = useRewards();
   const { getTotalItems, items } = useCart();
   const [cartItemsCount, setCartItemsCount] = useState(0);
@@ -120,34 +120,16 @@ const Header = () => {
             )}
           </Link>
         )}
-        {user && !showAdminOrders ? (
-          // Customers sign out from the profile page
-          <Link href="/profile" style={{ color: '#f1d00f', display: 'inline-flex', alignItems: 'center' }} title="Profile">
+        {user ? (
+          // Everyone signs out from the profile page
+          <Link
+            href="/profile"
+            style={{ color: '#f1d00f', display: 'inline-flex', alignItems: 'center' }}
+            title="Profile"
+            aria-label="Profile"
+          >
             <BsPersonFill size={22} style={{ color: '#f1d00f' }} />
           </Link>
-        ) : user ? (
-          <>
-            <Link href="/profile" className="auth-mobile" style={{ color: '#f1d00f', alignItems: 'center' }} title="Profile">
-              <FaUser size={18} style={{ color: '#f1d00f' }} />
-            </Link>
-            <button
-              type="button"
-              onClick={signOut}
-              className="auth-desktop"
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                color: '#f1d00f',
-                fontSize: '1.7rem',
-                fontWeight: 600,
-                padding: 0,
-                fontFamily: 'inherit',
-              }}
-            >
-              Sign Out
-            </button>
-          </>
         ) : (
           <Link
             href="/auth/signin"

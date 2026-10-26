@@ -7,14 +7,21 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import CherryBlossom from '@/components/CherryBlossom';
 import HomeMembership from '@/components/HomeMembership';
+import AdminActiveOrders from '@/components/AdminActiveOrders';
+import AdminOrdersFeed from '@/components/AdminOrdersFeed';
 import { useAuth } from '@/contexts/AuthContext';
+import { canManageOrders } from '@/lib/auth/roles';
+import { useLiveStoreOrders } from '@/lib/orders/useLiveStoreOrders';
 import { AiOutlineClose } from 'react-icons/ai';
 import { SiDoordash, SiUbereats, SiYelp } from 'react-icons/si';
 import { FcGoogle } from 'react-icons/fc';
 
 const HomePage = () => {
   const [showReviewCard, setShowReviewCard] = useState(true);
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  // Admins and managers have no member rank, so they get the kitchen's orders instead
+  const isStaff = canManageOrders(user?.email);
+  const storeOrders = useLiveStoreOrders(isStaff);
   const [profileName, setProfileName] = useState<string | null>(null);
 
   // Profile edits only update the database, so prefer that name over the one saved at sign-up
@@ -96,7 +103,9 @@ const HomePage = () => {
                 </div>
             </div>
         </div>
-        <HomeMembership />
+        {/* Wait for auth so staff don't see the customer sections flash in first */}
+        {!authLoading && (isStaff ? <AdminActiveOrders {...storeOrders.active} /> : <HomeMembership />)}
+        {!authLoading && (isStaff ? <AdminOrdersFeed {...storeOrders.feed} /> : (
         <section className="parallex">
             <div className="parallex-wrapper" style={{ position: 'relative', zIndex: 1 }}>
                 <Image
@@ -303,6 +312,7 @@ const HomePage = () => {
                 )}
             </div>
         </section>
+        ))}
         </main>
         <Footer />
     </div>

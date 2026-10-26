@@ -6,8 +6,9 @@ import Footer from '../../components/Footer';
 import AdminOnly from '../../components/AdminOnly';
 import { useAuth } from '../../contexts/AuthContext';
 import { canManageOrders } from '../../lib/auth/roles';
-import { getPickupStatusLabel } from '../../lib/orders/pickupStatus';
+import { formatTimeAgo, getPageNumbers, getStatusColor, getStatusLabel, isCompletedStatus } from '../../lib/orders/orderDisplay';
 import { createClient } from '../../lib/supabase/client';
+import { refetchOnRejoin, useRefetchOnReturn } from '../../lib/realtime/catchUp';
 
 interface OrderItem {
   id: string;
@@ -57,41 +58,12 @@ interface PauseState {
 
 const ORDERS_PER_PAGE = 12;
 
-const COMPLETED_STATUSES = new Set(['picked_up', 'delivered', 'cancelled']);
-
 function isOrderCompleted(order: Order): boolean {
-  return COMPLETED_STATUSES.has(order.status);
-}
-
-const STATUS_COLORS: Record<string, { bg: string; border: string; text: string }> = {
-  pending: { bg: 'rgba(158, 158, 158, 0.15)', border: 'rgba(158, 158, 158, 0.5)', text: '#bbb' },
-  confirmed: { bg: 'rgba(33, 150, 243, 0.15)', border: 'rgba(33, 150, 243, 0.5)', text: '#64b5f6' },
-  preparing: { bg: 'rgba(255, 152, 0, 0.15)', border: 'rgba(255, 152, 0, 0.5)', text: '#ffb74d' },
-  ready: { bg: 'rgba(76, 175, 80, 0.15)', border: 'rgba(76, 175, 80, 0.5)', text: '#81c784' },
-  picked_up: { bg: 'rgba(0, 200, 83, 0.15)', border: 'rgba(0, 200, 83, 0.5)', text: '#69f0ae' },
-  delivered: { bg: 'rgba(0, 200, 83, 0.15)', border: 'rgba(0, 200, 83, 0.5)', text: '#69f0ae' },
-  cancelled: { bg: 'rgba(244, 67, 54, 0.15)', border: 'rgba(244, 67, 54, 0.5)', text: '#ef5350' },
-};
-
-function getStatusColor(status: string) {
-  return STATUS_COLORS[status] || STATUS_COLORS.pending;
-}
-
-function formatTimeAgo(dateString: string): string {
-  const now = new Date();
-  const then = new Date(dateString);
-  const diffMs = now.getTime() - then.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours}h ${diffMins % 60}m ago`;
-  const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays}d ago`;
+  return isCompletedStatus(order.status);
 }
 
 interface OrderSectionProps {
+  id?: string;
   title: string;
   titleColor: string;
   accentColor: string;
@@ -114,6 +86,7 @@ interface OrderSectionProps {
 }
 
 function OrderSection({
+  id,
   title,
   titleColor,
   accentColor,
@@ -135,7 +108,7 @@ function OrderSection({
   onToggleOpen,
 }: OrderSectionProps) {
   return (
-    <div style={{ marginBottom: '40px' }}>
+    <div id={id} style={{ marginBottom: '40px', scrollMarginTop: '120px' }}>
       {/* Section Header */}
       <div
         style={{
@@ -747,7 +720,10 @@ export default function AdminOrdersPage() {
 
   const canAccess = useMemo(() => canManageOrders(user?.email), [user?.email]);
 
-  const activeOrders = orders.filter((o) => !isOrderCompleted(o));
+  // Oldest first, so the order that has waited longest is at the top; completed stay newest first
+  const activeOrders = orders
+    .filter((o) => !isOrderCompleted(o))
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
   const completedOrders = orders.filter((o) => isOrderCompleted(o));
 
   // Forget open state for orders that left Completed, so they re-enter collapsed
@@ -901,6 +877,36 @@ export default function AdminOrdersPage() {
     }
   }, []);
 
+  // The date range last applied, so a catch-up refetch keeps the same filter
+  const appliedRange = useRef({ start: startDate, end: endDate });
+  const ordersRef = useRef(orders);
+  ordersRef.current = orders;
+  const loadingRef = useRef(loading);
+  loadingRef.current = loading;
+
+  // Refetch in place (no loading state, same pages) to catch up on broadcasts missed while away
+  const catchUpOrders = useCallback(async () => {
+    // A full load is already running and will bring everything current
+    if (loadingRef.current) return;
+    const query = new URLSearchParams();
+    if (appliedRange.current.start) query.set('startDate', appliedRange.current.start);
+    if (appliedRange.current.end) query.set('endDate', appliedRange.current.end);
+    try {
+      const response = await fetch(`/api/orders/admin-orders?${query.toString()}`);
+      if (!response.ok) return;
+      const data = await response.json();
+      const fresh: Order[] = data.orders || [];
+      const known = new Set(ordersRef.current.map((o) => o.id));
+      const missed = fresh.find((o) => !known.has(o.id) && !isOrderCompleted(o));
+      setOrders(fresh);
+      if (missed) showNewOrderAlert(missed.id);
+    } catch {
+      // Keep showing what we have; the next catch-up will try again
+    }
+  }, [showNewOrderAlert]);
+
+  useRefetchOnReturn(!!user && canAccess, catchUpOrders);
+
   useEffect(() => {
     if (!user || !canAccess) return;
 
@@ -935,18 +941,19 @@ export default function AdminOrdersPage() {
           })
         );
       })
-      .subscribe();
+      .subscribe(refetchOnRejoin(catchUpOrders));
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, canAccess, fetchSingleOrder, showNewOrderAlert]);
+  }, [user, canAccess, fetchSingleOrder, showNewOrderAlert, catchUpOrders]);
 
   const fetchOrders = useCallback(async (rangeStart: string, rangeEnd: string) => {
     try {
       setLoading(true);
       setError('');
 
+      appliedRange.current = { start: rangeStart, end: rangeEnd };
       const query = new URLSearchParams();
       if (rangeStart) {
         query.set('startDate', rangeStart);
@@ -1000,6 +1007,12 @@ export default function AdminOrdersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user, canAccess, router]);
 
+  // The staff homepage links to /admin/orders#completed, but the section only exists once orders load
+  useEffect(() => {
+    if (loading || window.location.hash !== '#completed') return;
+    document.getElementById('completed')?.scrollIntoView({ behavior: 'smooth' });
+  }, [loading]);
+
   const applyFilters = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     fetchOrders(startDate, endDate);
@@ -1045,21 +1058,6 @@ export default function AdminOrdersPage() {
       : ['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled'];
   };
 
-  const getStatusLabel = (orderType: string, status: string) => {
-    if (orderType === 'pickup') {
-      return getPickupStatusLabel(status);
-    }
-    const labels: Record<string, string> = {
-      pending: 'Pending',
-      confirmed: 'Confirmed',
-      preparing: 'Preparing',
-      ready: 'Ready',
-      delivered: 'Delivered',
-      cancelled: 'Cancelled',
-    };
-    return labels[status] || status.charAt(0).toUpperCase() + status.slice(1);
-  };
-
   const goToActivePage = (page: number) => {
     if (page < 1 || page > activeTotalPages) return;
     setActiveCurrentPage(page);
@@ -1068,22 +1066,6 @@ export default function AdminOrdersPage() {
   const goToCompletedPage = (page: number) => {
     if (page < 1 || page > completedTotalPages) return;
     setCompletedCurrentPage(page);
-  };
-
-  const getPageNumbers = (currentPage: number, totalPages: number): (number | 'ellipsis')[] => {
-    const pages: (number | 'ellipsis')[] = [];
-    if (totalPages <= 7) {
-      for (let i = 1; i <= totalPages; i++) pages.push(i);
-      return pages;
-    }
-    pages.push(1);
-    if (currentPage > 3) pages.push('ellipsis');
-    const start = Math.max(2, currentPage - 1);
-    const end = Math.min(totalPages - 1, currentPage + 1);
-    for (let i = start; i <= end; i++) pages.push(i);
-    if (currentPage < totalPages - 2) pages.push('ellipsis');
-    pages.push(totalPages);
-    return pages;
   };
 
   if (!authLoading && user && !canAccess) {
@@ -1429,6 +1411,9 @@ export default function AdminOrdersPage() {
             >
               Last 30 Days
             </button>
+            <span style={{ color: '#888', fontSize: '13px', alignSelf: 'center' }}>
+              Active orders always show; dates filter completed orders.
+            </span>
           </form>
 
           {(authLoading || loading) && (
@@ -1491,6 +1476,7 @@ export default function AdminOrdersPage() {
           {/* ===== COMPLETED ORDERS SECTION ===== */}
           {!loading && !error && orders.length > 0 && (
             <OrderSection
+              id="completed"
               title="Completed Orders"
               titleColor="#81c784"
               accentColor="rgba(76, 175, 80, 0.3)"
