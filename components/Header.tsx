@@ -56,11 +56,11 @@ const Header = () => {
             {user ? (
               <>
                 <Link href="/my-orders" onClick={closeMenu}>My Orders</Link>
-                <Link href="/contact" onClick={closeMenu}>Contact Us</Link>
+                <Link href="/contact" onClick={closeMenu}>Help</Link>
               </>
             ) : (
               <>
-                <Link href="/contact" onClick={closeMenu}>Contact Us</Link>
+                <Link href="/contact" onClick={closeMenu}>Help</Link>
                 <Link href="/members" onClick={closeMenu}>Members</Link>
               </>
             )}
@@ -92,60 +92,33 @@ const Header = () => {
           </Link>
         )}
         {!showAdminOrders && (
-          <>
-            {/* Signed-in customers get the icon at every width; guests see text on desktop */}
-            <Link
-              href="/cart"
-              className={user ? undefined : 'cart-mobile'}
-              style={user ? { position: 'relative', display: 'inline-flex', alignItems: 'center' } : { position: 'relative' }}
-              title="Cart"
-            >
-              <FaShoppingCart size={20} style={{ color: '#f1d00f' }} />
-              {cartItemsCount > 0 && (
-                <span style={{
-                  position: 'absolute',
-                  top: '-8px',
-                  right: '-8px',
-                  background: '#fc3678',
-                  color: 'white',
-                  borderRadius: '50%',
-                  width: '20px',
-                  height: '20px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '12px',
-                  fontWeight: 'bold'
-                }}>
-                  {cartItemsCount}
-                </span>
-              )}
-            </Link>
-            {!user && (
-            <Link href="/cart" className="cart-desktop" style={{ position: 'relative', color: '#f1d00f', textDecoration: 'none', fontSize: '1.7rem', fontWeight: 600 }}>
-              Cart
-              {cartItemsCount > 0 && (
-                <span style={{
-                  position: 'absolute',
-                  top: '-10px',
-                  right: '-14px',
-                  background: '#fc3678',
-                  color: 'white',
-                  borderRadius: '50%',
-                  width: '20px',
-                  height: '20px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '12px',
-                  fontWeight: 'bold'
-                }}>
-                  {cartItemsCount}
-                </span>
-              )}
-            </Link>
+          <Link
+            href="/cart"
+            style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}
+            title="Cart"
+            aria-label="Cart"
+          >
+            <FaShoppingCart size={20} style={{ color: '#f1d00f' }} />
+            {cartItemsCount > 0 && (
+              <span style={{
+                position: 'absolute',
+                top: '-8px',
+                right: '-8px',
+                background: '#fc3678',
+                color: 'white',
+                borderRadius: '50%',
+                width: '20px',
+                height: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '12px',
+                fontWeight: 'bold'
+              }}>
+                {cartItemsCount}
+              </span>
             )}
-          </>
+          </Link>
         )}
         {user && !showAdminOrders ? (
           // Customers sign out from the profile page
@@ -176,14 +149,14 @@ const Header = () => {
             </button>
           </>
         ) : (
-          <>
-            <Link href="/auth/signin" className="auth-mobile" style={{ color: '#f1d00f' }} title="Sign in">
-              <FaUser size={18} style={{ color: '#f1d00f' }} />
-            </Link>
-            <Link href="/auth/signin" className="auth-desktop" style={{ color: '#f1d00f', textDecoration: 'none', fontSize: '1.7rem', fontWeight: 600 }}>
-              Sign In
-            </Link>
-          </>
+          <Link
+            href="/auth/signin"
+            style={{ color: '#f1d00f', display: 'inline-flex', alignItems: 'center' }}
+            title="Sign in"
+            aria-label="Sign in"
+          >
+            <BsPersonFill size={22} style={{ color: '#f1d00f' }} />
+          </Link>
         )}
         <button
           id="menu"
