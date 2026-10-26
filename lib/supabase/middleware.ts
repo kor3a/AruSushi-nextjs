@@ -72,6 +72,23 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
+  // Customer-only pages: send admins and managers to the admin Orders page instead
+  const customerOnlyRoutes = ['/my-orders', '/rewards', '/cart', '/checkout'];
+  const isCustomerOnlyRoute = customerOnlyRoutes.some(
+    (route) =>
+      request.nextUrl.pathname === route ||
+      request.nextUrl.pathname.startsWith(`${route}/`)
+  );
+
+  if (isCustomerOnlyRoute && user && canManageOrders(user.email)) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/admin/orders';
+    url.search = '';
+    const response = NextResponse.redirect(url);
+    supabaseResponse.cookies.getAll().forEach((cookie) => response.cookies.set(cookie));
+    return response;
+  }
+
   // Redirect authenticated users away from auth pages
   const authRoutes = ['/auth/signin', '/auth/signup'];
   const isAuthRoute = authRoutes.some((route) =>
