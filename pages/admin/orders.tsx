@@ -108,6 +108,9 @@ interface OrderSectionProps {
   updateOrderStatus: (orderId: string, status: string) => void;
   getStatusOptions: (orderType: string, currentStatus: string) => string[];
   getStatusLabel: (orderType: string, status: string) => string;
+  collapsible?: boolean;
+  openOrderIds?: Set<string>;
+  onToggleOpen?: (id: string) => void;
 }
 
 function OrderSection({
@@ -127,6 +130,9 @@ function OrderSection({
   updateOrderStatus,
   getStatusOptions,
   getStatusLabel,
+  collapsible = false,
+  openOrderIds,
+  onToggleOpen,
 }: OrderSectionProps) {
   return (
     <div style={{ marginBottom: '40px' }}>
@@ -181,6 +187,8 @@ function OrderSection({
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
               gap: '20px',
+              // Collapsed cards shouldn't stretch to match an open card in the same row
+              alignItems: collapsible ? 'start' : undefined,
             }}
           >
             {orders.map((order) => (
@@ -195,6 +203,8 @@ function OrderSection({
                 updateOrderStatus={updateOrderStatus}
                 getStatusOptions={getStatusOptions}
                 getStatusLabel={getStatusLabel}
+                isCollapsed={collapsible && !openOrderIds?.has(order.id)}
+                onToggleCollapse={collapsible && onToggleOpen ? () => onToggleOpen(order.id) : undefined}
               />
             ))}
           </div>
@@ -301,6 +311,8 @@ interface OrderCardProps {
   updateOrderStatus: (orderId: string, status: string) => void;
   getStatusOptions: (orderType: string, currentStatus: string) => string[];
   getStatusLabel: (orderType: string, status: string) => string;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 function OrderCard({
@@ -311,12 +323,31 @@ function OrderCard({
   updateOrderStatus,
   getStatusOptions,
   getStatusLabel,
+  isCollapsed = false,
+  onToggleCollapse,
 }: OrderCardProps) {
   const statusColor = getStatusColor(order.status);
   const statusOptions = getStatusOptions(order.orderType, order.status);
 
+  // Collapsed cards toggle from anywhere on the card; open ones from the header only
+  const toggleProps = onToggleCollapse
+    ? {
+        role: 'button' as const,
+        tabIndex: 0,
+        'aria-expanded': !isCollapsed,
+        onClick: onToggleCollapse,
+        onKeyDown: (e: React.KeyboardEvent) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onToggleCollapse();
+          }
+        },
+      }
+    : {};
+
   return (
     <div
+      {...(isCollapsed ? toggleProps : {})}
       style={{
         background: 'rgba(255, 255, 255, 0.04)',
         border: `1px solid ${statusColor.border}`,
@@ -326,10 +357,12 @@ function OrderCard({
         flexDirection: 'column',
         overflow: 'hidden',
         transition: 'border-color 0.2s',
+        cursor: isCollapsed ? 'pointer' : undefined,
       }}
     >
       {/* Status Badge Header */}
       <div
+        {...(!isCollapsed ? toggleProps : {})}
         style={{
           background: statusColor.bg,
           borderBottom: `1px solid ${statusColor.border}`,
@@ -337,6 +370,7 @@ function OrderCard({
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
+          cursor: onToggleCollapse ? 'pointer' : undefined,
         }}
       >
         <span
@@ -350,6 +384,7 @@ function OrderCard({
         >
           {getStatusLabel(order.orderType, order.status)}
         </span>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
         <span
           style={{
             color: '#999',
@@ -363,8 +398,70 @@ function OrderCard({
         >
           {order.orderType}
         </span>
+        {onToggleCollapse && (
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#bbb"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{
+              marginLeft: '8px',
+              flexShrink: 0,
+              transform: isCollapsed ? 'rotate(0deg)' : 'rotate(180deg)',
+              transition: 'transform 0.2s',
+            }}
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        )}
+        </div>
       </div>
 
+      {/* Collapsed Summary */}
+      {isCollapsed && (
+        <div
+          style={{
+            padding: '12px 16px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: '12px',
+          }}
+        >
+          <div style={{ minWidth: 0 }}>
+            <p style={{ color: '#f1d00f', fontWeight: 700, fontSize: '14px', margin: 0 }}>
+              #{order.id.slice(0, 8)}
+            </p>
+            <p
+              style={{
+                color: '#bbb',
+                fontSize: '13px',
+                margin: '2px 0 0',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {order.customerName || 'Guest'}
+            </p>
+          </div>
+          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+            <p style={{ color: '#fff', fontWeight: 700, fontSize: '16px', margin: 0 }}>
+              ${Number(order.total).toFixed(2)}
+            </p>
+            <p style={{ color: '#999', fontSize: '12px', margin: '2px 0 0' }}>
+              {formatTimeAgo(order.createdAt)}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {!isCollapsed && (
+      <>
       {/* Card Body */}
       <div style={{ padding: '16px', flex: 1 }}>
         {/* Order ID and Time */}
@@ -605,6 +702,8 @@ function OrderCard({
           </div>
         )}
       </div>
+      </>
+      )}
     </div>
   );
 }
@@ -621,6 +720,16 @@ export default function AdminOrdersPage() {
   const [activeCurrentPage, setActiveCurrentPage] = useState(1);
   const [completedCurrentPage, setCompletedCurrentPage] = useState(1);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
+  const [openCompletedIds, setOpenCompletedIds] = useState<Set<string>>(new Set());
+
+  const toggleCompletedOpen = (id: string) => {
+    setOpenCompletedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const [newOrderAlert, setNewOrderAlert] = useState<string | null>(null);
   const alertTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -640,6 +749,16 @@ export default function AdminOrdersPage() {
 
   const activeOrders = orders.filter((o) => !isOrderCompleted(o));
   const completedOrders = orders.filter((o) => isOrderCompleted(o));
+
+  // Forget open state for orders that left Completed, so they re-enter collapsed
+  useEffect(() => {
+    setOpenCompletedIds((prev) => {
+      const next = new Set(
+        Array.from(prev).filter((id) => orders.some((o) => o.id === id && isOrderCompleted(o)))
+      );
+      return next.size === prev.size ? prev : next;
+    });
+  }, [orders]);
 
   const activeTotalPages = Math.max(1, Math.ceil(activeOrders.length / ORDERS_PER_PAGE));
   const completedTotalPages = Math.max(1, Math.ceil(completedOrders.length / ORDERS_PER_PAGE));
@@ -1388,6 +1507,9 @@ export default function AdminOrdersPage() {
               updateOrderStatus={updateOrderStatus}
               getStatusOptions={getStatusOptions}
               getStatusLabel={getStatusLabel}
+              collapsible
+              openOrderIds={openCompletedIds}
+              onToggleOpen={toggleCompletedOpen}
             />
           )}
         </div>
