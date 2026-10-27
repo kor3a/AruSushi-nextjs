@@ -4,8 +4,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
 import { useRewards } from '../contexts/RewardsContext';
 import { canManageOrders, getUserRoleByEmail } from '../lib/auth/roles';
-import { FaShoppingCart, FaBars } from 'react-icons/fa';
+import { FaBars } from 'react-icons/fa';
 import { BsPersonFill } from 'react-icons/bs';
+import CartPopover from './CartPopover';
 
 const Header = () => {
   const { user } = useAuth();
@@ -92,33 +93,7 @@ const Header = () => {
           </Link>
         )}
         {!showAdminOrders && (
-          <Link
-            href="/cart"
-            style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}
-            title="Cart"
-            aria-label="Cart"
-          >
-            <FaShoppingCart size={20} style={{ color: '#f1d00f' }} />
-            {cartItemsCount > 0 && (
-              <span style={{
-                position: 'absolute',
-                top: '-8px',
-                right: '-8px',
-                background: '#fc3678',
-                color: 'white',
-                borderRadius: '50%',
-                width: '20px',
-                height: '20px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '12px',
-                fontWeight: 'bold'
-              }}>
-                {cartItemsCount}
-              </span>
-            )}
-          </Link>
+          <CartPopover itemCount={cartItemsCount} onOpen={closeMenu} />
         )}
         {user ? (
           // Everyone signs out from the profile page
