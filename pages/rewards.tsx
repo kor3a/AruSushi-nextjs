@@ -636,7 +636,11 @@ export default function Rewards() {
                 {redemptions.map((reward) => (
                   <li key={reward.id} className={styles.stub} data-stub={reward.id}>
                     <span className={styles.stubLabel}>{reward.rewardLabel}</span>
-                    <span className={styles.stubMeta}>Claimed {fmtDate(reward.claimedAt)}</span>
+                    <span className={styles.stubMeta}>
+                      {reward.expiresAt
+                        ? `Won in the daily game · Expires ${fmtDate(reward.expiresAt)}`
+                        : `Claimed ${fmtDate(reward.claimedAt)}`}
+                    </span>
                   </li>
                 ))}
               </ul>

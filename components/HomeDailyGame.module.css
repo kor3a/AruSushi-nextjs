@@ -1,0 +1,178 @@
+/* 1rem = 10px here (html is 62.5% in public/style/style.css) */
+
+.root {
+  --ink: #13110f;
+  --paper: #f3ece0;
+  --muted: #9d958a;
+  --line: rgba(243, 236, 224, 0.14);
+  --gold: #f1d00f;
+  --vermilion: #e0412f;
+
+  position: relative;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: 'Josefin Sans', sans-serif;
+  /* overrides the global `section` padding */
+  padding: 0 0 12rem;
+}
+
+/* The site stylesheet puts `transition: all` and a font on every element */
+.root * {
+  transition: none;
+  font-family: inherit;
+}
+
+.inner {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: 4rem 6rem;
+  align-items: center;
+  max-width: 124rem;
+  margin: 0 auto;
+  padding: 8rem 2.4rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  font-size: 1.25rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.eyebrow::before {
+  content: '';
+  width: 3.2rem;
+  height: 1px;
+  background: currentColor;
+}
+
+.headline {
+  margin-top: 2.2rem;
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 380;
+  font-size: clamp(4rem, 5vw, 6.4rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variation-settings: 'SOFT' 50, 'WONK' 1, 'opsz' 144;
+  color: var(--paper);
+  text-transform: none;
+}
+
+.headline em {
+  font-style: italic;
+  color: var(--gold);
+}
+
+.lede {
+  margin-top: 2rem;
+  max-width: 44rem;
+  font-size: 1.7rem;
+  font-weight: 300;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.prizes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  margin-top: 2.4rem;
+  list-style: none;
+}
+
+.prizes li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.7rem 1.2rem;
+  border: 1px solid var(--line);
+  border-radius: 99rem;
+  font-size: 1.3rem;
+  color: var(--paper);
+}
+
+.prizes li[data-rare] {
+  border-color: rgba(241, 208, 15, 0.5);
+  color: var(--gold);
+}
+
+.rareTag {
+  padding: 0.2rem 0.6rem;
+  border-radius: 99rem;
+  background: var(--gold);
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.fine {
+  margin-top: 1.6rem;
+  font-size: 1.3rem;
+  color: var(--muted);
+}
+
+/* Stands in for the game (signed out, loading, already played) at about its size */
+.panel {
+  display: grid;
+  place-items: center;
+  min-height: 40rem;
+  padding: 3.2rem 2.4rem;
+  text-align: center;
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(241, 208, 15, 0.08), transparent 60%),
+    var(--ink);
+}
+
+.plates {
+  display: flex;
+  gap: 1.2rem;
+  margin-bottom: 0.8rem;
+}
+
+.plate {
+  display: grid;
+  place-items: center;
+  width: 7.2rem;
+  height: 7.2rem;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fbf8f2 0 56%, var(--vermilion) 57% 68%, #fbf8f2 69% 100%);
+  box-shadow: 0 0.6rem 1.2rem rgba(0, 0, 0, 0.5);
+}
+
+.plate:nth-child(2) {
+  background: radial-gradient(circle, #fff8d6 0 56%, #e0b400 57% 68%, #fff1a8 69% 100%);
+  transform: translateY(-0.8rem);
+}
+
+.plate svg {
+  width: 86%;
+  margin-top: -0.4rem;
+}
+
+@media (max-width: 960px) {
+  .inner {
+    grid-template-columns: minmax(0, 1fr);
+    padding-top: 7rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .root {
+    padding-bottom: 9rem;
+  }
+
+  .inner {
+    padding-left: 1.6rem;
+    padding-right: 1.6rem;
+  }
+
+  .panel {
+    min-height: 34rem;
+  }
+}

@@ -21,6 +21,26 @@ export interface MenuCategory {
   items: MenuItemData[];
 }
 
+// Optional extras on every roll. The Conveyor Catch "Free Add-on" prize takes
+// the priciest one in the cart off (lib/perks/discounts.ts).
+export const ROLL_ADDON_OPTION: MenuItemOption = {
+  label: 'Roll Add-ons',
+  name: 'rollAddons',
+  required: false,
+  isMultiSelect: true,
+  choices: ['Avocado', 'Soy Paper', 'Cream Cheese', 'Masago', 'Extra Eel Sauce', 'Extra Spicy Mayo'],
+  addonPrices: {
+    'Avocado': 1.5,
+    'Soy Paper': 1.0,
+    'Cream Cheese': 1.0,
+    'Masago': 1.5,
+    'Extra Eel Sauce': 0.5,
+    'Extra Spicy Mayo': 0.5,
+  },
+};
+
+export const ROLL_CATEGORIES = ['Basic Rolls', 'House Special Rolls'];
+
 export const lunchMenu: MenuCategory[] = [
   {
     category: 'Lunch Combination',
@@ -1015,3 +1035,10 @@ export const dinnerMenu: MenuCategory[] = [
     ],
   },
 ];
+
+for (const category of dinnerMenu) {
+  if (!ROLL_CATEGORIES.includes(category.category)) continue;
+  for (const item of category.items) {
+    item.options = [...(item.options ?? []), ROLL_ADDON_OPTION];
+  }
+}

@@ -210,15 +210,28 @@ export default async function handler(
         return res.status(400).json({ message: 'Selected reward is no longer available' });
       }
 
-      appliedRewardDiscount = calculateOrderDiscounts(
-        normalizedItems,
-        rewardRedemption.rewardType,
-        []
-      ).rewardDiscount;
+      appliedReward = rewardRedemption;
+    }
+
+    const resolvedPerks = await resolveRequestedPerks(user.id, dbUser.birthday, perks);
+    if (!resolvedPerks.ok) {
+      return res.status(resolvedPerks.status).json({ message: resolvedPerks.message });
+    }
+
+    // Worked out with the perks, since some game prizes (a free add-on, % off
+    // rolls) skip items a perk already made free
+    const discounts = calculateOrderDiscounts(
+      normalizedItems,
+      appliedReward?.rewardType,
+      resolvedPerks.perks
+    );
+
+    if (appliedReward) {
+      appliedRewardDiscount = discounts.rewardDiscount;
 
       if (appliedRewardDiscount <= 0) {
         return res.status(400).json({
-          message: `Add an eligible item to use ${rewardRedemption.rewardLabel}`,
+          message: `Add an eligible item to use ${appliedReward.rewardLabel}`,
         });
       }
 
@@ -228,20 +241,8 @@ export default async function handler(
       ) {
         return res.status(400).json({ message: 'Reward discount mismatch' });
       }
-
-      appliedReward = rewardRedemption;
     }
 
-    const resolvedPerks = await resolveRequestedPerks(user.id, dbUser.birthday, perks);
-    if (!resolvedPerks.ok) {
-      return res.status(resolvedPerks.status).json({ message: resolvedPerks.message });
-    }
-
-    const discounts = calculateOrderDiscounts(
-      normalizedItems,
-      appliedReward?.rewardType,
-      resolvedPerks.perks
-    );
     const unusablePerk = findUnusablePerk(resolvedPerks.perks, discounts);
     if (unusablePerk) {
       return res.status(400).json({

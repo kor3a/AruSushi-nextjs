@@ -1,4 +1,4 @@
-import type { RewardCatalogItem, RewardType } from './types';
+import type { PointsRewardType, RewardCatalogItem } from './types';
 
 export const POINTS_PER_DOLLAR = 1;
 
@@ -21,6 +21,6 @@ export function getRewardByType(rewardType: string): RewardCatalogItem | undefin
   return REWARD_CATALOG.find((reward) => reward.type === rewardType);
 }
 
-export function isRewardType(value: string): value is RewardType {
+export function isRewardType(value: string): value is PointsRewardType {
   return REWARD_CATALOG.some((reward) => reward.type === value);
 }

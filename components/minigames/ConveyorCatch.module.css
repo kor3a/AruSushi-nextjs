@@ -1,0 +1,320 @@
+.root {
+  --plate: 10rem;
+  padding: 2rem;
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(241, 208, 15, 0.08), transparent 60%),
+    var(--ink);
+}
+
+/* ---------- HUD ---------- */
+
+.hud {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.6rem;
+  margin-bottom: 1.8rem;
+}
+
+.order {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.6rem 1.6rem 0.6rem 0.6rem;
+  border-radius: 0.6rem;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 0.6rem 1.6rem rgba(0, 0, 0, 0.4);
+  transform: rotate(-2deg);
+  animation: orderIn 0.4s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+.orderArt {
+  width: 6.4rem;
+  height: 4.5rem;
+}
+
+.orderEyebrow {
+  display: block;
+  font-size: 1rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--vermilion);
+}
+
+.orderName {
+  display: block;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 2.4rem;
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+.stats {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.timer,
+.scoreLine {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.statValue {
+  font-size: 3rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--paper);
+}
+
+.statLabel {
+  font-size: 1.3rem;
+  color: var(--muted);
+}
+
+.timer[data-low] .statValue {
+  color: var(--vermilion);
+  animation: pulse 0.5s ease-in-out infinite alternate;
+}
+
+.scoreBox {
+  display: grid;
+  gap: 0.6rem;
+  min-width: 12rem;
+}
+
+.progress {
+  height: 0.6rem;
+  border-radius: 99rem;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--vermilion);
+  transition: width 0.25s ease-out;
+}
+
+.progress[data-done] span {
+  background: var(--gold);
+}
+
+.luckyChip {
+  margin-left: 0.4rem;
+  padding: 0.3rem 0.8rem;
+  border-radius: 99rem;
+  background: var(--gold);
+  color: var(--ink);
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  animation: orderIn 0.4s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+/* ---------- Belts ---------- */
+
+.belts {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem 0;
+  border-radius: 1.4rem;
+  /* Wooden counter the belts sit on */
+  background: linear-gradient(180deg, #5a4030, #3e2c21);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.08);
+}
+
+.lane {
+  position: relative;
+  height: calc(var(--plate) + 2.4rem);
+  overflow: hidden;
+  background-color: #26221f;
+  background-image: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.06) 0 2px, transparent 2px 4rem);
+  background-size: 4rem 100%;
+  border-top: 3px solid #8d8478;
+  border-bottom: 3px solid #8d8478;
+  animation: slatsRight 0.9s linear infinite;
+}
+
+.laneLeft {
+  animation-name: slatsLeft;
+}
+
+.track {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  animation: travelRight linear forwards;
+}
+
+.trackLeft {
+  animation-name: travelLeft;
+}
+
+.paused {
+  animation-play-state: paused;
+}
+
+.plate {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: var(--plate);
+  height: var(--plate);
+  margin-top: calc(var(--plate) / -2);
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  pointer-events: auto;
+  cursor: pointer;
+  touch-action: manipulation;
+  background: radial-gradient(circle, #fbf8f2 0 56%, var(--rim) 57% 68%, #fbf8f2 69% 100%);
+  box-shadow: 0 0.6rem 1.2rem rgba(0, 0, 0, 0.5);
+}
+
+.plateArt {
+  width: 86%;
+  height: auto;
+  margin-top: -0.6rem;
+  pointer-events: none;
+}
+
+.gold {
+  background: radial-gradient(circle, #fff8d6 0 56%, #e0b400 57% 68%, #fff1a8 69% 100%);
+  animation: goldGlow 0.7s ease-in-out infinite alternate;
+}
+
+.caught {
+  animation: pop 0.5s ease-out forwards;
+}
+
+.wrong {
+  animation: shake 0.5s ease-in-out forwards;
+}
+
+.points {
+  position: absolute;
+  top: -1.2rem;
+  left: 50%;
+  translate: -50% 0;
+  white-space: nowrap;
+  padding: 0.3rem 0.9rem;
+  border-radius: 99rem;
+  background: var(--gold);
+  color: var(--ink);
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.points[data-bad] {
+  background: var(--vermilion);
+  color: #fff;
+}
+
+@keyframes slatsRight {
+  to {
+    background-position: 4rem 0;
+  }
+}
+
+@keyframes slatsLeft {
+  to {
+    background-position: -4rem 0;
+  }
+}
+
+@keyframes travelRight {
+  from {
+    transform: translateX(calc(-1 * var(--plate)));
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes travelLeft {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(calc(-1 * var(--plate)));
+  }
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: translateY(-4rem) scale(0.6);
+    opacity: 0;
+  }
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-0.8rem);
+  }
+  40%,
+  80% {
+    transform: translateX(0.8rem);
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes goldGlow {
+  from {
+    box-shadow: 0 0 0.8rem rgba(241, 208, 15, 0.5), 0 0.6rem 1.2rem rgba(0, 0, 0, 0.5);
+  }
+  to {
+    box-shadow: 0 0 2.6rem rgba(241, 208, 15, 0.95), 0 0.6rem 1.2rem rgba(0, 0, 0, 0.5);
+  }
+}
+
+@keyframes orderIn {
+  from {
+    opacity: 0;
+    transform: rotate(-8deg) scale(0.7);
+  }
+}
+
+@keyframes pulse {
+  to {
+    opacity: 0.55;
+  }
+}
+
+@media (max-width: 600px) {
+  .root {
+    --plate: 8rem;
+    padding: 1.4rem;
+  }
+
+  .hud {
+    flex-wrap: wrap;
+  }
+
+  .orderName {
+    font-size: 2rem;
+  }
+
+  .statValue {
+    font-size: 2.4rem;
+  }
+}
