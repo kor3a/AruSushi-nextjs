@@ -36,9 +36,11 @@ export interface RewardRedemptionRecord {
   rewardType: RewardType;
   rewardLabel: string;
   pointsCost: number;
-  status: 'available' | 'used' | 'cancelled';
+  // 'expired' is never stored: it's an available row past expires_at
+  status: 'available' | 'used' | 'cancelled' | 'expired';
   claimedAt: Date;
   usedAt: Date | null;
+  expiresAt: Date | null;
   orderId: string | null;
 }
 
@@ -58,6 +60,7 @@ type RewardRedemptionRow = {
   claimed_at: Date;
   used_at: Date | null;
   order_id: string | null;
+  expires_at: Date | null;
 };
 
 export interface StoreSettings {
@@ -148,9 +151,41 @@ export function isRewardsSchemaMissingError(error: unknown): boolean {
   const fullMessage = `${prismaError.message || ''} ${prismaError.meta?.message || ''}`.toLowerCase();
   return (
     fullMessage.includes('relation "user_points" does not exist') ||
-    fullMessage.includes('relation "reward_redemptions" does not exist')
+    fullMessage.includes('relation "reward_redemptions" does not exist') ||
+    // Added by add_game_plays.sql
+    fullMessage.includes('column "expires_at" does not exist')
   );
 }
+
+export function isGamesSchemaMissingError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const e = error as { code?: string; message?: string; meta?: { message?: string } };
+  if (e.code !== 'P2010') return false;
+  const msg = `${e.message || ''} ${e.meta?.message || ''}`.toLowerCase();
+  return msg.includes('relation "game_plays" does not exist') || msg.includes('column "expires_at" does not exist');
+}
+
+export interface GamePlayRecord {
+  id: string;
+  playDate: string;
+  goldAtMs: number | null;
+  startedAt: Date;
+  finishedAt: Date | null;
+  score: number | null;
+  caughtGold: boolean;
+  prize: RewardRedemptionRecord | null;
+}
+
+type GamePlayRow = {
+  id: string;
+  play_date: string;
+  gold_at_ms: number | null;
+  started_at: Date;
+  finished_at: Date | null;
+  score: number | null;
+  caught_gold: boolean;
+  redemption_id: string | null;
+};
 
 // Helper types for creating records
 export type CreateUserInput = Prisma.UserCreateInput;
@@ -195,9 +230,13 @@ class Database {
       rewardType: row.reward_type as RewardType,
       rewardLabel: row.reward_label,
       pointsCost: Number(row.points_cost),
-      status: row.status as RewardRedemptionRecord['status'],
+      status:
+        row.status === 'available' && row.expires_at && row.expires_at <= new Date()
+          ? 'expired'
+          : (row.status as RewardRedemptionRecord['status']),
       claimedAt: row.claimed_at,
       usedAt: row.used_at,
+      expiresAt: row.expires_at,
       orderId: row.order_id,
     };
   }
@@ -331,9 +370,12 @@ class Database {
         status,
         claimed_at,
         used_at,
-        order_id
+        order_id,
+        expires_at
       FROM reward_redemptions
-      WHERE user_id = ${userId}::uuid AND status = 'available'
+      WHERE user_id = ${userId}::uuid
+        AND status = 'available'
+        AND (expires_at IS NULL OR expires_at > NOW())
       ORDER BY claimed_at ASC
     `;
 
@@ -353,7 +395,8 @@ class Database {
         status,
         claimed_at,
         used_at,
-        order_id
+        order_id,
+        expires_at
       FROM reward_redemptions
       WHERE id = ${redemptionId}::uuid AND user_id = ${userId}::uuid
       LIMIT 1
@@ -374,7 +417,10 @@ class Database {
     const rows = await prisma.$queryRaw<RewardRedemptionRow[]>`
       UPDATE reward_redemptions
       SET status = 'used', used_at = NOW(), order_id = ${orderId}::uuid, updated_at = NOW()
-      WHERE id = ${redemptionId}::uuid AND user_id = ${userId}::uuid AND status = 'available'
+      WHERE id = ${redemptionId}::uuid
+        AND user_id = ${userId}::uuid
+        AND status = 'available'
+        AND (expires_at IS NULL OR expires_at > NOW())
       RETURNING
         id,
         reward_type,
@@ -383,7 +429,8 @@ class Database {
         status,
         claimed_at,
         used_at,
-        order_id
+        order_id,
+        expires_at
     `;
 
     if (!rows.length) {
@@ -447,7 +494,8 @@ class Database {
           status,
           claimed_at,
           used_at,
-          order_id
+          order_id,
+          expires_at
       `;
 
       return {
@@ -629,6 +677,88 @@ class Database {
         unavailableReason,
         usedAt: use?.used_at.toISOString() ?? null,
       };
+    });
+  }
+
+  // Mini game operations
+  private async mapGamePlayRow(row: GamePlayRow, userId: string): Promise<GamePlayRecord> {
+    return {
+      id: row.id,
+      playDate: row.play_date,
+      goldAtMs: row.gold_at_ms,
+      startedAt: row.started_at,
+      finishedAt: row.finished_at,
+      score: row.score,
+      caughtGold: row.caught_gold,
+      prize: row.redemption_id ? await this.getRewardRedemptionById(userId, row.redemption_id) : null,
+    };
+  }
+
+  async getGamePlay(userId: string, game: string, playDate: string): Promise<GamePlayRecord | null> {
+    const rows = await prisma.$queryRaw<GamePlayRow[]>`
+      SELECT id, play_date, gold_at_ms, started_at, finished_at, score, caught_gold, redemption_id
+      FROM game_plays
+      WHERE user_id = ${userId}::uuid AND game = ${game} AND play_date = ${playDate}
+      LIMIT 1
+    `;
+    return rows.length ? this.mapGamePlayRow(rows[0], userId) : null;
+  }
+
+  async getGamePlayById(userId: string, playId: string): Promise<GamePlayRecord | null> {
+    const rows = await prisma.$queryRaw<GamePlayRow[]>`
+      SELECT id, play_date, gold_at_ms, started_at, finished_at, score, caught_gold, redemption_id
+      FROM game_plays
+      WHERE id = ${playId}::uuid AND user_id = ${userId}::uuid
+      LIMIT 1
+    `;
+    return rows.length ? this.mapGamePlayRow(rows[0], userId) : null;
+  }
+
+  // Returns null when the member has already played today
+  async startGamePlay(
+    userId: string,
+    game: string,
+    playDate: string,
+    goldAtMs: number | null
+  ): Promise<GamePlayRecord | null> {
+    const rows = await prisma.$queryRaw<GamePlayRow[]>`
+      INSERT INTO game_plays (user_id, game, play_date, gold_at_ms)
+      VALUES (${userId}::uuid, ${game}, ${playDate}, ${goldAtMs})
+      ON CONFLICT (user_id, game, play_date) DO NOTHING
+      RETURNING id, play_date, gold_at_ms, started_at, finished_at, score, caught_gold, redemption_id
+    `;
+    return rows.length ? this.mapGamePlayRow(rows[0], userId) : null;
+  }
+
+  // Records the result and, for a win, the prize as a reward redemption that
+  // checkout can apply. Throws ALREADY_FINISHED if the round was already scored.
+  async finishGamePlay(
+    userId: string,
+    playId: string,
+    result: { score: number; caughtGold: boolean },
+    prize: { rewardType: RewardType; rewardLabel: string; expiresAt: Date } | null
+  ): Promise<RewardRedemptionRecord | null> {
+    return prisma.$transaction(async (tx) => {
+      const finished = await tx.$queryRaw<{ id: string }[]>`
+        UPDATE game_plays
+        SET finished_at = NOW(), score = ${result.score}, caught_gold = ${result.caughtGold}
+        WHERE id = ${playId}::uuid AND user_id = ${userId}::uuid AND finished_at IS NULL
+        RETURNING id
+      `;
+      if (!finished.length) {
+        throw new Error('ALREADY_FINISHED');
+      }
+      if (!prize) return null;
+
+      const redemptionRows = await tx.$queryRaw<RewardRedemptionRow[]>`
+        INSERT INTO reward_redemptions (user_id, reward_type, reward_label, points_cost, status, expires_at)
+        VALUES (${userId}::uuid, ${prize.rewardType}, ${prize.rewardLabel}, 0, 'available', ${prize.expiresAt})
+        RETURNING id, reward_type, reward_label, points_cost, status, claimed_at, used_at, order_id, expires_at
+      `;
+      await tx.$executeRaw`
+        UPDATE game_plays SET redemption_id = ${redemptionRows[0].id}::uuid WHERE id = ${playId}::uuid
+      `;
+      return this.mapRewardRedemptionRow(redemptionRows[0]);
     });
   }
 

@@ -1,0 +1,243 @@
+.root {
+  padding: 1.6rem;
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(241, 208, 15, 0.08), transparent 60%),
+    var(--ink);
+}
+
+/* ---------- Pond ---------- */
+
+.pond {
+  position: relative;
+  height: 36rem;
+  overflow: hidden;
+  cursor: crosshair;
+  touch-action: manipulation;
+  /* Stone rim around an oval pond */
+  border-radius: 50% / 46%;
+  border: 1rem solid #4a4540;
+  box-shadow:
+    0 0 0 2px #6b645c,
+    inset 0 1rem 3rem rgba(0, 0, 0, 0.55);
+  background:
+    radial-gradient(60% 50% at 40% 40%, rgba(120, 210, 200, 0.22), transparent 70%),
+    radial-gradient(ellipse at center, #1f6f74 0%, #154f58 55%, #0d343d 100%);
+}
+
+/* Slow light caustics drifting across the water */
+.pond::before {
+  content: '';
+  position: absolute;
+  inset: -20%;
+  pointer-events: none;
+  opacity: 0.18;
+  background:
+    radial-gradient(circle at 20% 30%, #fff 0 1px, transparent 2.5rem),
+    radial-gradient(circle at 70% 60%, #fff 0 1px, transparent 3rem),
+    radial-gradient(circle at 45% 80%, #fff 0 1px, transparent 2rem);
+  animation: drift 9s ease-in-out infinite alternate;
+}
+
+.lily {
+  position: absolute;
+  width: 6rem;
+  height: 6rem;
+  pointer-events: none;
+  border-radius: 50%;
+  background: conic-gradient(from 20deg, transparent 0 8%, #4f8f45 8% 100%);
+  box-shadow: inset -0.4rem -0.4rem 0 rgba(0, 0, 0, 0.18);
+  z-index: 3;
+}
+
+.ripple {
+  position: absolute;
+  width: 4rem;
+  height: 2rem;
+  margin: -1rem 0 0 -2rem;
+  pointer-events: none;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  animation: ripple 3.2s ease-out infinite;
+}
+
+.hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 2.4rem;
+  z-index: 4;
+  pointer-events: none;
+  text-align: center;
+  font-size: 1.4rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(243, 236, 224, 0.75);
+  animation: hintIn 0.6s ease-out;
+}
+
+/* ---------- Fish ---------- */
+
+.fish {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 7.2rem;
+  height: 3.6rem;
+  pointer-events: none;
+  will-change: transform;
+  filter: drop-shadow(0 1rem 0.6rem rgba(0, 0, 0, 0.35));
+  z-index: 2;
+}
+
+.fish[data-caught] {
+  z-index: 5;
+  filter: drop-shadow(0 1.6rem 1.4rem rgba(0, 0, 0, 0.5));
+}
+
+.fish[data-gold] {
+  filter: drop-shadow(0 0 1.2rem rgba(241, 208, 15, 0.9));
+  animation: goldFlash 0.6s ease-out;
+}
+
+.fishSvg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.fish path {
+  transition: fill 0.4s ease;
+}
+
+.top {
+  fill: var(--fish);
+}
+
+.belly,
+.tail {
+  fill: var(--fish-dark);
+}
+
+/* Set on the paths, since each fish's inline colour variables would win over the attribute */
+.fish[data-gold] .top {
+  fill: #f1d00f;
+}
+
+.fish[data-gold] .belly,
+.fish[data-gold] .tail {
+  fill: #c99f00;
+}
+
+.tail {
+  transform-box: fill-box;
+  transform-origin: right center;
+  animation: wag 0.35s ease-in-out infinite alternate;
+}
+
+.fish[data-caught] .tail {
+  animation-duration: 0.12s;
+}
+
+/* ---------- Scoop net (a paper poi) ---------- */
+
+.net {
+  position: absolute;
+  width: 9rem;
+  height: 9rem;
+  margin: -4.5rem 0 0 -4.5rem;
+  pointer-events: none;
+  z-index: 6;
+  border-radius: 50%;
+  border: 0.4rem solid #e9e2d4;
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.25) 0 1px, transparent 1px 0.8rem),
+    repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.25) 0 1px, transparent 1px 0.8rem),
+    rgba(255, 255, 255, 0.08);
+  animation: netMiss 0.65s ease-out forwards;
+}
+
+.net[data-hit] {
+  border-color: var(--gold);
+  animation: netHit 0.9s ease-out forwards;
+}
+
+@keyframes wag {
+  from {
+    transform: rotate(-16deg);
+  }
+  to {
+    transform: rotate(16deg);
+  }
+}
+
+@keyframes drift {
+  to {
+    transform: translate(6%, 4%) rotate(4deg);
+  }
+}
+
+@keyframes ripple {
+  from {
+    transform: scale(0.3);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+@keyframes netMiss {
+  0% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+  30% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.1);
+    opacity: 0;
+  }
+}
+
+@keyframes netHit {
+  0% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+  25% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+@keyframes goldFlash {
+  0% {
+    filter: brightness(3) drop-shadow(0 0 3rem #fff);
+  }
+}
+
+@keyframes hintIn {
+  from {
+    opacity: 0;
+    transform: translateY(1rem);
+  }
+}
+
+@media (max-width: 600px) {
+  .root {
+    padding: 1rem;
+  }
+
+  .pond {
+    height: 32rem;
+    border-width: 0.7rem;
+  }
+}

@@ -1,46 +1,33 @@
-import { dinnerMenu } from '../../data/menuData';
-import type { RewardType } from './types';
+import { dinnerMenu, ROLL_ADDON_OPTION } from '../../data/menuData';
 
 export interface RewardEligibleItem {
   name: string;
   price: number;
   quantity: number;
+  options?: { [key: string]: string };
 }
 
-export const appetizerItemNames = new Set(
-  dinnerMenu
-    .find((category) => category.category === 'Appetizers')
-    ?.items.map((item) => item.name.toLowerCase()) ?? []
-);
+const namesInCategory = (category: string) =>
+  new Set(
+    dinnerMenu
+      .find((c) => c.category === category)
+      ?.items.map((item) => item.name.toLowerCase()) ?? []
+  );
 
-export const houseSpecialRollItemNames = new Set(
-  dinnerMenu
-    .find((category) => category.category === 'House Special Rolls')
-    ?.items.map((item) => item.name.toLowerCase()) ?? []
-);
+export const appetizerItemNames = namesInCategory('Appetizers');
 
-function getEligibleNameSet(rewardType: RewardType) {
-  return rewardType === 'free_appetizer'
-    ? appetizerItemNames
-    : houseSpecialRollItemNames;
-}
+export const houseSpecialRollItemNames = namesInCategory('House Special Rolls');
 
-export function calculateRewardDiscount(
-  rewardType: RewardType,
-  items: RewardEligibleItem[]
-): number {
-  const eligibleNameSet = getEligibleNameSet(rewardType);
+// Beer and sake are left out on purpose: the game's free drink is non-alcoholic only.
+export const drinkItemNames = namesInCategory('Beverages (Non-alcoholic)');
 
-  let highestEligiblePrice = 0;
-  for (const item of items) {
-    if (item.quantity <= 0) {
-      continue;
-    }
-
-    if (eligibleNameSet.has(item.name.toLowerCase())) {
-      highestEligiblePrice = Math.max(highestEligiblePrice, item.price);
-    }
-  }
-
-  return Number(highestEligiblePrice.toFixed(2));
+// Prices of the roll add-ons on one cart item, one entry per add-on. MenuItem
+// joins multi-select choices with ', ' (see splitChoices in lib/menu/pricing.ts).
+export function rollAddonPrices(item: RewardEligibleItem): number[] {
+  const value = item.options?.[ROLL_ADDON_OPTION.name];
+  if (!value) return [];
+  return value
+    .split(',')
+    .map((choice) => ROLL_ADDON_OPTION.addonPrices?.[choice.trim()])
+    .filter((price): price is number => price !== undefined);
 }

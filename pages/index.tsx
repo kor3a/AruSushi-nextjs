@@ -7,6 +7,7 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import CherryBlossom from '@/components/CherryBlossom';
 import HomeMembership from '@/components/HomeMembership';
+import HomeDailyGame from '@/components/HomeDailyGame';
 import AdminActiveOrders from '@/components/AdminActiveOrders';
 import AdminOrdersFeed from '@/components/AdminOrdersFeed';
 import { useAuth } from '@/contexts/AuthContext';
@@ -105,6 +106,7 @@ const HomePage = () => {
         </div>
         {/* Wait for auth so staff don't see the customer sections flash in first */}
         {!authLoading && (isStaff ? <AdminActiveOrders {...storeOrders.active} /> : <HomeMembership />)}
+        {!authLoading && !isStaff && <HomeDailyGame />}
         {!authLoading && (isStaff ? <AdminOrdersFeed {...storeOrders.feed} /> : (
         <section className="parallex">
             <div className="parallex-wrapper" style={{ position: 'relative', zIndex: 1 }}>

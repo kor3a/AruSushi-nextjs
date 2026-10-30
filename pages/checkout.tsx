@@ -7,7 +7,6 @@ import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { useCart } from '../contexts/CartContext';
-import { calculateRewardDiscount } from '../lib/rewards/eligibility';
 import type { RewardsSummary } from '../lib/rewards/types';
 import type { UserRankInfo } from '../lib/ranks/types';
 import { calculateOrderDiscounts, type OrderDiscounts } from '../lib/perks/discounts';
@@ -414,7 +413,7 @@ function CheckoutForm({
             </label>
 
             {rewardsSummary.availableRedemptions.map((reward) => {
-              const possibleDiscount = calculateRewardDiscount(reward.rewardType, items);
+              const possibleDiscount = calculateOrderDiscounts(items, reward.rewardType, selectedPerks).rewardDiscount;
               const isEligible = possibleDiscount > 0;
 
               return (
@@ -440,6 +439,12 @@ function CheckoutForm({
                   />
                   <div>
                     <p style={{ color: '#fff', fontWeight: 600, marginBottom: '2px' }}>{reward.rewardLabel}</p>
+                    {reward.expiresAt && (
+                      <p style={{ color: '#888', fontSize: '12px', marginBottom: '2px' }}>
+                        Daily game prize • Expires{' '}
+                        {new Date(reward.expiresAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </p>
+                    )}
                     {isEligible ? (
                       <p style={{ color: '#4ade80', fontSize: '12px' }}>
                         Eligible now • Discount: ${possibleDiscount.toFixed(2)}

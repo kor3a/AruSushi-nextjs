@@ -1,0 +1,238 @@
+/* 1rem = 10px here (html is 62.5% in public/style/style.css) */
+
+.frame {
+  --ink: #13110f;
+  --paper: #f3ece0;
+  --muted: #9d958a;
+  --line: rgba(243, 236, 224, 0.14);
+  --gold: #f1d00f;
+  --vermilion: #e0412f;
+  --pink: #fc3678;
+
+  position: relative;
+  overflow: hidden;
+  border-radius: 2.4rem;
+  border: 1px solid var(--line);
+  background: var(--ink);
+  color: var(--paper);
+  font-family: 'Josefin Sans', sans-serif;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* The site stylesheet puts `transition: all` and a font on every element */
+.frame * {
+  transition: none;
+  font-family: inherit;
+}
+
+/* ---------- Overlays (intro, drawing, result) ---------- */
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 2.4rem;
+  text-align: center;
+  background: rgba(19, 17, 15, 0.8);
+  backdrop-filter: blur(3px);
+  animation: fadeIn 0.3s ease-out;
+}
+
+.overlayInner {
+  display: grid;
+  justify-items: center;
+  gap: 1.4rem;
+  max-width: 42rem;
+}
+
+.eyebrow {
+  font-size: 1.2rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.overlayTitle {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(3rem, 4vw, 4.2rem);
+  font-weight: 400;
+  line-height: 1.05;
+  color: var(--paper);
+  text-transform: none;
+}
+
+.overlayText {
+  font-size: 1.6rem;
+  line-height: 1.55;
+  color: rgba(243, 236, 224, 0.78);
+}
+
+.overlayText strong {
+  color: var(--paper);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-top: 0.6rem;
+  padding: 1.3rem 3rem;
+  border-radius: 99rem;
+  background: var(--vermilion);
+  color: #fff;
+  font-size: 1.6rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  box-shadow: 0 0.8rem 2.4rem rgba(224, 65, 47, 0.35);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.btn:hover {
+  background: #f04d3a;
+  transform: translateY(-2px);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 3px;
+}
+
+.dots {
+  display: inline-flex;
+  gap: 0.6rem;
+}
+
+.dots span {
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius: 50%;
+  background: var(--gold);
+  animation: bounce 0.9s ease-in-out infinite;
+}
+
+.dots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.dots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+/* ---------- Prize ticket ---------- */
+
+.ticket {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 0.8rem;
+  width: min(34rem, 100%);
+  padding: 3.2rem 2.8rem 2.6rem;
+  border-radius: 0.8rem;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 2rem 5rem rgba(0, 0, 0, 0.5);
+  animation: ticketIn 0.6s cubic-bezier(0.2, 1.4, 0.4, 1);
+  /* Notched ticket edges */
+  -webkit-mask: radial-gradient(circle at 0 50%, transparent 1.1rem, #000 1.15rem) left / 51% 100% no-repeat,
+    radial-gradient(circle at 100% 50%, transparent 1.1rem, #000 1.15rem) right / 51% 100% no-repeat;
+  mask: radial-gradient(circle at 0 50%, transparent 1.1rem, #000 1.15rem) left / 51% 100% no-repeat,
+    radial-gradient(circle at 100% 50%, transparent 1.1rem, #000 1.15rem) right / 51% 100% no-repeat;
+}
+
+.ticket[data-rare] {
+  background: linear-gradient(115deg, #f7e7a1 0%, #f1d00f 40%, #fff3b8 50%, #f1d00f 60%, #d9b400 100%);
+  background-size: 250% 100%;
+  animation: ticketIn 0.6s cubic-bezier(0.2, 1.4, 0.4, 1), shimmer 2.4s linear infinite;
+}
+
+.ticketEyebrow {
+  font-size: 1.15rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--vermilion);
+}
+
+.ticketLabel {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 3.2rem;
+  font-weight: 500;
+  line-height: 1.1;
+  color: var(--ink);
+  text-transform: none;
+}
+
+.ticketDetail {
+  font-size: 1.5rem;
+  color: rgba(19, 17, 15, 0.7);
+}
+
+.ticketNote {
+  margin-top: 0.8rem;
+  padding-top: 1.2rem;
+  border-top: 1px dashed rgba(19, 17, 15, 0.3);
+  width: 100%;
+  font-size: 1.3rem;
+  color: rgba(19, 17, 15, 0.6);
+}
+
+/* Hanko stamp: 当 (atari) means "a winning draw" */
+.stamp {
+  position: absolute;
+  top: 1.2rem;
+  right: 1.6rem;
+  display: grid;
+  place-items: center;
+  width: 4.8rem;
+  height: 4.8rem;
+  border-radius: 50%;
+  border: 3px solid var(--vermilion);
+  color: var(--vermilion);
+  font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif;
+  font-size: 2.6rem;
+  font-weight: 700;
+  background: rgba(243, 236, 224, 0.9);
+  transform: rotate(-12deg);
+  animation: stampIn 0.5s 0.35s cubic-bezier(0.3, 1.8, 0.5, 1) both;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  50% {
+    transform: translateY(-0.6rem);
+    opacity: 1;
+  }
+}
+
+@keyframes ticketIn {
+  from {
+    opacity: 0;
+    transform: translateY(2rem) scale(0.85) rotate(-3deg);
+  }
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -250% 0;
+  }
+}
+
+@keyframes stampIn {
+  from {
+    opacity: 0;
+    transform: rotate(-12deg) scale(2.2);
+  }
+}
